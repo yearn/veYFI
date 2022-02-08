@@ -42,7 +42,7 @@ interface ERC20:
     def symbol() -> String[32]: view
     def transfer(to: address, amount: uint256) -> bool: nonpayable
     def transferFrom(spender: address, to: address, amount: uint256) -> bool: nonpayable
-
+    def approve(spender: address, amount: uint256) -> bool: nonpayable
 
 interface IVeYfiRewards:
     def updateReward(_account: address) -> bool: nonpayable
@@ -474,8 +474,8 @@ def force_withdraw():
     _locked: LockedBalance = self.locked[msg.sender]
     assert block.timestamp < _locked.end, "lock expired"
     
-    uint256 time_left = _locked.end - block.timestamp
-    uint256 penalty_ratio = min(MULTIPLIER * 3 / 4,  MULTIPLIER * time_left / MAXTIME)
+    time_left: uint256 = _locked.end - block.timestamp
+    penalty_ratio: uint256 = min(MULTIPLIER * 3 / 4,  MULTIPLIER * time_left / MAXTIME)
 
     value: uint256 = convert(_locked.amount, uint256)
     IVeYfiRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
@@ -492,9 +492,9 @@ def force_withdraw():
     # Both can have >= 0 amount
     self._checkpoint(msg.sender, old_locked, _locked)
     
-    uint256 penalty = value * penalty_ratio / MULTIPLIER
+    penalty: uint256 = value * penalty_ratio / MULTIPLIER
     assert ERC20(self.token).transfer(msg.sender, value - penalty)
-    assert ERC20(self.token).safeApprove(self.reward_pool, penalty)
+    assert ERC20(self.token).approve(self.reward_pool, penalty)
     IVeYfiRewards(self.reward_pool).donate(penalty)
 
     log Withdraw(msg.sender, value, block.timestamp)
