@@ -87,8 +87,10 @@ contract Voter {
         uint256[] memory _weights
     ) internal {
         _reset(_account);
-        uint256 _vaultCnt = _vaultVote.length;
         uint256 _weight = IVotingEscrow(ve).balanceOf(_account);
+        if (_weight == 0) return;
+
+        uint256 _vaultCnt = _vaultVote.length;
         uint256 _totalVoteWeight = 0;
         uint256 _totalWeight = 0;
         uint256 _usedWeight = 0;
