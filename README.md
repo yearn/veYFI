@@ -10,7 +10,13 @@
 - Penalty size may be fixed (i.e. 50%), or may be depending on the remaining lock duration.
 
 
-![image](https://user-images.githubusercontent.com/87183122/151378637-da78ca62-1f69-430b-abb4-a1b4e5665f33.png)
+- Vault gauges allow vault depositors to stake their vault tokens and earn YFI rewards according to their veYFI weight.
+- YFI are allocated to gauges based on weekly governance votes. Each gauge can get a different amount of bought back YFI to emit.
+- Based on their veYFI lock, users can boost their rewards of up to 2.5x proportional to the amount of vault tokens deposited, when they claim YFI rewards from gauges. The greater the amount of veYFI, the more vault deposits can be boosted for the user.
+- Inspired by Andre Cronje’s initial design of Fixed Forex[10], in order for gauge rewards to be claimed, the user must have a veYFI lock. Depending on their lock duration, they are entitled to a different share of gauge rewards: if max lock = 4 years, and user is locked for 4 years, they are entitled to 100% of their rewards, if user is locked for 2 years = 50% of rewards, if user has no lock = 0% of their rewards. The difference is paid as penalty to veYFI holders, as an additional source of yield.
+- 
+![03-gauges](https://user-images.githubusercontent.com/87183122/152998641-39c8454d-4cfe-4440-b497-12f3b4d83754.svg)
+
 
 # Setup
 
