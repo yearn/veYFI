@@ -46,6 +46,7 @@ interface ERC20:
 
 interface IVeYfiRewards:
     def updateReward(_account: address) -> bool: nonpayable
+    def donate(_amount: uint256) -> bool: nonpayable
 
 # Interface for checking whether address belongs to a whitelisted
 # type of a smart wallet.
@@ -458,6 +459,43 @@ def withdraw():
     self._checkpoint(msg.sender, old_locked, _locked)
 
     assert ERC20(self.token).transfer(msg.sender, value)
+
+    log Withdraw(msg.sender, value, block.timestamp)
+    log Supply(supply_before, supply_before - value)
+
+
+@external
+@nonreentrant('lock')
+def force_withdraw():
+    """
+    @notice Withdraw all tokens for `msg.sender`
+    @dev Only possible if the lock has expired
+    """
+    _locked: LockedBalance = self.locked[msg.sender]
+    assert block.timestamp < _locked.end, "lock expired"
+    
+    uint256 time_left = _locked.end - block.timestamp
+    uint256 penalty_ratio = min(MULTIPLIER * 3 / 4,  MULTIPLIER * time_left / MAXTIME)
+
+    value: uint256 = convert(_locked.amount, uint256)
+    IVeYfiRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
+
+    old_locked: LockedBalance = _locked
+    _locked.end = 0
+    _locked.amount = 0
+    self.locked[msg.sender] = _locked
+    supply_before: uint256 = self.supply
+    self.supply = supply_before - value
+
+    # old_locked can have either expired <= timestamp or zero end
+    # _locked has only 0 end
+    # Both can have >= 0 amount
+    self._checkpoint(msg.sender, old_locked, _locked)
+    
+    uint256 penalty = value * penalty_ratio / MULTIPLIER
+    assert ERC20(self.token).transfer(msg.sender, value - penalty)
+    assert ERC20(self.token).safeApprove(self.reward_pool, penalty)
+    IVeYfiRewards(self.reward_pool).donate(penalty)
 
     log Withdraw(msg.sender, value, block.timestamp)
     log Supply(supply_before, supply_before - value)
