@@ -41,8 +41,8 @@ def test_extra_rewards(
     assert extra_reward.balanceOf(whale) == lp_amount
     chain.sleep(3600)
     extra_reward.getReward({"from": whale})
-    assert pytest.approx(yfo.balanceOf(whale)) == 10 ** 18 / 7 / 24
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-5) == 10 ** 18 / 7 / 24
 
     chain.sleep(3600)
     gauge.getReward({"from": whale})
-    assert pytest.approx(yfo.balanceOf(whale)) == 10 ** 18 / 7 / 12
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-5) == 10 ** 18 / 7 / 12
