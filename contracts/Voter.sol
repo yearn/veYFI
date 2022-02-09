@@ -137,15 +137,15 @@ contract Voter {
 
     function addVaultToRewards(
         address _vault,
-        address gov,
-        address rewardManager
+        address _gov,
+        address _rewardManager
     ) external returns (address) {
         require(msg.sender == gov, "exists");
         address _gauge = IGaugeFactory(gaugefactory).createGauge(
             _vault,
             yfi,
-            gov,
-            rewardManager,
+            _gov,
+            _rewardManager,
             ve,
             veYfiRewardPool
         );
