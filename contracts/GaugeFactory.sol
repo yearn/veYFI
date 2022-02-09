@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 import "./interfaces/IGauge.sol";
 import "./interfaces/IExtraReward.sol";
+import "./interfaces/IGaugeFactory.sol";
 
-contract GaugeFactory {
+contract GaugeFactory is IGaugeFactory {
     address deployedGauge; // immutable
     address deployedExtra;
 
@@ -17,12 +18,20 @@ contract GaugeFactory {
     function createGauge(
         address _vault,
         address yfi,
+        address gov,
         address manager,
         address ve,
         address veYfiRewardPool
-    ) external returns (address) {
+    ) external override returns (address) {
         address newGauge = _clone(deployedGauge);
-        IGauge(newGauge).initialize(_vault, yfi, manager, ve, veYfiRewardPool);
+        IGauge(newGauge).initialize(
+            _vault,
+            yfi,
+            gov,
+            manager,
+            ve,
+            veYfiRewardPool
+        );
         emit GaugeCreated(newGauge);
 
         return newGauge;

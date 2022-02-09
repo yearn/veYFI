@@ -5,6 +5,7 @@ interface IGauge {
     function initialize(
         address stakingToken_,
         address rewardToken_,
+        address gov,
         address rewardManager_,
         address ve_,
         address veYfiRewardPool_

@@ -1,15 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-interface IGaugeFactory {
-    function createGauge(
-        address,
-        address,
-        address,
-        address,
-        address
-    ) external returns (address);
-}
+import "./interfaces/IGaugeFactory.sol";
 
 interface IVotingEscrow {
     function balanceOf(address) external view returns (uint256);
@@ -30,7 +22,9 @@ contract Voter {
     mapping(address => address[]) public vaultVote; // address => vault
     mapping(address => uint256) public usedWeights; // address => total voting weight of user
     mapping(address => bool) public isGauge;
-    address owner;
+    address public gov;
+
+    event UpdatedGov(address gov);
 
     constructor(
         address _ve,
@@ -42,7 +36,7 @@ contract Voter {
         yfi = _yfi;
         gaugefactory = _gaugefactory;
         veYfiRewardPool = _veYfiRewardPool;
-        owner = msg.sender;
+        gov = msg.sender;
     }
 
     function reset() external {
@@ -123,12 +117,25 @@ contract Voter {
         _vote(msg.sender, _vaultVote, _weights);
     }
 
-    function addVaultToRewards(address _vault) external returns (address) {
-        require(msg.sender == owner, "exists");
+    function setGov(address _gov) external {
+        require(msg.sender == gov, "!authorized");
+
+        require(_gov != address(0));
+        gov = _gov;
+        emit UpdatedGov(_gov);
+    }
+
+    function addVaultToRewards(
+        address _vault,
+        address gov,
+        address rewardManager
+    ) external returns (address) {
+        require(msg.sender == gov, "exists");
         address _gauge = IGaugeFactory(gaugefactory).createGauge(
             _vault,
             yfi,
-            msg.sender,
+            gov,
+            rewardManager,
             ve,
             veYfiRewardPool
         );

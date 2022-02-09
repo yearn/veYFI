@@ -19,15 +19,22 @@ contract VeYfiRewards {
     uint256 public queuedRewards = 0;
     uint256 public currentRewards = 0;
     uint256 public historicalRewards = 0;
+    address public gov;
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
 
     event RewardAdded(uint256 reward);
     event RewardPaid(address indexed user, uint256 reward);
+    event UpdatedGov(address gov);
 
-    constructor(address veToken_, address rewardToken_) {
+    constructor(
+        address veToken_,
+        address rewardToken_,
+        address _gov
+    ) {
         veToken = IVotingEscrow(veToken_);
         rewardToken = IERC20(rewardToken_);
+        gov = _gov;
     }
 
     function totalSupply() public view returns (uint256) {
@@ -153,5 +160,24 @@ contract VeYfiRewards {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp + DURATION;
         emit RewardAdded(reward);
+    }
+
+    function setGov(address _gov) external {
+        require(msg.sender == gov, "!authorized");
+
+        require(_gov != address(0));
+        gov = _gov;
+        emit UpdatedGov(_gov);
+    }
+
+    function sweep(address _token) external {
+        require(msg.sender == gov, "!authorized");
+        require(_token != address(rewardToken), "!rewardToken");
+
+        SafeERC20.safeTransfer(
+            IERC20(_token),
+            gov,
+            IERC20(_token).balanceOf(address(this))
+        );
     }
 }

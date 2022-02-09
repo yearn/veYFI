@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 from brownie import chain
+import brownie
 
 
 def test_ve_yfi_distribution(yfi, ve_yfi, whale, whale_amount, ve_yfi_rewards, gov):
@@ -36,3 +37,16 @@ def test_ve_yfi_distribution_relock(
     chain.sleep(3600 * 24 * 7)
     ve_yfi_rewards.getReward(True, {"from": whale})
     assert pytest.approx(ve_yfi.locked(whale)[0]) == rewards + whale_amount
+
+
+def test_sweep(yfi, ve_yfi, ve_yfi_rewards, create_token, whale, whale_amount, gov):
+    yfi.approve(ve_yfi, whale_amount, {"from": whale})
+    ve_yfi.create_lock(whale_amount, chain.time() + 3600 * 24 * 365, {"from": whale})
+    yfo = create_token("YFO")
+    yfo.mint(ve_yfi_rewards, 10 ** 18)
+    with brownie.reverts("!authorized"):
+        ve_yfi_rewards.sweep(yfo, {"from": whale})
+    with brownie.reverts("!rewardToken"):
+        ve_yfi_rewards.sweep(yfi, {"from": gov})
+    ve_yfi_rewards.sweep(yfo, {"from": gov})
+    assert yfo.balanceOf(gov) == 10 ** 18
