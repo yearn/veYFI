@@ -277,8 +277,8 @@ def test_early_exit(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
 
     point_history_1 = ve_yfi.point_history(1).dict()
     point_history_3 = ve_yfi.point_history(3).dict()
-    assert approx(point_history_1["bias"]) == point_history_3["bias"]
-    assert approx(point_history_1["slope"]) == point_history_3["slope"]
+    assert approx(point_history_1["bias"], rel=10e-4) == point_history_3["bias"]
+    assert approx(point_history_1["slope"], rel=10e-4) == point_history_3["slope"]
     ve_yfi.force_withdraw({"from": alice})
     assert ve_yfi.totalSupply() == 0
     point_history_4 = ve_yfi.point_history(4).dict()
