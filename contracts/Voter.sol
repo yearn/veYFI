@@ -22,6 +22,9 @@ contract Voter {
     address public gov;
 
     event UpdatedGov(address gov);
+    event Reset(address account);
+    event Vote(address gauge, uint256 weigth);
+    event VaultAdded(address vault);
 
     constructor(
         address _ve,
@@ -57,6 +60,7 @@ contract Voter {
         }
         totalWeight -= _totalWeight;
         usedWeights[_account] = 0;
+        emit Reset(_account);
         delete vaultVote[_account];
     }
 
@@ -101,6 +105,7 @@ contract Voter {
                 weights[_vault] += _vaultWeight;
                 vaultVote[_account].push(_vault);
                 votes[_account][_vault] += _vaultWeight;
+                emit Vote(_gauge, _vaultWeight);
             }
         }
         totalWeight += _totalWeight;
@@ -153,6 +158,7 @@ contract Voter {
         vaultForGauge[_gauge] = _vault;
         isGauge[_gauge] = true;
         vaults.push(_vault);
+        emit VaultAdded(_vault);
         return _gauge;
     }
 }
