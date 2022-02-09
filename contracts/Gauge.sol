@@ -23,6 +23,7 @@ contract Gauge is IGauge {
     uint256 constant GRACE_PERIOD = 30 days; // No penalty for a max lock for 30 days.
 
     address public rewardManager;
+    address public gov;
 
     uint256 public pid;
     uint256 public periodFinish;
@@ -46,10 +47,13 @@ contract Gauge is IGauge {
     event RewardPaid(address indexed user, uint256 reward);
     event AddedExtraReward(address reward);
     event deletedExtraRewards();
+    event UpdatedRewardManager(address rewardManaager);
+    event UpdatedGov(address gov);
 
     function initialize(
         address stakingToken_,
         address rewardToken_,
+        address gov_,
         address rewardManager_,
         address ve_,
         address veYfiRewardPool_
@@ -59,6 +63,7 @@ contract Gauge is IGauge {
         rewardToken = IERC20(rewardToken_);
         rewardManager = rewardManager_;
         veToken = ve_;
+        gov = gov_;
         veYfiRewardPool = veYfiRewardPool_;
     }
 
@@ -392,5 +397,36 @@ contract Gauge is IGauge {
 
         IERC20(rewardToken).safeApprove(veYfiRewardPool, toTransfer);
         IVeYfiRewardPool(veYfiRewardPool).donate(toTransfer);
+    }
+
+    function setRewardManager(address _rewardManager) external {
+        require(
+            msg.sender == rewardManager || msg.sender == gov,
+            "!authorized"
+        );
+
+        require(_rewardManager != address(0));
+        rewardManager = _rewardManager;
+        emit UpdatedRewardManager(rewardManager);
+    }
+
+    function setGov(address _gov) external {
+        require(msg.sender == gov, "!authorized");
+
+        require(_gov != address(0));
+        gov = _gov;
+        emit UpdatedGov(_gov);
+    }
+
+    function sweep(address _token) external {
+        require(msg.sender == gov, "!authorized");
+        require(_token != address(stakingToken), "!stakingToken");
+        require(_token != address(rewardToken), "!rewardToken");
+
+        SafeERC20.safeTransfer(
+            IERC20(_token),
+            rewardManager,
+            IERC20(_token).balanceOf(address(this))
+        );
     }
 }

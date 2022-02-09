@@ -15,6 +15,7 @@ def test_vote(
     voter,
     create_vault,
     create_gauge,
+    gov,
 ):
     yfi.approve(ve_yfi, whale_amount, {"from": whale})
     ve_yfi.create_lock(whale_amount, chain.time() + 3600 * 24 * 365, {"from": whale})
@@ -25,12 +26,12 @@ def test_vote(
     vault = create_vault()
     tx = create_gauge(vault)
     gauge_a = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    voter.addVaultToRewards(gauge_a)
+    voter.addVaultToRewards(gauge_a, gov, gov)
 
     vault = create_vault()
     tx = create_gauge(vault)
     gauge_b = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    voter.addVaultToRewards(gauge_b)
+    voter.addVaultToRewards(gauge_b, gov, gov)
 
     assert voter.usedWeights(whale) == 0
 

@@ -76,7 +76,7 @@ def ve_yfi(VotingEscrow, yfi, gov):
 
 @pytest.fixture
 def ve_yfi_rewards(VeYfiRewards, ve_yfi, yfi, gov):
-    ve_yfi_rewards = gov.deploy(VeYfiRewards, ve_yfi, yfi)
+    ve_yfi_rewards = gov.deploy(VeYfiRewards, ve_yfi, yfi, gov)
     ve_yfi.set_reward_pool(ve_yfi_rewards)
     yield ve_yfi_rewards
 
@@ -102,9 +102,9 @@ def create_vault(VaultMock, gov):
 
 
 @pytest.fixture
-def create_gauge(voter):
+def create_gauge(voter, gov):
     def create_gauge(vault):
-        return voter.addVaultToRewards(vault)
+        return voter.addVaultToRewards(vault, gov, gov)
 
     yield create_gauge
 
