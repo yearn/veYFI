@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
+import "./interfaces/IVotingEscrow.sol";
 
 import "./interfaces/IGaugeFactory.sol";
-
-interface IVotingEscrow {
-    function balanceOf(address) external view returns (uint256);
-}
 
 contract Voter {
     address public ve; // immutable // the ve token that governs these contracts
@@ -108,6 +105,19 @@ contract Voter {
         }
         totalWeight += _totalWeight;
         usedWeights[_account] = _usedWeight;
+    }
+
+    function vote(
+        address _account,
+        address[] calldata _vaultVote,
+        uint256[] calldata _weights
+    ) external {
+        require(
+            IVotingEscrow(ve).delegation(_account) == msg.sender ||
+                _account == msg.sender
+        );
+        require(_vaultVote.length == _weights.length);
+        _vote(_account, _vaultVote, _weights);
     }
 
     function vote(address[] calldata _vaultVote, uint256[] calldata _weights)
