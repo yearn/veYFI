@@ -45,15 +45,29 @@ contract ExtraReward is IExtraReward {
         return gauge.balanceOf(account);
     }
 
-    modifier updateReward(address account) {
-        rewardPerTokenStored = rewardPerToken();
-        lastUpdateTime = lastTimeRewardApplicable();
+    function boostedBalanceOf(address account) public view returns (uint256) {
+        return gauge.boostedBalanceOf(account);
+    }
 
+    modifier updateReward(address account) {
+        _updateReward(account);
+        _;
+    }
+
+    function _updateReward(address account) internal {
+        rewardPerTokenStored = _rewardPerToken();
+        lastUpdateTime = lastTimeRewardApplicable();
         if (account != address(0)) {
-            rewards[account] = earned(account);
+            uint256 newEarning = _newEarning(account);
+            uint256 maxEarming = _maxEarning(account);
+
+            rewards[account] += newEarning;
+
+            // If rewards aren't boosted at max, loss rewards are queued to be redistributed to the gauge.
+            queuedRewards += (maxEarming - newEarning);
+
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
         }
-        _;
     }
 
     function lastTimeRewardApplicable() public view returns (uint256) {
@@ -61,6 +75,10 @@ contract ExtraReward is IExtraReward {
     }
 
     function rewardPerToken() public view returns (uint256) {
+        return _rewardPerToken();
+    }
+
+    function _rewardPerToken() internal view returns (uint256) {
         if (totalSupply() == 0) {
             return rewardPerTokenStored;
         }
@@ -71,12 +89,20 @@ contract ExtraReward is IExtraReward {
                 1e18) / totalSupply());
     }
 
-    function earned(address account) public view returns (uint256) {
+    function _newEarning(address account) internal view returns (uint256) {
+        return
+            (boostedBalanceOf(account) *
+                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
+    }
+
+    function _maxEarning(address account) internal view returns (uint256) {
         return
             (balanceOf(account) *
-                (rewardPerToken() - userRewardPerTokenPaid[account])) /
-            1e18 +
-            rewards[account];
+                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
+    }
+
+    function earned(address account) public view returns (uint256) {
+        return _newEarning(account);
     }
 
     //update reward, emit, call linked reward's stake
