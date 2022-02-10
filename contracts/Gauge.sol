@@ -229,27 +229,27 @@ contract Gauge is IGauge {
         return true;
     }
 
-    // function depositFor(address _for, uint256 _amount)
-    //     external
-    //     updateReward(_for)
-    //     returns (bool)
-    // {
-    //     require(_amount > 0, "RewardPool : Cannot deposit 0");
+    function depositFor(address _for, uint256 _amount)
+        external
+        updateReward(_for)
+        returns (bool)
+    {
+        require(_amount > 0, "RewardPool : Cannot deposit 0");
 
-    //     //also deposit to linked rewards
-    //     for (uint256 i = 0; i < extraRewards.length; i++) {
-    //         IVirtualBalanceRewardPool(extraRewards[i]).deposit(_for, _amount);
-    //     }
+        //also deposit to linked rewards
+        for (uint256 i = 0; i < extraRewards.length; i++) {
+            IVirtualBalanceRewardPool(extraRewards[i]).deposit(_for, _amount);
+        }
 
-    //     //give to _for
-    //     _totalSupply = _totalSupply + _amount;
-    //     _balances[_for] = _balances[_for] + _amount;
+        //give to _for
+        _totalSupply = _totalSupply + _amount;
+        _balances[_for] = _balances[_for] + _amount;
 
-    //     //take away from sender
-    //     stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
-    //     emit Staked(_for, _amount);
-    //     return true;
-    // }
+        //take away from sender
+        stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
+        emit Staked(_for, _amount);
+        return true;
+    }
 
     function withdraw(
         uint256 amount,
@@ -306,6 +306,7 @@ contract Gauge is IGauge {
         return true;
     }
 
+
     function getReward(bool lock)
         external
         updateReward(msg.sender)
@@ -317,6 +318,15 @@ contract Gauge is IGauge {
 
     function getReward() external updateReward(msg.sender) returns (bool) {
         _getReward(msg.sender, false, true);
+        return true;
+    }
+
+    function getRewardFor(address account, bool _claimExtras)
+        external
+        updateReward(account)
+        returns (bool)
+    {
+        _getReward(account, false, _claimExtras);
         return true;
     }
 
