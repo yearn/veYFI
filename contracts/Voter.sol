@@ -112,17 +112,20 @@ contract Voter {
         usedWeights[_account] = _usedWeight;
     }
 
+
     function vote(
-        address _account,
+        address[] calldata _accounts,
         address[] calldata _vaultVote,
         uint256[] calldata _weights
     ) external {
-        require(
-            IVotingEscrow(ve).delegation(_account) == msg.sender ||
-                _account == msg.sender
-        );
         require(_vaultVote.length == _weights.length);
-        _vote(_account, _vaultVote, _weights);
+        for(uint256 i=0; i < _accounts.length; i++) {
+            require(
+                _accounts[i] == msg.sender ||
+                IVotingEscrow(ve).delegation(_accounts[i]) == msg.sender 
+            );
+            _vote(_accounts[i], _vaultVote, _weights);
+        }
     }
 
     function vote(address[] calldata _vaultVote, uint256[] calldata _weights)
