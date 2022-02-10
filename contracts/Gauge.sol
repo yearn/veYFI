@@ -306,7 +306,6 @@ contract Gauge is IGauge {
         return true;
     }
 
-
     function getReward(bool lock)
         external
         updateReward(msg.sender)

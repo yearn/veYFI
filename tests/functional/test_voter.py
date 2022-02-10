@@ -2,7 +2,7 @@ from pathlib import Path
 import brownie
 
 import pytest
-from brownie import chain, Gauge
+from brownie import ZERO_ADDRESS, chain, Gauge
 
 
 def test_vote(
@@ -86,7 +86,9 @@ def test_vote_delegation(
 ):
     yfi.approve(ve_yfi, whale_amount, {"from": whale})
     ve_yfi.create_lock(whale_amount, chain.time() + 3600 * 24 * 365, {"from": whale})
-    ve_yfi.delegate(shark, {"from": whale})
+    voter.delegate(shark, True, {"from": whale})
+    assert voter.getDelegated(shark) == [whale]
+    assert voter.delegation(whale) == shark
 
     yfi.approve(ve_yfi, shark_amount, {"from": shark})
     ve_yfi.create_lock(shark_amount, chain.time() + 3600 * 24 * 365, {"from": shark})
@@ -99,6 +101,15 @@ def test_vote_delegation(
     assert voter.usedWeights(whale) == 0
     voter.vote([whale, shark], [gauge_a], [1], {"from": shark})
     assert voter.totalWeight() == ve_yfi.balanceOf(whale) + ve_yfi.balanceOf(shark)
+    whaleBalanceOf = ve_yfi.balanceOf(whale)
     assert voter.usedWeights(whale) == ve_yfi.balanceOf(whale)
     assert voter.usedWeights(shark) == ve_yfi.balanceOf(shark)
     assert voter.weights(gauge_a) == ve_yfi.balanceOf(whale) + ve_yfi.balanceOf(shark)
+
+    voter.delegate(ZERO_ADDRESS, False, {"from": whale})
+    assert voter.delegation(whale) == ZERO_ADDRESS
+    assert voter.getDelegated(shark) == []
+
+    assert voter.usedWeights(whale) == whaleBalanceOf
+    with brownie.reverts():
+        voter.vote([whale, shark], [gauge_a], [1], {"from": shark})

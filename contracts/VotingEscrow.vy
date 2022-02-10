@@ -1,4 +1,4 @@
-# @version 0.2.6
+# @version 0.3.1
 """
 @title Voting Escrow
 @author Curve Finance
@@ -85,10 +85,6 @@ event Supply:
     prevSupply: uint256
     supply: uint256
 
-event Delegation:
-    sender: address
-    recipient: address
-
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
 MULTIPLIER: constant(uint256) = 10 ** 18
@@ -116,7 +112,6 @@ decimals: public(uint256)
 admin: public(address)  # Can and will be a smart contract
 future_admin: public(address)
 reward_pool: public(address)
-delegation: public(HashMap[address, address])
 
 @external
 def __init__(token_addr: address, _name: String[64], _symbol: String[32], _version: String[32]):
@@ -683,15 +678,6 @@ def totalSupplyAt(_block: uint256) -> uint256:
     # Now dt contains info on how far are we beyond point
 
     return self.supply_at(point, point.ts + dt)
-
-@external
-def delegate(_to: address):
-    """
-    @notice Delegate voting power to an address.
-    @param _to the address that can use the voting power
-    """
-    self.delegation[msg.sender] = _to
-    log Delegation(msg.sender, _to)
 
 # Dummy methods for compatibility with Aragon
 

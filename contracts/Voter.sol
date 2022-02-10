@@ -19,12 +19,16 @@ contract Voter {
     mapping(address => address[]) public vaultVote; // address => vault
     mapping(address => uint256) public usedWeights; // address => total voting weight of user
     mapping(address => bool) public isGauge;
+    mapping(address => address) public delegation;
+    mapping(address => address[]) public delegated;
+
     address public gov;
 
     event UpdatedGov(address gov);
     event Reset(address account);
     event Vote(address gauge, uint256 weigth);
     event VaultAdded(address vault);
+    event Delegation(address sender, address recipient);
 
     constructor(
         address _ve,
@@ -62,6 +66,14 @@ contract Voter {
         usedWeights[_account] = 0;
         emit Reset(_account);
         delete vaultVote[_account];
+    }
+
+    function getDelegated(address _account)
+        external
+        view
+        returns (address[] memory)
+    {
+        return delegated[_account];
     }
 
     function poke(address _account) external {
@@ -112,17 +124,16 @@ contract Voter {
         usedWeights[_account] = _usedWeight;
     }
 
-
     function vote(
         address[] calldata _accounts,
         address[] calldata _vaultVote,
         uint256[] calldata _weights
     ) external {
         require(_vaultVote.length == _weights.length);
-        for(uint256 i=0; i < _accounts.length; i++) {
+        for (uint256 i = 0; i < _accounts.length; i++) {
             require(
                 _accounts[i] == msg.sender ||
-                IVotingEscrow(ve).delegation(_accounts[i]) == msg.sender 
+                    delegation[_accounts[i]] == msg.sender
             );
             _vote(_accounts[i], _vaultVote, _weights);
         }
@@ -163,5 +174,30 @@ contract Voter {
         vaults.push(_vault);
         emit VaultAdded(_vault);
         return _gauge;
+    }
+
+    /**
+    @notice Delegate voting power to an address.
+    @param _to the address that can use the voting power
+     */
+    function delegate(address _to, bool reset_) external {
+        if (reset_) _reset(msg.sender);
+        address oldTo = delegation[msg.sender];
+
+        if (oldTo != address(0x0)) {
+            address[] storage delgateList = delegated[oldTo];
+            uint256 length = delgateList.length;
+            for (uint256 i = 0; i < length; i++) {
+                if (delgateList[i] == msg.sender) {
+                    delgateList[i] = delegated[oldTo][length - 1];
+                    delegated[oldTo].pop();
+                    break;
+                }
+            }
+        }
+
+        delegation[msg.sender] = _to;
+        if (_to != address(0x0)) delegated[_to].push(msg.sender);
+        emit Delegation(msg.sender, _to);
     }
 }
