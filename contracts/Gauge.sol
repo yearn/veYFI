@@ -10,27 +10,48 @@ import "./interfaces/IVeYfiRewardPool.sol";
 
 import "./interfaces/IVotingEscrow.sol";
 
+/** @title  Gauge stake vault token get YFI rewards
+    @notice Deposit your vault token (one gauge per vault). 
+    YFI are paid based on the amount of vualt tokens, the veYFI balance and the duration of the lock.
+    @dev this contract is used behind multiple delegate proxies.
+ */
+
 contract Gauge is IGauge {
     using SafeERC20 for IERC20;
 
     IERC20 public rewardToken;
     IERC20 public stakingToken;
+    //// @notice veYFI
     address public veToken;
+    //// @notice the veYFI YFI reward pool, penalty are sent to this contract.
     address public veYfiRewardPool;
+    //// @notice rewards are distributed during 7 days when queued.
     uint256 public constant DURATION = 7 days;
+    //// @notice a copy of the veYFI max lock duration
     uint256 constant MAX_LOCK = 4 * 365 * 86400;
     uint256 constant PRECISON_FACTOR = 10**6;
-    uint256 constant GRACE_PERIOD = 30 days; // No penalty for a max lock for 30 days.
+    //// @notice Penalty do not apply for locks expiring after 3y11m
+    uint256 constant GRACE_PERIOD = 30 days;
 
-    address public rewardManager;
+    //// @notice gov can sweep token airdrop
     address public gov;
+    //// @notice rewardManager is in charge of adding/removing aditional rewards
+    address public rewardManager;
 
-    uint256 public pid;
     uint256 public periodFinish;
     uint256 public rewardRate;
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored;
+    /** 
+    @notice that are queueud to be distributed on a `queueNewRewards` call
+    @dev rewards are queeud using `donate`.
+    @dev rewards are queeud when an account `_updateReward`.
+    */
     uint256 public queuedRewards;
+    /** 
+    @notice penalty queued to be transfer later to veYfiRewardPool using `transferQueuedPenalty`
+\    @dev rewards are queeud when an account `_updateReward`.
+    */
     uint256 public queuedPenalty;
     uint256 public currentRewards;
     uint256 public historicalRewards;
@@ -39,6 +60,7 @@ contract Gauge is IGauge {
     mapping(address => uint256) public rewards;
     mapping(address => uint256) private _balances;
 
+    //// @notice list of extraRewards pool.
     address[] public extraRewards;
 
     event RewardAdded(uint256 reward);
@@ -50,6 +72,15 @@ contract Gauge is IGauge {
     event UpdatedRewardManager(address rewardManaager);
     event UpdatedGov(address gov);
 
+    /** @notice initialize the contract
+     *  @dev Initialize called after contract is cloned.
+     *  @param stakingToken_ The vault token to stake
+     *  @param rewardToken_ the reward token YFI
+     *  @param gov_ goverance address
+     *  @param rewardManager_ reward manager address
+     *  @param ve_ veYFI address
+     *  @param veYfiRewardPool_ veYfiRewardPool address
+     */
     function initialize(
         address stakingToken_,
         address rewardToken_,
@@ -67,18 +98,31 @@ contract Gauge is IGauge {
         veYfiRewardPool = veYfiRewardPool_;
     }
 
+    /** @return total of the staked vault token
+     */
+
     function totalSupply() public view returns (uint256) {
         return _totalSupply;
     }
 
+    /** @param account to look bakance for
+     *  @return amount of staked token for an account
+     */
     function balanceOf(address account) public view override returns (uint256) {
         return _balances[account];
     }
 
+    /** @return the number of extra rewards pool
+     */
     function extraRewardsLength() external view returns (uint256) {
         return extraRewards.length;
     }
 
+    /** @notice add extra rewards to the gauge
+     *  @dev can only be done by rewardManager
+     *  @param _extraReward the ExtraReward contract address
+     *  @return true
+     */
     function addExtraReward(address _extraReward) external returns (bool) {
         require(msg.sender == rewardManager, "!authorized");
         require(_extraReward != address(0), "!reward setting");
@@ -87,12 +131,18 @@ contract Gauge is IGauge {
         return true;
     }
 
+    /** @notice remove extra rewards
+     *  @dev can only be done by rewardManager
+     */
     function clearExtraRewards() external {
         require(msg.sender == rewardManager, "!authorized");
         emit deletedExtraRewards();
         delete extraRewards;
     }
 
+    /** @notice update reward manager
+     *  @dev can only be done by rewardManager
+     */
     function updateRewardManager(address _rewardManager) external {
         require(msg.sender == rewardManager, "!authorized");
         rewardManager = _rewardManager;
@@ -124,6 +174,10 @@ contract Gauge is IGauge {
         }
     }
 
+    /** @notice give the lockingRatio
+     * @dev locking ratio is expressed in PRECISON_FACTOR, it's used to calculate the penalty due to the lock duration.
+     * @return lockingRatio
+     */
     function lockingRatio(address account) external view returns (uint256) {
         return _lockingRatio(account);
     }
@@ -140,10 +194,17 @@ contract Gauge is IGauge {
         return (PRECISON_FACTOR * timeLeft) / MAX_LOCK;
     }
 
+    /**
+     *  @return timestamp untill rewards are distributed
+     */
     function lastTimeRewardApplicable() public view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
+    /** @notice reward per token deposited
+     *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
+     *  @return rewardPerToken
+     */
     function rewardPerToken() public view returns (uint256) {
         return _rewardPerToken();
     }
@@ -159,6 +220,10 @@ contract Gauge is IGauge {
                 1e18) / totalSupply());
     }
 
+    /** @notice earning for an account
+     *  @dev earning are based on lock duration and boost
+     *  @return amount of tokens earned
+     */
     function earned(address account) public view returns (uint256) {
         uint256 newEarning = _newEarning(account);
 
@@ -170,7 +235,7 @@ contract Gauge is IGauge {
 
     function _newEarning(address account) internal view returns (uint256) {
         return
-            (boostedBalanceOf(account) *
+            (_boostedBalanceOf(account) *
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
@@ -180,22 +245,34 @@ contract Gauge is IGauge {
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
+    /** @notice boosted balance of based on veYFI balance
+     *  @dev min(balance * 0.4 + totalSupply * veYFIBalance / veYFITotalSypply * 0.6, balance)
+     *  @return boosted balance
+     */
     function boostedBalanceOf(address account) public view returns (uint256) {
+        return _boostedBalanceOf(account);
+    }
+
+    function _boostedBalanceOf(address account) public view returns (uint256) {
         uint256 veTotalSupply = IVotingEscrow(veToken).totalSupply();
         if (veTotalSupply == 0) return _balances[account];
 
         return
             Math.min(
-                ((_balances[account] * 40) /
-                    100 +
+                ((_balances[account] * 40) +
                     (((_totalSupply *
                         IVotingEscrow(veToken).balanceOf(account)) /
-                        veTotalSupply) * 60) /
-                    100),
+                        veTotalSupply) * 60)) / 100,
                 _balances[account]
             );
     }
 
+    /** @notice deposit vault tokens into the gauge
+     * @dev a user without a veYFI should not lock.
+     * @dev This call update claimable rewards
+     * @param _amount of vault token
+     * @return true
+     */
     function deposit(uint256 _amount)
         public
         updateReward(msg.sender)
@@ -220,6 +297,12 @@ contract Gauge is IGauge {
         return true;
     }
 
+    /** @notice deposit vault tokens into the gauge
+     *   @dev a user without a veYFI should not lock.
+     *   @dev will deposit the min betwwen user balance and user approval
+     *   @dev This call update claimable rewards
+     *   @return true
+     */
     function deposit() external returns (bool) {
         uint256 balance = Math.min(
             stakingToken.balanceOf(msg.sender),
@@ -229,6 +312,13 @@ contract Gauge is IGauge {
         return true;
     }
 
+    /** @notice deposit vault tokens into the gauge for a user
+     *   @dev vault token is taken from msg.sender
+     *   @dev This call update  `_for` claimable rewards
+     *   @param _for account to deposit to
+     *    @param _amount to deposit
+     *    @return true
+     */
     function depositFor(address _for, uint256 _amount)
         external
         updateReward(_for)
@@ -251,44 +341,69 @@ contract Gauge is IGauge {
         return true;
     }
 
+    /** @notice withdraw vault token from the gauge
+     * @dev This call update claimable rewards
+     *  @param _amount amount to withdraw
+     *   @param _claim claimm veYFI and aditional reward
+     *   @param _lock should the claimed rewards be locked in veYFI for the user
+     *   @return true
+     */
     function withdraw(
-        uint256 amount,
-        bool claim,
-        bool lock
+        uint256 _amount,
+        bool _claim,
+        bool _lock
     ) public updateReward(msg.sender) returns (bool) {
-        require(amount > 0, "RewardPool : Cannot withdraw 0");
+        require(_amount > 0, "RewardPool : Cannot withdraw 0");
 
         //also withdraw from linked rewards
         for (uint256 i = 0; i < extraRewards.length; i++) {
             IVirtualBalanceRewardPool(extraRewards[i]).withdraw(
                 msg.sender,
-                amount
+                _amount
             );
         }
 
-        _totalSupply = _totalSupply - amount;
-        _balances[msg.sender] = _balances[msg.sender] - amount;
+        _totalSupply = _totalSupply - _amount;
+        _balances[msg.sender] = _balances[msg.sender] - _amount;
 
-        if (claim) {
-            _getReward(msg.sender, lock, true);
+        if (_claim) {
+            _getReward(msg.sender, _lock, true);
         }
 
-        stakingToken.safeTransfer(msg.sender, amount);
-        emit Withdrawn(msg.sender, amount);
+        stakingToken.safeTransfer(msg.sender, _amount);
+        emit Withdrawn(msg.sender, _amount);
 
         return true;
     }
 
-    function withdraw(bool _claim, bool _lock) external {
+    /** @notice withdraw all vault token from gauge
+     *   @dev This call update claimable rewards
+     *   @param _claim claimm veYFI and aditional reward
+     *   @param _lock should the claimed rewards be locked in veYFI for the user
+     *   @return true
+     */
+    function withdraw(bool _claim, bool _lock) external returns (bool) {
         withdraw(_balances[msg.sender], _claim, _lock);
+        return true;
     }
 
-    function withdraw(bool _claim) external {
+    /** @notice withdraw all vault token from gauge
+     *  @dev This call update claimable rewards
+     *  @param _claim claimm veYFI and aditional reward
+     *  @return true
+     */
+    function withdraw(bool _claim) external returns (bool) {
         withdraw(_balances[msg.sender], _claim, false);
+        return true;
     }
 
-    function withdraw() external {
+    /** @notice withdraw all vault token from gauge
+        @dev This call update claimable rewards
+        @return true
+    */
+    function withdraw() external returns (bool) {
         withdraw(_balances[msg.sender], false, false);
+        return true;
     }
 
     /**
@@ -296,6 +411,7 @@ contract Gauge is IGauge {
      *  Get rewards
      * @param _lock should the yfi be locked in veYFI
      * @param _claimExtras claim extra rewards
+     * @return true
      */
     function getReward(bool _lock, bool _claimExtras)
         external
@@ -306,26 +422,45 @@ contract Gauge is IGauge {
         return true;
     }
 
-    function getReward(bool lock)
+    /**
+     * @notice
+     *  Get rewards and claim extra rewards
+     *  @param _lock should the yfi be locked in veYFI
+     *  @return true
+     */
+    function getReward(bool _lock)
         external
         updateReward(msg.sender)
         returns (bool)
     {
-        _getReward(msg.sender, lock, true);
+        _getReward(msg.sender, _lock, true);
         return true;
     }
 
+    /**
+     * @notice
+     *  Get rewards and claim extra rewards, do not lock YFI earned
+     *  @return true
+     */
     function getReward() external updateReward(msg.sender) returns (bool) {
         _getReward(msg.sender, false, true);
         return true;
     }
 
-    function getRewardFor(address account, bool _claimExtras)
+    /**
+     * @notice
+     *  Get rewards for an account
+     * @dev rewards are transfer to _account
+     * @param _account to claim reards for
+     * @param _claimExtras claim extra rewards
+     * @return true
+     */
+    function getRewardFor(address _account, bool _claimExtras)
         external
-        updateReward(account)
+        updateReward(_account)
         returns (bool)
     {
-        _getReward(account, false, _claimExtras);
+        _getReward(_account, false, _claimExtras);
         return true;
     }
 
@@ -356,6 +491,14 @@ contract Gauge is IGauge {
         }
     }
 
+    /**
+     * @notice
+     *  Donate tokens to distribute as rewards
+     * @dev Do not trigger rewardRate recalculation
+     * @param _amount token to donate
+     * @return true
+     */
+
     function donate(uint256 _amount) external returns (bool) {
         require(_amount != 0);
         IERC20(rewardToken).safeTransferFrom(
@@ -367,16 +510,23 @@ contract Gauge is IGauge {
         return true;
     }
 
-    function queueNewRewards(uint256 _rewards) external returns (bool) {
-        require(_rewards != 0);
+    /**
+     * @notice
+     * Add new rewards to be distributed over a week
+     * @dev Triger rewardRate recalculation using _amount and queuedRewards
+     * @param _amount token to add to rewards
+     * @return true
+     */
+    function queueNewRewards(uint256 _amount) external returns (bool) {
+        require(_amount != 0);
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
-            _rewards
+            _amount
         );
-        _rewards = _rewards + queuedRewards;
+        _amount = _amount + queuedRewards;
 
-        _notifyRewardAmount(_rewards);
+        _notifyRewardAmount(_amount);
         queuedRewards = 0;
         return true;
     }
@@ -400,15 +550,29 @@ contract Gauge is IGauge {
         emit RewardAdded(reward);
     }
 
-    function transferQueuedPenalty() public {
+    /**
+     * @notice
+     * Transfer penalty to the veYFIRewardContract
+     * @dev Penalty are queued in this contract.
+     * @return true
+     */
+    function transferQueuedPenalty() external returns (bool) {
         uint256 toTransfer = queuedPenalty;
         queuedPenalty = 0;
 
         IERC20(rewardToken).safeApprove(veYfiRewardPool, toTransfer);
         IVeYfiRewardPool(veYfiRewardPool).donate(toTransfer);
+        return true;
     }
 
-    function setRewardManager(address _rewardManager) external {
+    /**
+     * @notice
+     * set reward manager
+     * @dev Can be called by rewardManager or gov
+     * @param _rewardManager new reward manager
+     * @return true
+     */
+    function setRewardManager(address _rewardManager) external returns (bool) {
         require(
             msg.sender == rewardManager || msg.sender == gov,
             "!authorized"
@@ -417,25 +581,44 @@ contract Gauge is IGauge {
         require(_rewardManager != address(0));
         rewardManager = _rewardManager;
         emit UpdatedRewardManager(rewardManager);
+        return true;
     }
 
-    function setGov(address _gov) external {
+    /**
+     * @notice
+     * set gov
+     * @dev Can be called by gov
+     * @param _gov new gov
+     * @return true
+     */
+
+    function setGov(address _gov) external returns (bool) {
         require(msg.sender == gov, "!authorized");
 
         require(_gov != address(0));
         gov = _gov;
         emit UpdatedGov(_gov);
+        return true;
     }
 
-    function sweep(address _token) external {
+    /**
+     * @notice
+     * sweep airdroped token
+     * @dev Can't sweep vault tokens nor reward token
+     * @dev token are sweep to giv
+     * @param _token token to sweeo
+     * @return true
+     */
+    function sweep(address _token) external returns (bool) {
         require(msg.sender == gov, "!authorized");
         require(_token != address(stakingToken), "!stakingToken");
         require(_token != address(rewardToken), "!rewardToken");
 
         SafeERC20.safeTransfer(
             IERC20(_token),
-            rewardManager,
+            gov,
             IERC20(_token).balanceOf(address(this))
         );
+        return true;
     }
 }
