@@ -47,6 +47,10 @@ contract Voter {
         _reset(msg.sender);
     }
 
+    function getVaults() external view returns (address[] memory) {
+        return vaults;
+    }
+
     function _reset(address _account) internal {
         address[] storage _vaultVote = vaultVote[_account];
         uint256 _vaultVoteCnt = _vaultVote.length;
@@ -159,7 +163,9 @@ contract Voter {
         address _gov,
         address _rewardManager
     ) external returns (address) {
-        require(msg.sender == gov, "exists");
+        require(msg.sender == gov, "gov");
+        require(gauges[_vault] == address(0x0), "exist");
+
         address _gauge = IGaugeFactory(gaugefactory).createGauge(
             _vault,
             yfi,
@@ -174,6 +180,25 @@ contract Voter {
         vaults.push(_vault);
         emit VaultAdded(_vault);
         return _gauge;
+    }
+
+    function removeVaultFromRewards(address _vault) external {
+        require(msg.sender == gov, "gov");
+        require(gauges[_vault] != address(0x0), "!exist");
+        address gauge = gauges[_vault];
+
+        uint256 length = vaults.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (vaults[i] == _vault) {
+                vaults[i] = vaults[length - 1];
+                vaults.pop();
+                break;
+            }
+        }
+
+        gauges[_vault] = address(0x0);
+        vaultForGauge[gauge] = address(0x0);
+        isGauge[gauge] = false;
     }
 
     /**
