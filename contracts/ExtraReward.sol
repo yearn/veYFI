@@ -26,7 +26,6 @@ contract ExtraReward is IExtraReward {
     uint256 public queuedRewards = 0;
     uint256 public currentRewards = 0;
     uint256 public historicalRewards = 0;
-    uint256 public constant NEW_REWARD_RATIO = 830;
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
 
@@ -152,8 +151,15 @@ contract ExtraReward is IExtraReward {
         return true;
     }
 
-    function getReward(address _account)
+    /**
+     * @notice
+     *  Get rewards
+     * @param _account claim extra rewards
+     * @return true
+     */
+    function getRewardFor(address _account)
         public
+        override
         updateReward(_account)
         returns (bool)
     {
@@ -166,45 +172,46 @@ contract ExtraReward is IExtraReward {
         return true;
     }
 
-    function getReward() external {
-        getReward(msg.sender);
+    function getReward() external override returns (bool) {
+        getRewardFor(msg.sender);
+        return true;
     }
 
-    function donate(uint256 _amount) external {
+    /**
+     * @notice
+     *  Donate tokens to distribute as rewards
+     * @dev Do not trigger rewardRate recalculation
+     * @param _amount token to donate
+     * @return true
+     */
+    function donate(uint256 _amount) external returns (bool) {
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
             _amount
         );
         queuedRewards = queuedRewards + _amount;
+        return true;
     }
 
-    function queueNewRewards(uint256 _rewards) external returns (bool) {
-        require(_rewards > 0);
+    /**
+     * @notice
+     * Add new rewards to be distributed over a week
+     * @dev Triger rewardRate recalculation using _amount and queuedRewards
+     * @param _amount token to add to rewards
+     * @return true
+     */
+    function queueNewRewards(uint256 _amount) external returns (bool) {
+        require(_amount > 0);
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
-            _rewards
+            _amount
         );
-        _rewards = _rewards + queuedRewards;
+        _amount = _amount + queuedRewards;
 
-        if (block.timestamp >= periodFinish) {
-            _notifyRewardAmount(_rewards);
-            queuedRewards = 0;
-            return true;
-        }
-
-        //et = now - (finish-DURATION)
-        uint256 elapsedTime = block.timestamp - (periodFinish - DURATION);
-        //current at now: rewardRate * elapsedTime
-        uint256 currentAtNow = rewardRate * elapsedTime;
-        uint256 queuedRatio = (currentAtNow * 1000) / _rewards;
-        if (queuedRatio < NEW_REWARD_RATIO) {
-            _notifyRewardAmount(_rewards);
-            queuedRewards = 0;
-        } else {
-            queuedRewards = _rewards;
-        }
+        _notifyRewardAmount(_amount);
+        queuedRewards = 0;
         return true;
     }
 

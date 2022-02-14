@@ -7,7 +7,9 @@ interface IExtraReward {
 
     function rewardCheckpoint(address _account) external returns (bool);
 
-    function getReward(address) external returns (bool);
+    function getRewardFor(address) external returns (bool);
+
+    function getReward() external returns (bool);
 
     function queueNewRewards(uint256) external returns (bool);
 

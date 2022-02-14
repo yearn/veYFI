@@ -478,7 +478,7 @@ contract Gauge is IGauge {
         //also get rewards from linked rewards
         if (_claimExtras) {
             for (uint256 i = 0; i < extraRewards.length; i++) {
-                IExtraReward(extraRewards[i]).getReward(msg.sender);
+                IExtraReward(extraRewards[i]).getRewardFor(msg.sender);
             }
         }
     }
