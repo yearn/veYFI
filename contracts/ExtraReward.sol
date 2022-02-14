@@ -7,11 +7,17 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IExtraReward.sol";
 
+/** @title Extra Rewards for a Gauge
+    @notice An ExtraReward is associated with a gauge and a token.
+    Balances are managed by the associated Gauge. Gauge will 
+    @dev this contract is used behind multiple delegate proxies.
+ */
 contract ExtraReward is IExtraReward {
     using SafeERC20 for IERC20;
 
     IERC20 public rewardToken;
     uint256 public constant DURATION = 7 days;
+    IGauge public gauge;
 
     uint256 public periodFinish = 0;
     uint256 public rewardRate = 0;
@@ -29,22 +35,37 @@ contract ExtraReward is IExtraReward {
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
 
+    /**
+    @notice Initialize the contract after a clone.
+    @param gauge_ the associated Gauge address
+    @param reward_ the reward token to be ditributed
+    */
     function initialize(address gauge_, address reward_) public {
         assert(address(gauge) == address(0x0));
         gauge = IGauge(gauge_);
         rewardToken = IERC20(reward_);
     }
 
-    IGauge public gauge;
-
+    /**
+    @notice The Gauge total supply
+    @return total supply
+    */
     function totalSupply() public view returns (uint256) {
         return gauge.totalSupply();
     }
 
+    /**
+    @notice The Gauge balance of an account
+    @return balance of an account
+    */
     function balanceOf(address account) public view returns (uint256) {
         return gauge.balanceOf(account);
     }
 
+    /**
+    @notice The Gauge boosted balance of an account
+    @return boosted balance of an account
+    */
     function boostedBalanceOf(address account) public view returns (uint256) {
         return gauge.boostedBalanceOf(account);
     }
@@ -70,10 +91,17 @@ contract ExtraReward is IExtraReward {
         }
     }
 
+    /**
+     *  @return timestamp untill rewards are distributed
+     */
     function lastTimeRewardApplicable() public view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
+    /** @notice reward per token deposited
+     *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
+     *  @return rewardPerToken
+     */
     function rewardPerToken() public view returns (uint256) {
         return _rewardPerToken();
     }
@@ -101,30 +129,26 @@ contract ExtraReward is IExtraReward {
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
+    /** @notice earning for an account
+     *  @dev earning are based on lock duration and boost
+     *  @return amount of tokens earned
+     */
     function earned(address account) public view returns (uint256) {
         return _newEarning(account);
     }
 
-    //update reward, emit, call linked reward's stake
-    function deposit(address _account, uint256 amount)
+    /** @notice update reward for an account
+     *  @dev called by the underlying gauge
+     *  @param _account to udpdate
+     *  @return true
+     */
+    function rewardCheckpoint(address _account)
         external
+        override
         updateReward(_account)
         returns (bool)
     {
         require(msg.sender == address(gauge), "!authorized");
-
-        emit Deposited(_account, amount);
-        return true;
-    }
-
-    function withdraw(address _account, uint256 amount)
-        external
-        updateReward(_account)
-        returns (bool)
-    {
-        require(msg.sender == address(gauge), "!authorized");
-
-        emit Withdrawn(_account, amount);
         return true;
     }
 
