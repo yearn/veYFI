@@ -1,3 +1,16 @@
 {
-  "extends": "solhint:default"
+  "extends": "solhint:recommended",
+  "plugins": [],
+  "rules": {
+    "compiler-version": ["error", "0.8.11"],
+    "code-complexity": "warn",
+    "const-name-snakecase": "warn",
+    "function-max-lines": "warn",
+    "func-visibility": ["warn", { "ignoreConstructors": true }],
+    "max-line-length": ["warn", 160],
+    "avoid-suicide": "error",
+    "avoid-sha3": "warn",
+    "not-rely-on-time": "off",
+    "reason-string": ["warn", { "maxLength": 64 }]
+  }
 }
