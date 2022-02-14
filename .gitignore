@@ -6,3 +6,4 @@ build/
 reports/
 node_modules
 yarn-error.log
+artifacts
