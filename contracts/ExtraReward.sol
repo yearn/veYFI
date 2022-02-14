@@ -7,11 +7,17 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IExtraReward.sol";
 
+/** @title Extra Rewards for a Gauge
+    @notice An ExtraReward is associated with a gauge and a token.
+    Balances are managed by the associated Gauge. Gauge will 
+    @dev this contract is used behind multiple delegate proxies.
+ */
 contract ExtraReward is IExtraReward {
     using SafeERC20 for IERC20;
 
     IERC20 public rewardToken;
     uint256 public constant DURATION = 7 days;
+    IGauge public gauge;
 
     uint256 public periodFinish = 0;
     uint256 public rewardRate = 0;
@@ -20,7 +26,6 @@ contract ExtraReward is IExtraReward {
     uint256 public queuedRewards = 0;
     uint256 public currentRewards = 0;
     uint256 public historicalRewards = 0;
-    uint256 public constant NEW_REWARD_RATIO = 830;
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
 
@@ -29,22 +34,37 @@ contract ExtraReward is IExtraReward {
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
 
+    /**
+    @notice Initialize the contract after a clone.
+    @param gauge_ the associated Gauge address
+    @param reward_ the reward token to be ditributed
+    */
     function initialize(address gauge_, address reward_) public {
         assert(address(gauge) == address(0x0));
         gauge = IGauge(gauge_);
         rewardToken = IERC20(reward_);
     }
 
-    IGauge public gauge;
-
+    /**
+    @notice The Gauge total supply
+    @return total supply
+    */
     function totalSupply() public view returns (uint256) {
         return gauge.totalSupply();
     }
 
+    /**
+    @notice The Gauge balance of an account
+    @return balance of an account
+    */
     function balanceOf(address account) public view returns (uint256) {
         return gauge.balanceOf(account);
     }
 
+    /**
+    @notice The Gauge boosted balance of an account
+    @return boosted balance of an account
+    */
     function boostedBalanceOf(address account) public view returns (uint256) {
         return gauge.boostedBalanceOf(account);
     }
@@ -70,10 +90,17 @@ contract ExtraReward is IExtraReward {
         }
     }
 
+    /**
+     *  @return timestamp untill rewards are distributed
+     */
     function lastTimeRewardApplicable() public view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
+    /** @notice reward per token deposited
+     *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
+     *  @return rewardPerToken
+     */
     function rewardPerToken() public view returns (uint256) {
         return _rewardPerToken();
     }
@@ -101,35 +128,38 @@ contract ExtraReward is IExtraReward {
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
+    /** @notice earning for an account
+     *  @dev earning are based on lock duration and boost
+     *  @return amount of tokens earned
+     */
     function earned(address account) public view returns (uint256) {
         return _newEarning(account);
     }
 
-    //update reward, emit, call linked reward's stake
-    function deposit(address _account, uint256 amount)
+    /** @notice update reward for an account
+     *  @dev called by the underlying gauge
+     *  @param _account to udpdate
+     *  @return true
+     */
+    function rewardCheckpoint(address _account)
         external
+        override
         updateReward(_account)
         returns (bool)
     {
         require(msg.sender == address(gauge), "!authorized");
-
-        emit Deposited(_account, amount);
         return true;
     }
 
-    function withdraw(address _account, uint256 amount)
-        external
-        updateReward(_account)
-        returns (bool)
-    {
-        require(msg.sender == address(gauge), "!authorized");
-
-        emit Withdrawn(_account, amount);
-        return true;
-    }
-
-    function getReward(address _account)
+    /**
+     * @notice
+     *  Get rewards
+     * @param _account claim extra rewards
+     * @return true
+     */
+    function getRewardFor(address _account)
         public
+        override
         updateReward(_account)
         returns (bool)
     {
@@ -142,45 +172,46 @@ contract ExtraReward is IExtraReward {
         return true;
     }
 
-    function getReward() external {
-        getReward(msg.sender);
+    function getReward() external override returns (bool) {
+        getRewardFor(msg.sender);
+        return true;
     }
 
-    function donate(uint256 _amount) external {
+    /**
+     * @notice
+     *  Donate tokens to distribute as rewards
+     * @dev Do not trigger rewardRate recalculation
+     * @param _amount token to donate
+     * @return true
+     */
+    function donate(uint256 _amount) external returns (bool) {
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
             _amount
         );
         queuedRewards = queuedRewards + _amount;
+        return true;
     }
 
-    function queueNewRewards(uint256 _rewards) external returns (bool) {
-        require(_rewards > 0);
+    /**
+     * @notice
+     * Add new rewards to be distributed over a week
+     * @dev Triger rewardRate recalculation using _amount and queuedRewards
+     * @param _amount token to add to rewards
+     * @return true
+     */
+    function queueNewRewards(uint256 _amount) external returns (bool) {
+        require(_amount > 0);
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
-            _rewards
+            _amount
         );
-        _rewards = _rewards + queuedRewards;
+        _amount = _amount + queuedRewards;
 
-        if (block.timestamp >= periodFinish) {
-            _notifyRewardAmount(_rewards);
-            queuedRewards = 0;
-            return true;
-        }
-
-        //et = now - (finish-DURATION)
-        uint256 elapsedTime = block.timestamp - (periodFinish - DURATION);
-        //current at now: rewardRate * elapsedTime
-        uint256 currentAtNow = rewardRate * elapsedTime;
-        uint256 queuedRatio = (currentAtNow * 1000) / _rewards;
-        if (queuedRatio < NEW_REWARD_RATIO) {
-            _notifyRewardAmount(_rewards);
-            queuedRewards = 0;
-        } else {
-            queuedRewards = _rewards;
-        }
+        _notifyRewardAmount(_amount);
+        queuedRewards = 0;
         return true;
     }
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import "./interfaces/IVirtualBalanceRewardPool.sol";
+import "./interfaces/IExtraReward.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
@@ -282,10 +282,7 @@ contract Gauge is IGauge {
 
         //also deposit to linked rewards
         for (uint256 i = 0; i < extraRewards.length; i++) {
-            IVirtualBalanceRewardPool(extraRewards[i]).deposit(
-                msg.sender,
-                _amount
-            );
+            IExtraReward(extraRewards[i]).rewardCheckpoint(msg.sender);
         }
 
         _totalSupply = _totalSupply + _amount;
@@ -328,7 +325,7 @@ contract Gauge is IGauge {
 
         //also deposit to linked rewards
         for (uint256 i = 0; i < extraRewards.length; i++) {
-            IVirtualBalanceRewardPool(extraRewards[i]).deposit(_for, _amount);
+            IExtraReward(extraRewards[i]).rewardCheckpoint(_for);
         }
 
         //give to _for
@@ -357,10 +354,7 @@ contract Gauge is IGauge {
 
         //also withdraw from linked rewards
         for (uint256 i = 0; i < extraRewards.length; i++) {
-            IVirtualBalanceRewardPool(extraRewards[i]).withdraw(
-                msg.sender,
-                _amount
-            );
+            IExtraReward(extraRewards[i]).rewardCheckpoint(msg.sender);
         }
 
         _totalSupply = _totalSupply - _amount;
@@ -484,9 +478,7 @@ contract Gauge is IGauge {
         //also get rewards from linked rewards
         if (_claimExtras) {
             for (uint256 i = 0; i < extraRewards.length; i++) {
-                IVirtualBalanceRewardPool(extraRewards[i]).getReward(
-                    msg.sender
-                );
+                IExtraReward(extraRewards[i]).getRewardFor(msg.sender);
             }
         }
     }
