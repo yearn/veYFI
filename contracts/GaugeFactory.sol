@@ -5,6 +5,10 @@ import "./interfaces/IGauge.sol";
 import "./interfaces/IExtraReward.sol";
 import "./interfaces/IGaugeFactory.sol";
 
+/** @title  GaugeFactory
+    @notice Creates Gauge and ExtraReward
+    @dev Uses clone to create new contracts
+ */
 contract GaugeFactory is IGaugeFactory {
     address public immutable deployedGauge;
     address public immutable deployedExtra;
@@ -17,6 +21,15 @@ contract GaugeFactory is IGaugeFactory {
         deployedExtra = _deployedExtra;
     }
 
+    /** @notice Create a new reward Gauge clone
+        @param _vault the vault address.
+        @param yfi the YFI token address.
+        @param gov governance
+        @param manager manager
+        @param ve veYFI
+        @param veYfiRewardPool veYfi RewardPool
+        @return gauge address
+    */
     function createGauge(
         address _vault,
         address yfi,
@@ -39,9 +52,14 @@ contract GaugeFactory is IGaugeFactory {
         return newGauge;
     }
 
+    /** @notice Create ExtraReward clone
+        @param gauge the gauge associated with.
+        @param reward The token to distribute as a rewards
+        @return ExtraReward address
+    */
     function createExtraReward(address gauge, address reward)
         external
-        returns (address result)
+        returns (address)
     {
         address newExtraReward = _clone(deployedExtra);
         IExtraReward(newExtraReward).initialize(gauge, reward);

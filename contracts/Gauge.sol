@@ -108,7 +108,12 @@ contract Gauge is IGauge {
     /** @param account to look bakance for
      *  @return amount of staked token for an account
      */
-    function balanceOf(address account) external view override returns (uint256) {
+    function balanceOf(address account)
+        external
+        view
+        override
+        returns (uint256)
+    {
         return _balances[account];
     }
 
