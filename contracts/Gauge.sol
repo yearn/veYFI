@@ -200,7 +200,7 @@ contract Gauge is IGauge {
     }
 
     /**
-     *  @return timestamp untill rewards are distributed
+     *  @return timestamp until rewards are distributed
      */
     function lastTimeRewardApplicable() public view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);

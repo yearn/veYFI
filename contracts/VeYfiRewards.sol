@@ -6,6 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IVotingEscrow.sol";
 
+/** @title VeYfiRewards
+    @notice Gauge like contract that simulate veYFI stake. 
+ */
+
 contract VeYfiRewards {
     using SafeERC20 for IERC20;
 
@@ -37,14 +41,6 @@ contract VeYfiRewards {
         gov = _gov;
     }
 
-    function totalSupply() public view returns (uint256) {
-        return veToken.totalSupply();
-    }
-
-    function balanceOf(address account) public view returns (uint256) {
-        return veToken.balanceOf(account);
-    }
-
     modifier _updateReward(address account) {
         rewardPerTokenStored = rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
@@ -56,12 +52,19 @@ contract VeYfiRewards {
         _;
     }
 
+    /**
+     *  @return timestamp until rewards are distributed
+     */
     function lastTimeRewardApplicable() public view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
+    /** @notice reward per token deposited
+     *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
+     *  @return rewardPerToken
+     */
     function rewardPerToken() public view returns (uint256) {
-        uint256 supply = totalSupply();
+        uint256 supply = veToken.totalSupply();
         if (supply == 0) {
             return rewardPerTokenStored;
         }
@@ -74,16 +77,23 @@ contract VeYfiRewards {
 
     function _earnedReward(address account) internal view returns (uint256) {
         return
-            (balanceOf(account) *
+            (veToken.balanceOf(account) *
                 (rewardPerToken() - userRewardPerTokenPaid[account])) /
             1e18 +
             rewards[account];
     }
 
+    /** @notice earning for an account
+     *  @return amount of tokens earned
+     */
     function earned(address account) external view returns (uint256) {
         return _earnedReward(account);
     }
 
+    /** @notice use to update rewards on veYFI balance changes.
+        @dev called by veYFI
+     *  @return true
+     */
     function updateReward(address _account)
         external
         _updateReward(_account)
@@ -94,10 +104,42 @@ contract VeYfiRewards {
         return true;
     }
 
-    function getReward(address _account, bool _lock)
-        public
+    /**
+     * @notice
+     *  Get rewards for an account
+     * @dev rewards are transfer to _account
+     * @param account to claim reards for
+     * @return true
+     */
+    function getRewardFor(address account) external returns (bool) {
+        _getReward(account, false);
+        return true;
+    }
+
+    /**
+     * @notice
+     *  Get rewards
+     * @param _lock should it lock rewards into veYFI
+     * @return true
+     */
+    function getReward(bool _lock) external returns (bool) {
+        _getReward(msg.sender, _lock);
+        return true;
+    }
+
+    /**
+     * @notice
+     *  Get rewards
+     * @return true
+     */
+    function getReward() external returns (bool) {
+        _getReward(msg.sender, false);
+        return true;
+    }
+
+    function _getReward(address _account, bool _lock)
+        internal
         _updateReward(_account)
-        returns (bool)
     {
         uint256 reward = rewards[_account];
         rewards[_account] = 0;
@@ -109,14 +151,15 @@ contract VeYfiRewards {
         }
 
         emit RewardPaid(_account, reward);
-        return true;
     }
 
-    function getReward(bool _stake) external returns (bool) {
-        getReward(msg.sender, _stake);
-        return true;
-    }
-
+    /**
+     * @notice
+     *  Donate tokens to distribute as rewards
+     * @dev Do not trigger rewardRate recalculation
+     * @param _amount token to donate
+     * @return true
+     */
     function donate(uint256 _amount) external returns (bool) {
         require(_amount != 0, "==0");
         IERC20(rewardToken).safeTransferFrom(
@@ -128,6 +171,13 @@ contract VeYfiRewards {
         return true;
     }
 
+    /**
+     * @notice
+     * Add new rewards to be distributed over a week
+     * @dev Triger rewardRate recalculation using _amount and queuedRewards
+     * @param _amount token to add to rewards
+     * @return true
+     */
     function queueNewRewards(uint256 _amount) external returns (bool) {
         require(_amount != 0, "==0");
         IERC20(rewardToken).safeTransferFrom(
@@ -162,15 +212,23 @@ contract VeYfiRewards {
         emit RewardAdded(reward);
     }
 
-    function setGov(address _gov) external {
+    /**
+     * @notice
+     * set gov
+     * @dev Can be called by gov
+     * @param _gov new gov
+     * @return true
+     */
+    function setGov(address _gov) external returns (bool) {
         require(msg.sender == gov, "!authorized");
 
         require(_gov != address(0), "0 address");
         gov = _gov;
         emit UpdatedGov(_gov);
+        return true;
     }
 
-    function sweep(address _token) external {
+    function sweep(address _token) external returns (bool) {
         require(msg.sender == gov, "!authorized");
         require(_token != address(rewardToken), "!rewardToken");
 
@@ -179,5 +237,6 @@ contract VeYfiRewards {
             gov,
             IERC20(_token).balanceOf(address(this))
         );
+        return true;
     }
 }
