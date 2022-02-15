@@ -88,7 +88,7 @@ contract Gauge is IGauge {
         address rewardManager_,
         address ve_,
         address veYfiRewardPool_
-    ) public {
+    ) external {
         assert(address(rewardToken) == address(0x0));
         stakingToken = IERC20(stakingToken_);
         rewardToken = IERC20(rewardToken_);
@@ -108,7 +108,7 @@ contract Gauge is IGauge {
     /** @param account to look bakance for
      *  @return amount of staked token for an account
      */
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) external view override returns (uint256) {
         return _balances[account];
     }
 
@@ -205,7 +205,7 @@ contract Gauge is IGauge {
      *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
      *  @return rewardPerToken
      */
-    function rewardPerToken() public view returns (uint256) {
+    function rewardPerToken() external view returns (uint256) {
         return _rewardPerToken();
     }
 
@@ -224,7 +224,7 @@ contract Gauge is IGauge {
      *  @dev earning are based on lock duration and boost
      *  @return amount of tokens earned
      */
-    function earned(address account) public view returns (uint256) {
+    function earned(address account) external view returns (uint256) {
         uint256 newEarning = _newEarning(account);
 
         return

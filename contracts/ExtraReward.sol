@@ -39,7 +39,7 @@ contract ExtraReward is IExtraReward {
     @param gauge_ the associated Gauge address
     @param reward_ the reward token to be ditributed
     */
-    function initialize(address gauge_, address reward_) public {
+    function initialize(address gauge_, address reward_) external {
         assert(address(gauge) == address(0x0));
         gauge = IGauge(gauge_);
         rewardToken = IERC20(reward_);
@@ -65,7 +65,7 @@ contract ExtraReward is IExtraReward {
     @notice The Gauge boosted balance of an account
     @return boosted balance of an account
     */
-    function boostedBalanceOf(address account) public view returns (uint256) {
+    function boostedBalanceOf(address account) external view returns (uint256) {
         return gauge.boostedBalanceOf(account);
     }
 
@@ -101,7 +101,7 @@ contract ExtraReward is IExtraReward {
      *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
      *  @return rewardPerToken
      */
-    function rewardPerToken() public view returns (uint256) {
+    function rewardPerToken() external view returns (uint256) {
         return _rewardPerToken();
     }
 
@@ -132,7 +132,7 @@ contract ExtraReward is IExtraReward {
      *  @dev earning are based on lock duration and boost
      *  @return amount of tokens earned
      */
-    function earned(address account) public view returns (uint256) {
+    function earned(address account) external view returns (uint256) {
         return _newEarning(account);
     }
 
