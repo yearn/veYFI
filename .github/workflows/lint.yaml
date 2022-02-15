@@ -43,7 +43,7 @@ jobs:
         run: yarn format:check
 
       - name: run linter check on *.sol file
-        run: yarn hint
+        run: yarn lint
   
     commits:
       runs-on: ubuntu-latest
@@ -81,12 +81,12 @@ jobs:
         with:
           path: |
             ${{ steps.pip-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
+            ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
             ${{ runner.os }}-pip-
       - name: Install python dependencies
-        run: pip install -r requirements-dev.txt
+        run: pip install -r requirements.txt
 
       - name: Run black
         run: black --check --include "(tests|scripts)" .

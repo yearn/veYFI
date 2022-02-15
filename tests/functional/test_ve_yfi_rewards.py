@@ -8,7 +8,7 @@ import brownie
 def test_ve_yfi_distribution(yfi, ve_yfi, whale, whale_amount, ve_yfi_rewards, gov):
     yfi.approve(ve_yfi, whale_amount, {"from": whale})
     ve_yfi.create_lock(whale_amount, chain.time() + 3600 * 24 * 365, {"from": whale})
-    rewards = 10 ** 18
+    rewards = 10**18
     yfi.mint(gov, rewards)
     yfi.approve(ve_yfi_rewards, rewards)
     ve_yfi_rewards.queueNewRewards(rewards, {"from": gov})
@@ -26,7 +26,7 @@ def test_ve_yfi_distribution_relock(
 ):
     yfi.approve(ve_yfi, whale_amount, {"from": whale})
     ve_yfi.create_lock(whale_amount, chain.time() + 3600 * 24 * 365, {"from": whale})
-    rewards = 10 ** 18
+    rewards = 10**18
     yfi.mint(gov, rewards)
     yfi.approve(ve_yfi_rewards, rewards)
     ve_yfi_rewards.queueNewRewards(rewards, {"from": gov})
@@ -43,10 +43,10 @@ def test_sweep(yfi, ve_yfi, ve_yfi_rewards, create_token, whale, whale_amount, g
     yfi.approve(ve_yfi, whale_amount, {"from": whale})
     ve_yfi.create_lock(whale_amount, chain.time() + 3600 * 24 * 365, {"from": whale})
     yfo = create_token("YFO")
-    yfo.mint(ve_yfi_rewards, 10 ** 18)
+    yfo.mint(ve_yfi_rewards, 10**18)
     with brownie.reverts("!authorized"):
         ve_yfi_rewards.sweep(yfo, {"from": whale})
     with brownie.reverts("!rewardToken"):
         ve_yfi_rewards.sweep(yfi, {"from": gov})
     ve_yfi_rewards.sweep(yfo, {"from": gov})
-    assert yfo.balanceOf(gov) == 10 ** 18
+    assert yfo.balanceOf(gov) == 10**18

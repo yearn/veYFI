@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/panda/Repository/yearn-tokenomics/contracts/ExtraReward.sol": {
-      "lastModificationDate": 1644850274000,
-      "contentHash": "cf8a6f84d70501ef9be3e4b151ec1694",
+      "lastModificationDate": 1644928057442,
+      "contentHash": "8e2d4494a14fef41dfaf7b8d4fb909d6",
       "sourceName": "contracts/ExtraReward.sol",
       "solcConfig": {
         "version": "0.8.11",
@@ -186,8 +186,8 @@
       ]
     },
     "/Users/panda/Repository/yearn-tokenomics/contracts/interfaces/IExtraReward.sol": {
-      "lastModificationDate": 1644850274002,
-      "contentHash": "5bd120ebe4bca8f2cbd0ff49945b676a",
+      "lastModificationDate": 1644872626149,
+      "contentHash": "af0c3235d746c84393df1bb29d4e45d8",
       "sourceName": "contracts/interfaces/IExtraReward.sol",
       "solcConfig": {
         "version": "0.8.11",
@@ -212,7 +212,9 @@
           }
         }
       },
-      "imports": [],
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol"
+      ],
       "versionPragmas": [
         "0.8.11"
       ],
@@ -256,8 +258,8 @@
       ]
     },
     "/Users/panda/Repository/yearn-tokenomics/contracts/GaugeFactory.sol": {
-      "lastModificationDate": 1644401320034,
-      "contentHash": "4a638f72f5a86b5187f9f5b6e6dcc738",
+      "lastModificationDate": 1644928057443,
+      "contentHash": "e27de4caae96b55e3d3e0e2a26deb3c8",
       "sourceName": "contracts/GaugeFactory.sol",
       "solcConfig": {
         "version": "0.8.11",
@@ -287,7 +289,9 @@
         "./interfaces/IExtraReward.sol",
         "./interfaces/IGaugeFactory.sol"
       ],
-      "versionPragmas": [],
+      "versionPragmas": [
+        "0.8.11"
+      ],
       "artifacts": [
         "GaugeFactory"
       ]
@@ -328,8 +332,8 @@
       ]
     },
     "/Users/panda/Repository/yearn-tokenomics/contracts/Voter.sol": {
-      "lastModificationDate": 1644835873826,
-      "contentHash": "c8ce92db3c2cb20ee78c0e76b7ab07ac",
+      "lastModificationDate": 1644928057443,
+      "contentHash": "0476439e6bbbed134e0cdf2a2272fbec",
       "sourceName": "contracts/Voter.sol",
       "solcConfig": {
         "version": "0.8.11",
@@ -403,8 +407,8 @@
       ]
     },
     "/Users/panda/Repository/yearn-tokenomics/contracts/VeYfiRewards.sol": {
-      "lastModificationDate": 1644401320034,
-      "contentHash": "3994a29853a2cf771cf9ccebf0a3f93b",
+      "lastModificationDate": 1644928057443,
+      "contentHash": "2fe159e1bb0ac4bb55a48de7b7f7adbc",
       "sourceName": "contracts/VeYfiRewards.sol",
       "solcConfig": {
         "version": "0.8.11",
@@ -443,8 +447,8 @@
       ]
     },
     "/Users/panda/Repository/yearn-tokenomics/contracts/Gauge.sol": {
-      "lastModificationDate": 1644850274001,
-      "contentHash": "f2884f17de146e6049e5ea3fee5fca32",
+      "lastModificationDate": 1644928395350,
+      "contentHash": "e0261c95a6b8ba3650145c89397c84a8",
       "sourceName": "contracts/Gauge.sol",
       "solcConfig": {
         "version": "0.8.11",
@@ -470,7 +474,7 @@
         }
       },
       "imports": [
-        "./interfaces/IVirtualBalanceRewardPool.sol",
+        "./interfaces/IExtraReward.sol",
         "@openzeppelin/contracts/token/ERC20/IERC20.sol",
         "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
         "@openzeppelin/contracts/utils/math/Math.sol",
@@ -483,43 +487,6 @@
       ],
       "artifacts": [
         "Gauge"
-      ]
-    },
-    "/Users/panda/Repository/yearn-tokenomics/contracts/interfaces/IVirtualBalanceRewardPool.sol": {
-      "lastModificationDate": 1644850274003,
-      "contentHash": "2c511a0bc991507909c96110f3901cad",
-      "sourceName": "contracts/interfaces/IVirtualBalanceRewardPool.sol",
-      "solcConfig": {
-        "version": "0.8.11",
-        "settings": {
-          "optimizer": {
-            "enabled": false,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "@openzeppelin/contracts/token/ERC20/IERC20.sol"
-      ],
-      "versionPragmas": [
-        "0.8.11"
-      ],
-      "artifacts": [
-        "IVirtualBalanceRewardPool"
       ]
     },
     "/Users/panda/Repository/yearn-tokenomics/contracts/interfaces/IVeYfiRewardPool.sol": {
@@ -741,37 +708,6 @@
       "artifacts": [
         "Token"
       ]
-    },
-    "/Users/panda/Repository/yearn-tokenomics/contracts/Registry.sol": {
-      "lastModificationDate": 1644329987294,
-      "contentHash": "d41d8cd98f00b204e9800998ecf8427e",
-      "sourceName": "contracts/Registry.sol",
-      "solcConfig": {
-        "version": "0.8.11",
-        "settings": {
-          "optimizer": {
-            "enabled": false,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [],
-      "artifacts": []
     }
   }
 }

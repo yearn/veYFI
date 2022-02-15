@@ -10,7 +10,7 @@ def gov(accounts):
 
 @pytest.fixture
 def whale_amount():
-    yield 10 ** 22
+    yield 10**22
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def whale(accounts, yfi, whale_amount):
 
 @pytest.fixture
 def shark_amount():
-    yield 10 ** 20
+    yield 10**20
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def shark(accounts, yfi, shark_amount):
 
 @pytest.fixture
 def fish_amount():
-    yield 10 ** 18
+    yield 10**18
 
 
 @pytest.fixture

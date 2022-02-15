@@ -253,7 +253,11 @@ contract Gauge is IGauge {
         return _boostedBalanceOf(account);
     }
 
-    function _boostedBalanceOf(address account) internal view returns (uint256) {
+    function _boostedBalanceOf(address account)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 veTotalSupply = IVotingEscrow(veToken).totalSupply();
         if (veTotalSupply == 0) return _balances[account];
 

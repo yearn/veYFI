@@ -257,7 +257,7 @@ TOL = 120 / WEEK
 
 def test_early_exit(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
     alice, bob = accounts[:2]
-    amount = 1000 * 10 ** 18
+    amount = 1000 * 10**18
     yfi.mint(bob, amount, {"from": bob})
     yfi.mint(alice, amount, {"from": alice})
 

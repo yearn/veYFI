@@ -33,10 +33,10 @@ def test_donate(create_vault, create_gauge, yfi, whale):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    yfi.approve(gauge, 10 ** 18, {"from": whale})
-    gauge.donate(10 ** 18, {"from": whale})
+    yfi.approve(gauge, 10**18, {"from": whale})
+    gauge.donate(10**18, {"from": whale})
 
-    assert gauge.queuedRewards() == 10 ** 18
+    assert gauge.queuedRewards() == 10**18
 
 
 def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
@@ -44,7 +44,7 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
     yfo = create_token("YFO")
-    yfo.mint(gauge, 10 ** 18)
+    yfo.mint(gauge, 10**18)
     with brownie.reverts("!authorized"):
         gauge.sweep(yfo, {"from": whale})
     with brownie.reverts("!rewardToken"):
@@ -52,4 +52,4 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     with brownie.reverts("!stakingToken"):
         gauge.sweep(vault, {"from": gov})
     gauge.sweep(yfo, {"from": gov})
-    assert yfo.balanceOf(gov) == 10 ** 18
+    assert yfo.balanceOf(gov) == 10**18

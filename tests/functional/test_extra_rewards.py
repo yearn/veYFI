@@ -21,7 +21,7 @@ def test_extra_rewards_full_boost(
     )
     assert yfi.balanceOf(whale) == 0
 
-    lp_amount = 10 ** 18
+    lp_amount = 10**18
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
@@ -31,9 +31,9 @@ def test_extra_rewards_full_boost(
     extra_reward = ExtraReward.at(tx.events["ExtraRewardCreated"]["extraReward"])
     gauge.addExtraReward(extra_reward, {"from": gov})
 
-    yfo.mint(gov, 10 ** 18)
-    yfo.approve(extra_reward, 10 ** 18)
-    extra_reward.queueNewRewards(10 ** 18, {"from": gov})
+    yfo.mint(gov, 10**18)
+    yfo.approve(extra_reward, 10**18)
+    extra_reward.queueNewRewards(10**18, {"from": gov})
 
     vault.mint(whale, lp_amount)
     vault.approve(gauge, lp_amount, {"from": whale})
@@ -41,11 +41,11 @@ def test_extra_rewards_full_boost(
     assert extra_reward.balanceOf(whale) == lp_amount
     chain.sleep(3600)
     extra_reward.getReward({"from": whale})
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10 ** 18 / 7 / 24
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24
 
     chain.sleep(3600)
     gauge.getReward({"from": whale})
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10 ** 18 / 7 / 12
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12
 
 
 def test_extra_rewards_no_boost(
@@ -69,7 +69,7 @@ def test_extra_rewards_no_boost(
     ve_yfi.create_lock(1, chain.time() + 4 * 3600 * 24 * 365, {"from": whale})
     assert yfi.balanceOf(whale) == 0
 
-    lp_amount = 10 ** 18
+    lp_amount = 10**18
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
@@ -79,9 +79,9 @@ def test_extra_rewards_no_boost(
     extra_reward = ExtraReward.at(tx.events["ExtraRewardCreated"]["extraReward"])
     gauge.addExtraReward(extra_reward, {"from": gov})
 
-    yfo.mint(gov, 10 ** 18)
-    yfo.approve(extra_reward, 10 ** 18)
-    extra_reward.queueNewRewards(10 ** 18, {"from": gov})
+    yfo.mint(gov, 10**18)
+    yfo.approve(extra_reward, 10**18)
+    extra_reward.queueNewRewards(10**18, {"from": gov})
 
     vault.mint(whale, lp_amount)
     vault.approve(gauge, lp_amount, {"from": whale})
@@ -89,8 +89,8 @@ def test_extra_rewards_no_boost(
     assert extra_reward.balanceOf(whale) == lp_amount
     chain.sleep(3600)
     extra_reward.getReward({"from": whale})
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10 ** 18 / 7 / 24 * 0.4
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24 * 0.4
 
     chain.sleep(3600)
     gauge.getReward({"from": whale})
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10 ** 18 / 7 / 12 * 0.4
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12 * 0.4

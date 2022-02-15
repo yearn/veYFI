@@ -13,7 +13,7 @@ def test_gauge_yfi_distribution_full_rewards(
     )
     assert yfi.balanceOf(whale) == 0
 
-    lp_amount = 10 ** 18
+    lp_amount = 10**18
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
@@ -26,7 +26,7 @@ def test_gauge_yfi_distribution_full_rewards(
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
 
-    yfi_to_distribute = 10 ** 16
+    yfi_to_distribute = 10**16
     yfi.mint(gov, yfi_to_distribute)
     yfi.approve(gauge, yfi_to_distribute, {"from": gov})
 
@@ -54,7 +54,7 @@ def test_gauge_yfi_distribution_no_boost(
     yfi.approve(ve_yfi, 1, {"from": whale})
     ve_yfi.create_lock(1, chain.time() + 4 * 3600 * 24 * 365, {"from": whale})
 
-    lp_amount = 10 ** 18
+    lp_amount = 10**18
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
@@ -67,7 +67,7 @@ def test_gauge_yfi_distribution_no_boost(
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
 
-    yfi_to_distribute = 10 ** 16
+    yfi_to_distribute = 10**16
     yfi.mint(gov, yfi_to_distribute)
     yfi.approve(gauge, yfi_to_distribute, {"from": gov})
 
@@ -94,7 +94,7 @@ def test_gauge_yfi_distribution_no_lock_no_rewards(
     ve_yfi.create_lock(
         whale_amount, chain.time() + 4 * 3600 * 24 * 365, {"from": whale}
     )
-    lp_amount = 10 ** 18
+    lp_amount = 10**18
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
@@ -107,7 +107,7 @@ def test_gauge_yfi_distribution_no_lock_no_rewards(
     vault.approve(gauge, lp_amount, {"from": panda})
     gauge.deposit({"from": panda})
 
-    yfi_to_distribute = 10 ** 16
+    yfi_to_distribute = 10**16
     yfi.mint(gov, yfi_to_distribute)
     yfi.approve(gauge, yfi_to_distribute, {"from": gov})
 
@@ -137,7 +137,7 @@ def test_gauge_yfi_distribution_max_boost_only_two_years_lock(
     )
     assert yfi.balanceOf(whale) == 0
 
-    lp_amount = 10 ** 18
+    lp_amount = 10**18
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
@@ -150,7 +150,7 @@ def test_gauge_yfi_distribution_max_boost_only_two_years_lock(
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
 
-    yfi_to_distribute = 10 ** 16
+    yfi_to_distribute = 10**16
     yfi.mint(gov, yfi_to_distribute)
     yfi.approve(gauge, yfi_to_distribute, {"from": gov})
 
@@ -179,7 +179,7 @@ def test_gauge_get_reward_for(
     )
     assert yfi.balanceOf(whale) == 0
 
-    lp_amount = 10 ** 18
+    lp_amount = 10**18
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
@@ -192,7 +192,7 @@ def test_gauge_get_reward_for(
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
 
-    yfi_to_distribute = 10 ** 16
+    yfi_to_distribute = 10**16
     yfi.mint(gov, yfi_to_distribute)
     yfi.approve(gauge, yfi_to_distribute, {"from": gov})
 
@@ -217,7 +217,7 @@ def test_deposit_for(
     )
     assert yfi.balanceOf(whale) == 0
 
-    lp_amount = 10 ** 18
+    lp_amount = 10**18
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
@@ -230,7 +230,7 @@ def test_deposit_for(
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
 
-    yfi_to_distribute = 10 ** 16
+    yfi_to_distribute = 10**16
     yfi.mint(gov, yfi_to_distribute)
     yfi.approve(gauge, yfi_to_distribute, {"from": gov})
 
@@ -253,7 +253,7 @@ def test_withdraw(yfi, ve_yfi, whale, whale_amount, create_vault, create_gauge, 
     )
     assert yfi.balanceOf(whale) == 0
 
-    lp_amount = 10 ** 18
+    lp_amount = 10**18
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
@@ -266,7 +266,7 @@ def test_withdraw(yfi, ve_yfi, whale, whale_amount, create_vault, create_gauge, 
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
 
-    yfi_to_distribute = 10 ** 16
+    yfi_to_distribute = 10**16
     yfi.mint(gov, yfi_to_distribute)
     yfi.approve(gauge, yfi_to_distribute, {"from": gov})
 
