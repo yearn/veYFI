@@ -38,7 +38,6 @@ def test_extra_rewards_full_boost(
     vault.mint(whale, lp_amount)
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
-    assert extra_reward.balanceOf(whale) == lp_amount
     chain.sleep(3600)
     extra_reward.getReward({"from": whale})
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24
@@ -86,7 +85,6 @@ def test_extra_rewards_no_boost(
     vault.mint(whale, lp_amount)
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
-    assert extra_reward.balanceOf(whale) == lp_amount
     chain.sleep(3600)
     extra_reward.getReward({"from": whale})
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24 * 0.4

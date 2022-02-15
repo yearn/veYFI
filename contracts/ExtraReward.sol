@@ -45,30 +45,6 @@ contract ExtraReward is IExtraReward {
         rewardToken = IERC20(reward_);
     }
 
-    /**
-    @notice The Gauge total supply
-    @return total supply
-    */
-    function totalSupply() public view returns (uint256) {
-        return gauge.totalSupply();
-    }
-
-    /**
-    @notice The Gauge balance of an account
-    @return balance of an account
-    */
-    function balanceOf(address account) public view returns (uint256) {
-        return gauge.balanceOf(account);
-    }
-
-    /**
-    @notice The Gauge boosted balance of an account
-    @return boosted balance of an account
-    */
-    function boostedBalanceOf(address account) external view returns (uint256) {
-        return gauge.boostedBalanceOf(account);
-    }
-
     modifier updateReward(address account) {
         _updateReward(account);
         _;
@@ -106,14 +82,14 @@ contract ExtraReward is IExtraReward {
     }
 
     function _rewardPerToken() internal view returns (uint256) {
-        if (totalSupply() == 0) {
+        if (gauge.totalSupply() == 0) {
             return rewardPerTokenStored;
         }
         return
             rewardPerTokenStored +
             (((lastTimeRewardApplicable() - lastUpdateTime) *
                 rewardRate *
-                1e18) / totalSupply());
+                1e18) / gauge.totalSupply());
     }
 
     function _newEarning(address account) internal view returns (uint256) {
@@ -124,7 +100,7 @@ contract ExtraReward is IExtraReward {
 
     function _maxEarning(address account) internal view returns (uint256) {
         return
-            (balanceOf(account) *
+            (gauge.boostedBalanceOf(account) *
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
