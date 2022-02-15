@@ -133,11 +133,12 @@ contract Voter {
         address[] calldata _vaultVote,
         uint256[] calldata _weights
     ) external {
-        require(_vaultVote.length == _weights.length);
+        require(_vaultVote.length == _weights.length, "!=length");
         for (uint256 i = 0; i < _accounts.length; i++) {
             require(
                 _accounts[i] == msg.sender ||
-                    delegation[_accounts[i]] == msg.sender
+                    delegation[_accounts[i]] == msg.sender,
+                "!authorized"
             );
             _vote(_accounts[i], _vaultVote, _weights);
         }
@@ -146,14 +147,14 @@ contract Voter {
     function vote(address[] calldata _vaultVote, uint256[] calldata _weights)
         external
     {
-        require(_vaultVote.length == _weights.length);
+        require(_vaultVote.length == _weights.length, "!=length");
         _vote(msg.sender, _vaultVote, _weights);
     }
 
     function setGov(address _gov) external {
         require(msg.sender == gov, "!authorized");
 
-        require(_gov != address(0));
+        require(_gov != address(0), "0 address");
         gov = _gov;
         emit UpdatedGov(_gov);
     }

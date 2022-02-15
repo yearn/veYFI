@@ -13,12 +13,6 @@
     "scripts": {
         "format": "prettier --write 'contracts/**/*.(sol|json)' --verbose",
         "format:check": "prettier --check 'contracts/**/*.*(sol|json)'",
-        "hint": "solhint 'contracts/**/*.sol'"
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "yarn lint:fix",
-            "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-        }
+        "lint": "solhint 'contracts/**/*.sol'"
     }
 }

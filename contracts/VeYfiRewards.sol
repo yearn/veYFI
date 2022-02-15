@@ -118,7 +118,7 @@ contract VeYfiRewards {
     }
 
     function donate(uint256 _amount) external returns (bool) {
-        require(_amount != 0);
+        require(_amount != 0, "==0");
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
@@ -129,7 +129,7 @@ contract VeYfiRewards {
     }
 
     function queueNewRewards(uint256 _amount) external returns (bool) {
-        require(_amount != 0, "zero");
+        require(_amount != 0, "==0");
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
@@ -165,7 +165,7 @@ contract VeYfiRewards {
     function setGov(address _gov) external {
         require(msg.sender == gov, "!authorized");
 
-        require(_gov != address(0));
+        require(_gov != address(0), "0 address");
         gov = _gov;
         emit UpdatedGov(_gov);
     }

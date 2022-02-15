@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
+pragma solidity 0.8.11;
+
 import "./interfaces/IGauge.sol";
 import "./interfaces/IExtraReward.sol";
 import "./interfaces/IGaugeFactory.sol";
 
 contract GaugeFactory is IGaugeFactory {
-    address deployedGauge; // immutable
-    address deployedExtra;
+    address public immutable deployedGauge;
+    address public immutable deployedExtra;
 
     event GaugeCreated(address gauge);
     event ExtraRewardCreated(address extraReward);

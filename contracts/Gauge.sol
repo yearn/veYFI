@@ -28,10 +28,10 @@ contract Gauge is IGauge {
     //// @notice rewards are distributed during 7 days when queued.
     uint256 public constant DURATION = 7 days;
     //// @notice a copy of the veYFI max lock duration
-    uint256 constant MAX_LOCK = 4 * 365 * 86400;
-    uint256 constant PRECISON_FACTOR = 10**6;
+    uint256 public constant MAX_LOCK = 4 * 365 * 86400;
+    uint256 public constant PRECISON_FACTOR = 10**6;
     //// @notice Penalty do not apply for locks expiring after 3y11m
-    uint256 constant GRACE_PERIOD = 30 days;
+    uint256 public constant GRACE_PERIOD = 30 days;
 
     //// @notice gov can sweep token airdrop
     address public gov;
@@ -68,7 +68,7 @@ contract Gauge is IGauge {
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
     event AddedExtraReward(address reward);
-    event deletedExtraRewards();
+    event DeletedExtraRewards();
     event UpdatedRewardManager(address rewardManaager);
     event UpdatedGov(address gov);
 
@@ -136,7 +136,7 @@ contract Gauge is IGauge {
      */
     function clearExtraRewards() external {
         require(msg.sender == rewardManager, "!authorized");
-        emit deletedExtraRewards();
+        emit DeletedExtraRewards();
         delete extraRewards;
     }
 
@@ -253,7 +253,7 @@ contract Gauge is IGauge {
         return _boostedBalanceOf(account);
     }
 
-    function _boostedBalanceOf(address account) public view returns (uint256) {
+    function _boostedBalanceOf(address account) internal view returns (uint256) {
         uint256 veTotalSupply = IVotingEscrow(veToken).totalSupply();
         if (veTotalSupply == 0) return _balances[account];
 
@@ -492,7 +492,7 @@ contract Gauge is IGauge {
      */
 
     function donate(uint256 _amount) external returns (bool) {
-        require(_amount != 0);
+        require(_amount != 0, "==0");
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
@@ -510,7 +510,7 @@ contract Gauge is IGauge {
      * @return true
      */
     function queueNewRewards(uint256 _amount) external returns (bool) {
-        require(_amount != 0);
+        require(_amount != 0, "==0");
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
@@ -570,7 +570,7 @@ contract Gauge is IGauge {
             "!authorized"
         );
 
-        require(_rewardManager != address(0));
+        require(_rewardManager != address(0), "already set");
         rewardManager = _rewardManager;
         emit UpdatedRewardManager(rewardManager);
         return true;
@@ -587,7 +587,7 @@ contract Gauge is IGauge {
     function setGov(address _gov) external returns (bool) {
         require(msg.sender == gov, "!authorized");
 
-        require(_gov != address(0));
+        require(_gov != address(0), "already set");
         gov = _gov;
         emit UpdatedGov(_gov);
         return true;
