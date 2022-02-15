@@ -4,6 +4,10 @@ import "./interfaces/IVotingEscrow.sol";
 
 import "./interfaces/IGaugeFactory.sol";
 
+/** @title Voter
+    @notice veYFI holders will vote for gauge allocation to vault tokens.
+ */
+
 contract Voter {
     address public ve; // immutable // the ve token that governs these contracts
     address public yfi; // immutable // reward token
@@ -43,9 +47,16 @@ contract Voter {
         gov = msg.sender;
     }
 
+    /** 
+    @notice Reset voting power for the sender.
+    */
     function reset() external {
         _reset(msg.sender);
     }
+
+    /** 
+    @return The list of vaults with gauge that are possible to vote for.
+    */
 
     function getVaults() external view returns (address[] memory) {
         return vaults;
@@ -72,6 +83,11 @@ contract Voter {
         delete vaultVote[_account];
     }
 
+    /** 
+    @notice get the list of account that have delegated power to _account
+    @param _account account to check
+    @return The list of account addresses.
+    */
     function getDelegated(address _account)
         external
         view
@@ -80,6 +96,10 @@ contract Voter {
         return delegated[_account];
     }
 
+    /** 
+    @notice Re-compute votes for an account based on current voting power.
+    @param _account account to poke
+    */
     function poke(address _account) external {
         address[] memory _vaultVote = vaultVote[_account];
         uint256 _vaultCnt = _vaultVote.length;
@@ -128,6 +148,14 @@ contract Voter {
         usedWeights[_account] = _usedWeight;
     }
 
+    /** 
+    @notice Vote for gauges using multiple accounts that have delegated
+    @dev 100% of the power of account is used.
+    @param _accounts accounts to use for voting.
+    @param _vaultVote list of vaults to vote for
+    @param _weights list of power atributed to vaults.
+    */
+
     function vote(
         address[] calldata _accounts,
         address[] calldata _vaultVote,
@@ -144,6 +172,12 @@ contract Voter {
         }
     }
 
+    /** 
+    @notice Vote for gauges
+    @dev 100% of the power of account is used.
+    @param _vaultVote list of vaults to vote for
+    @param _weights list of power atributed to vaults.
+    */
     function vote(address[] calldata _vaultVote, uint256[] calldata _weights)
         external
     {
@@ -151,6 +185,10 @@ contract Voter {
         _vote(msg.sender, _vaultVote, _weights);
     }
 
+    /** 
+    @notice Update goverance
+    @param _gov new governance.
+    */
     function setGov(address _gov) external {
         require(msg.sender == gov, "!authorized");
 
@@ -159,6 +197,12 @@ contract Voter {
         emit UpdatedGov(_gov);
     }
 
+    /** 
+    @notice Add a vault to the list of vaults that recieves rewards.
+    @param _vault vault address
+    @param _gov governance.
+    @param _rewardManager address in charge of managing additional rewards
+    */
     function addVaultToRewards(
         address _vault,
         address _gov,
@@ -183,6 +227,10 @@ contract Voter {
         return _gauge;
     }
 
+    /** 
+    @notice Remove a vault from the list of vaults recieving rewards.
+    @param _vault vault address
+    */
     function removeVaultFromRewards(address _vault) external {
         require(msg.sender == gov, "gov");
         require(gauges[_vault] != address(0x0), "!exist");
