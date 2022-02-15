@@ -12,7 +12,7 @@ import "./interfaces/IVotingEscrow.sol";
 
 /** @title  Gauge stake vault token get YFI rewards
     @notice Deposit your vault token (one gauge per vault). 
-    YFI are paid based on the amount of vualt tokens, the veYFI balance and the duration of the lock.
+    YFI are paid based on the amount of vault tokens, the veYFI balance and the duration of the lock.
     @dev this contract is used behind multiple delegate proxies.
  */
 
