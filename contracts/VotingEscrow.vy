@@ -69,7 +69,7 @@ event ApplyOwnership:
     admin: address
 
 event Deposit:
-    _from: indexed(address)
+    deposit_from: indexed(address)
     provider: indexed(address)
     value: uint256
     locktime: indexed(uint256)
