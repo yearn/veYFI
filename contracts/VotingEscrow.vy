@@ -469,6 +469,8 @@ def force_withdraw():
     """
     @notice Withdraw all tokens for `msg.sender`
     @dev Will pay a penalty based on time.
+    With a 4 years lock on withdraw, you pay 75% penalty during the first year.
+    penalty decrease linearly to zero starting when time left is under 3 years.
     """
     _locked: LockedBalance = self.locked[msg.sender]
     assert block.timestamp < _locked.end, "lock expired"
