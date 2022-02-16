@@ -468,7 +468,7 @@ def withdraw():
 def force_withdraw():
     """
     @notice Withdraw all tokens for `msg.sender`
-    @dev Only possible if the lock has expired
+    @dev Will pay a penalty based on time.
     """
     _locked: LockedBalance = self.locked[msg.sender]
     assert block.timestamp < _locked.end, "lock expired"
