@@ -493,8 +493,9 @@ def force_withdraw():
     
     penalty: uint256 = value * penalty_ratio / MULTIPLIER
     assert ERC20(self.token).transfer(msg.sender, value - penalty)
-    assert ERC20(self.token).approve(self.reward_pool, penalty)
-    IVeYfiRewards(self.reward_pool).donate(penalty)
+    if penalty != 0:
+        assert ERC20(self.token).approve(self.reward_pool, penalty)
+        IVeYfiRewards(self.reward_pool).donate(penalty)
 
     log Withdraw(msg.sender, value, block.timestamp)
     log Supply(supply_before, supply_before - value)
