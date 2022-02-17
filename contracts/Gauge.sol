@@ -209,6 +209,8 @@ contract Gauge is IGauge {
     }
 
     function _lockingRatio(address acccount) internal view returns (uint256) {
+        if (IVotingEscrow(veToken).unlocked()) return PRECISON_FACTOR;
+
         uint256 lockedUntil = IVotingEscrow(veToken).locked__end(acccount);
         if (lockedUntil == 0) return 0;
 

@@ -230,7 +230,10 @@ contract VeYfiRewards {
 
     function sweep(address _token) external returns (bool) {
         require(msg.sender == gov, "!authorized");
-        require(_token != address(rewardToken), "!rewardToken");
+        require(
+            _token != address(rewardToken) || veToken.unlocked(),
+            "!rewardToken"
+        );
 
         SafeERC20.safeTransfer(
             IERC20(_token),

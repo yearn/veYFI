@@ -280,3 +280,48 @@ def test_withdraw(yfi, ve_yfi, whale, whale_amount, create_vault, create_gauge, 
     )
     assert gauge.queuedPenalty() == 0
     assert gauge.queuedRewards() == 0
+
+
+def test_gauge_yfi_distribution_no_more_ve_yfi(
+    yfi, ve_yfi, whale, whale_amount, create_vault, create_gauge, gov
+):
+    # we create a big lock compared to what whale will deposit so he doesn't have a boost.
+    # User should also suffer penalty since he only locked for a year but after veYFI unlocks
+    #  the boost and the penalty meachnisms are removed.
+    yfi.transfer(gov, whale_amount - 1, {"from": whale})
+    yfi.approve(ve_yfi, whale_amount - 1, {"from": gov})
+    ve_yfi.create_lock(
+        whale_amount - 1, chain.time() + 4 * 3600 * 24 * 365, {"from": gov}
+    )
+    yfi.approve(ve_yfi, 1, {"from": whale})
+    ve_yfi.create_lock(1, chain.time() + 3600 * 24 * 365, {"from": whale})
+
+    lp_amount = 10**18
+    vault = create_vault()
+    tx = create_gauge(vault)
+    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
+
+    vault.mint(whale, lp_amount)
+    vault.approve(gauge, lp_amount, {"from": whale})
+    gauge.deposit({"from": whale})
+
+    vault.mint(whale, lp_amount)
+    vault.approve(gauge, lp_amount, {"from": whale})
+    gauge.deposit({"from": whale})
+
+    yfi_to_distribute = 10**16
+    yfi.mint(gov, yfi_to_distribute)
+    yfi.approve(gauge, yfi_to_distribute, {"from": gov})
+
+    gauge.queueNewRewards(yfi_to_distribute, {"from": gov})
+    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
+    chain.sleep(3600)
+    ve_yfi.unlock()
+
+    gauge.getReward({"from": whale})
+
+    assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
+        7 * 24
+    )
+    assert gauge.queuedPenalty() == 0
+    assert gauge.queuedRewards() == 0
