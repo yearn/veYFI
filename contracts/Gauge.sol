@@ -144,7 +144,7 @@ contract Gauge is IGauge {
     function removeExtraReward(address _extraReward) external returns (bool) {
         require(msg.sender == rewardManager, "!authorized");
         uint256 index = type(uint256).max;
-        for (uint i = 0; i < extraRewards.length; i++) {
+        for (uint256 i = 0; i < extraRewards.length; i++) {
             if (extraRewards[i] == _extraReward) {
                 index = i;
                 break;

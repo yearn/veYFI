@@ -56,11 +56,7 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
 
 
 def test_remove_extra_reward(
-    create_vault,
-    create_gauge,
-    create_token,
-    create_extra_reward,
-    gov
+    create_vault, create_gauge, create_token, create_extra_reward, gov
 ):
     vault = create_vault()
     tx = create_gauge(vault)
