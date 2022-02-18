@@ -2,7 +2,7 @@ from pathlib import Path
 import brownie
 
 import pytest
-from brownie import chain, Gauge
+from brownie import chain, Gauge, ExtraReward
 
 
 def test_change_reward_manager(
@@ -53,3 +53,24 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
         gauge.sweep(vault, {"from": gov})
     gauge.sweep(yfo, {"from": gov})
     assert yfo.balanceOf(gov) == 10**18
+
+
+def test_remove_extra_reward(
+    create_vault,
+    create_gauge,
+    create_token,
+    create_extra_reward,
+    gov
+):
+    vault = create_vault()
+    tx = create_gauge(vault)
+    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
+    yfo = create_token("YFO")
+
+    tx = create_extra_reward(gauge, yfo)
+    extra_reward = ExtraReward.at(tx.events["ExtraRewardCreated"]["extraReward"])
+    gauge.addExtraReward(extra_reward, {"from": gov})
+    assert gauge.extraRewardsLength() == 1
+
+    gauge.removeExtraReward(extra_reward, {"from": gov})
+    assert gauge.extraRewardsLength() == 0
