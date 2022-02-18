@@ -11,7 +11,7 @@ import "./interfaces/IVeYfiRewardPool.sol";
 import "./interfaces/IVotingEscrow.sol";
 
 /** @title  Gauge stake vault token get YFI rewards
-    @notice Deposit your vault token (one gauge per vault). 
+    @notice Deposit your vault token (one gauge per vault).
     YFI are paid based on the amount of vault tokens, the veYFI balance and the duration of the lock.
     @dev this contract is used behind multiple delegate proxies.
  */
@@ -42,13 +42,13 @@ contract Gauge is IGauge {
     uint256 public rewardRate;
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored;
-    /** 
+    /**
     @notice that are queueud to be distributed on a `queueNewRewards` call
     @dev rewards are queeud using `donate`.
     @dev rewards are queeud when an account `_updateReward`.
     */
     uint256 public queuedRewards;
-    /** 
+    /**
     @notice penalty queued to be transfer later to veYfiRewardPool using `transferQueuedPenalty`
 \    @dev rewards are queeud when an account `_updateReward`.
     */
@@ -69,6 +69,7 @@ contract Gauge is IGauge {
     event RewardPaid(address indexed user, uint256 reward);
     event AddedExtraReward(address reward);
     event DeletedExtraRewards();
+    event RemovedExtraReward(address reward);
     event UpdatedRewardManager(address rewardManaager);
     event UpdatedGov(address gov);
 
@@ -133,6 +134,26 @@ contract Gauge is IGauge {
         require(_extraReward != address(0), "!reward setting");
         emit AddedExtraReward(_extraReward);
         extraRewards.push(_extraReward);
+        return true;
+    }
+
+    /** @notice remove extra rewards from the gauge
+     *  @dev can only be done by rewardManager
+     *  @param _extraReward the ExtraReward contract address
+     */
+    function removeExtraReward(address _extraReward) external returns (bool) {
+        require(msg.sender == rewardManager, "!authorized");
+        uint256 index = type(uint256).max;
+        for (uint256 i = 0; i < extraRewards.length; i++) {
+            if (extraRewards[i] == _extraReward) {
+                index = i;
+                break;
+            }
+        }
+        require(index <= extraRewards.length, "extra reward not found");
+        emit RemovedExtraReward(_extraReward);
+        extraRewards[index] = extraRewards[extraRewards.length - 1];
+        extraRewards.pop();
         return true;
     }
 
