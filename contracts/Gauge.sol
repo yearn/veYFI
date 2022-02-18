@@ -43,14 +43,14 @@ contract Gauge is IGauge {
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored;
     /**
-    @notice that are queueud to be distributed on a `queueNewRewards` call
-    @dev rewards are queeud using `donate`.
-    @dev rewards are queeud when an account `_updateReward`.
+    @notice that are queued to be distributed on a `queueNewRewards` call
+    @dev rewards are queued using `donate`.
+    @dev rewards are queued when an account `_updateReward`.
     */
     uint256 public queuedRewards;
     /**
     @notice penalty queued to be transfer later to veYfiRewardPool using `transferQueuedPenalty`
-\    @dev rewards are queeud when an account `_updateReward`.
+    @dev rewards are queued when an account `_updateReward`.
     */
     uint256 public queuedPenalty;
     uint256 public currentRewards;
