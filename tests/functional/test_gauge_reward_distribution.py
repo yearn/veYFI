@@ -1,7 +1,8 @@
 from pathlib import Path
+import brownie
 
 import pytest
-from brownie import chain, Gauge
+from brownie import chain, Gauge, ExtraReward
 
 
 def test_gauge_yfi_distribution_full_rewards(
@@ -209,7 +210,16 @@ def test_gauge_get_reward_for(
 
 
 def test_deposit_for(
-    yfi, ve_yfi, whale, shark, whale_amount, create_vault, create_gauge, gov
+    yfi,
+    ve_yfi,
+    whale,
+    shark,
+    whale_amount,
+    create_vault,
+    create_gauge,
+    create_token,
+    create_extra_reward,
+    gov,
 ):
     yfi.approve(ve_yfi, whale_amount, {"from": whale})
     ve_yfi.create_lock(
@@ -221,14 +231,29 @@ def test_deposit_for(
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
+    yfo = create_token("YFO")
+    tx = create_extra_reward(gauge, yfo)
+    extra_reward = ExtraReward.at(tx.events["ExtraRewardCreated"]["extraReward"])
+    gauge.addExtraReward(extra_reward, {"from": gov})
+    assert gauge.totalSupply() == 0
+
+    with brownie.reverts("RewardPool : Cannot deposit 0"):
+        gauge.depositFor(whale, 0, {"from": shark})
 
     vault.mint(shark, lp_amount)
     vault.approve(gauge, lp_amount, {"from": shark})
     gauge.depositFor(whale, lp_amount, {"from": shark})
+    assert gauge.totalSupply() == 10**18
+    assert gauge.balanceOf(whale) == 10**18
+
+    with brownie.reverts("RewardPool : Cannot deposit 0"):
+        gauge.deposit(0, {"from": whale})
 
     vault.mint(whale, lp_amount)
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
+    assert gauge.totalSupply() == 2 * 10**18
+    assert gauge.balanceOf(whale) == 2 * 10**18
 
     yfi_to_distribute = 10**16
     yfi.mint(gov, yfi_to_distribute)
