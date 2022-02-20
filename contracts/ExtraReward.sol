@@ -100,7 +100,7 @@ contract ExtraReward is IExtraReward {
 
     function _maxEarning(address account) internal view returns (uint256) {
         return
-            (gauge.boostedBalanceOf(account) *
+            (gauge.balanceOf(account) *
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
