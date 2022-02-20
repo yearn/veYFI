@@ -35,7 +35,7 @@ contract Gauge is IGauge {
 
     //// @notice gov can sweep token airdrop
     address public gov;
-    //// @notice rewardManager is in charge of adding/removing aditional rewards
+    //// @notice rewardManager is in charge of adding/removing additional rewards
     address public rewardManager;
 
     uint256 public periodFinish;
@@ -77,7 +77,7 @@ contract Gauge is IGauge {
      *  @dev Initialize called after contract is cloned.
      *  @param stakingToken_ The vault token to stake
      *  @param rewardToken_ the reward token YFI
-     *  @param gov_ goverance address
+     *  @param gov_ governance address
      *  @param rewardManager_ reward manager address
      *  @param ve_ veYFI address
      *  @param veYfiRewardPool_ veYfiRewardPool address
@@ -105,7 +105,7 @@ contract Gauge is IGauge {
         return _totalSupply;
     }
 
-    /** @param account to look bakance for
+    /** @param account to look balance for
      *  @return amount of staked token for an account
      */
     function balanceOf(address account)
@@ -184,7 +184,7 @@ contract Gauge is IGauge {
         if (account != address(0)) {
             if (_balances[account] != 0) {
                 uint256 newEarning = _newEarning(account);
-                uint256 maxEarming = _maxEarning(account);
+                uint256 maxEarning = _maxEarning(account);
 
                 uint256 penalty = ((PRECISON_FACTOR - _lockingRatio(account)) *
                     newEarning) / PRECISON_FACTOR;
@@ -193,7 +193,7 @@ contract Gauge is IGauge {
                 queuedPenalty += penalty;
 
                 // If rewards aren't boosted at max, loss rewards are queued to be redistributed to the gauge.
-                queuedRewards += (maxEarming - newEarning);
+                queuedRewards += (maxEarning - newEarning);
             }
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
         }
@@ -403,7 +403,7 @@ contract Gauge is IGauge {
 
     /** @notice withdraw all vault token from gauge
      *   @dev This call update claimable rewards
-     *   @param _claim claimm veYFI and aditional reward
+     *   @param _claim claim veYFI and additional reward
      *   @param _lock should the claimed rewards be locked in veYFI for the user
      *   @return true
      */
@@ -414,7 +414,7 @@ contract Gauge is IGauge {
 
     /** @notice withdraw all vault token from gauge
      *  @dev This call update claimable rewards
-     *  @param _claim claimm veYFI and aditional reward
+     *  @param _claim claim veYFI and additional reward
      *  @return true
      */
     function withdraw(bool _claim) external returns (bool) {
@@ -476,7 +476,7 @@ contract Gauge is IGauge {
      * @notice
      *  Get rewards for an account
      * @dev rewards are transfer to _account
-     * @param _account to claim reards for
+     * @param _account to claim rewards for
      * @param _claimExtras claim extra rewards
      * @return true
      */
@@ -626,10 +626,10 @@ contract Gauge is IGauge {
 
     /**
      * @notice
-     * sweep airdroped token
+     * sweep airdropped token
      * @dev Can't sweep vault tokens nor reward token
-     * @dev token are sweep to giv
-     * @param _token token to sweeo
+     * @dev token are sweep to gov
+     * @param _token token to sweep
      * @return true
      */
     function sweep(address _token) external returns (bool) {

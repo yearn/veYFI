@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IVotingEscrow.sol";
 
 /** @title VeYfiRewards
-    @notice Gauge like contract that simulate veYFI stake. 
+    @notice Gauge like contract that simulate veYFI stake.
  */
 
 contract VeYfiRewards {
@@ -108,7 +108,7 @@ contract VeYfiRewards {
      * @notice
      *  Get rewards for an account
      * @dev rewards are transfer to _account
-     * @param account to claim reards for
+     * @param account to claim rewards for
      * @return true
      */
     function getRewardFor(address account) external returns (bool) {
@@ -174,7 +174,7 @@ contract VeYfiRewards {
     /**
      * @notice
      * Add new rewards to be distributed over a week
-     * @dev Triger rewardRate recalculation using _amount and queuedRewards
+     * @dev Trigger rewardRate recalculation using _amount and queuedRewards
      * @param _amount token to add to rewards
      * @return true
      */

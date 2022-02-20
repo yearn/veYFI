@@ -9,7 +9,7 @@ import "./interfaces/IExtraReward.sol";
 
 /** @title Extra Rewards for a Gauge
     @notice An ExtraReward is associated with a gauge and a token.
-    Balances are managed by the associated Gauge. Gauge will 
+    Balances are managed by the associated Gauge. Gauge will
     @dev this contract is used behind multiple delegate proxies.
  */
 contract ExtraReward is IExtraReward {
@@ -37,7 +37,7 @@ contract ExtraReward is IExtraReward {
     /**
     @notice Initialize the contract after a clone.
     @param gauge_ the associated Gauge address
-    @param reward_ the reward token to be ditributed
+    @param reward_ the reward token to be distributed
     */
     function initialize(address gauge_, address reward_) external {
         assert(address(gauge) == address(0x0));
@@ -55,19 +55,19 @@ contract ExtraReward is IExtraReward {
         lastUpdateTime = lastTimeRewardApplicable();
         if (account != address(0)) {
             uint256 newEarning = _newEarning(account);
-            uint256 maxEarming = _maxEarning(account);
+            uint256 maxEarning = _maxEarning(account);
 
             rewards[account] += newEarning;
 
             // If rewards aren't boosted at max, loss rewards are queued to be redistributed to the gauge.
-            queuedRewards += (maxEarming - newEarning);
+            queuedRewards += (maxEarning - newEarning);
 
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
         }
     }
 
     /**
-     *  @return timestamp untill rewards are distributed
+     *  @return timestamp until rewards are distributed
      */
     function lastTimeRewardApplicable() public view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
@@ -114,7 +114,7 @@ contract ExtraReward is IExtraReward {
 
     /** @notice update reward for an account
      *  @dev called by the underlying gauge
-     *  @param _account to udpdate
+     *  @param _account to update
      *  @return true
      */
     function rewardCheckpoint(address _account)
@@ -173,7 +173,7 @@ contract ExtraReward is IExtraReward {
     /**
      * @notice
      * Add new rewards to be distributed over a week
-     * @dev Triger rewardRate recalculation using _amount and queuedRewards
+     * @dev Trigger rewardRate recalculation using _amount and queuedRewards
      * @param _amount token to add to rewards
      * @return true
      */
