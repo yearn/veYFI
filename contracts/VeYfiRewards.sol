@@ -143,6 +143,8 @@ contract VeYfiRewards {
     {
         uint256 reward = rewards[_account];
         rewards[_account] = 0;
+        if (reward == 0) return;
+
         if (_lock) {
             SafeERC20.safeApprove(rewardToken, address(veToken), reward);
             veToken.deposit_for(msg.sender, reward);
