@@ -1,8 +1,5 @@
-from pathlib import Path
 import brownie
-
-import pytest
-from brownie import chain, Gauge, ExtraReward, ZERO_ADDRESS
+from brownie import Gauge, ExtraReward, ZERO_ADDRESS
 
 
 def test_set_reward_manager(create_vault, create_gauge, panda, gov):

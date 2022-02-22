@@ -1,6 +1,4 @@
-from pathlib import Path
 import brownie
-
 import pytest
 from brownie import ZERO_ADDRESS, chain, Gauge
 
@@ -61,13 +59,6 @@ def test_vote(
     assert pytest.approx(voter.weights(vault_a)) == ve_yfi.balanceOf(
         whale
     ) / 3 + ve_yfi.balanceOf(shark)
-
-
-from pathlib import Path
-import brownie
-
-import pytest
-from brownie import chain, Gauge
 
 
 def test_vote_delegation(
