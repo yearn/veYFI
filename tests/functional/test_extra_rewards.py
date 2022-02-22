@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 from brownie import chain, Gauge, ExtraReward
 
