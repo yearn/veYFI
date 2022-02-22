@@ -161,6 +161,7 @@ contract ExtraReward is IExtraReward {
      * @return true
      */
     function donate(uint256 _amount) external returns (bool) {
+        require(_amount > 0, "==0");
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
