@@ -1,6 +1,4 @@
-from pathlib import Path
 import brownie
-
 import pytest
 from brownie import chain, Gauge, ExtraReward
 
@@ -40,17 +38,13 @@ def test_extra_rewards_full_boost(
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
     chain.sleep(3600)
-    extra_reward.rewardCheckpoint(whale, {"from": gauge})
-    assert pytest.approx(extra_reward.rewardPerToken(), rel=10e-4) == 10**18 / 7 / 24
+    assert extra_reward.rewardPerToken() == 0
     assert extra_reward.queuedRewards() == 0
     extra_reward.getReward({"from": whale})
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24
 
     chain.sleep(3600)
-    extra_reward.rewardCheckpoint(whale, {"from": gauge})
-    assert (
-        pytest.approx(extra_reward.rewardPerToken(), rel=10e-4) == 2 * 10**18 / 7 / 24
-    )
+    assert pytest.approx(extra_reward.rewardPerToken(), rel=10e-4) == 10**18 / 7 / 24
     assert extra_reward.queuedRewards() == 0
     gauge.getReward({"from": whale})
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12
@@ -95,21 +89,15 @@ def test_extra_rewards_no_boost(
     vault.approve(gauge, lp_amount, {"from": whale})
     gauge.deposit({"from": whale})
     chain.sleep(3600)
-    extra_reward.rewardCheckpoint(whale, {"from": gauge})
-    assert pytest.approx(extra_reward.rewardPerToken(), rel=10e-4) == 10**18 / 7 / 24
-    # boost ~= .4 as whale lock is small compared to gov lock
-    assert pytest.approx(extra_reward.queuedRewards(), rel=10e-4) == 0.6 * (
-        10**18 / 7 / 24
-    )
+    assert extra_reward.rewardPerToken() == 0
+    assert extra_reward.queuedRewards() == 0
     extra_reward.getReward({"from": whale})
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24 * 0.4
 
     chain.sleep(3600)
-    extra_reward.rewardCheckpoint(whale, {"from": gauge})
-    assert (
-        pytest.approx(extra_reward.rewardPerToken(), rel=10e-4) == 2 * 10**18 / 7 / 24
-    )
-    assert pytest.approx(extra_reward.queuedRewards(), rel=10e-4) == 1.2 * (
+    assert pytest.approx(extra_reward.rewardPerToken(), rel=10e-4) == 10**18 / 7 / 24
+    # boost ~= .4 as whale lock is small compared to gov lock
+    assert pytest.approx(extra_reward.queuedRewards(), rel=10e-4) == 0.6 * (
         10**18 / 7 / 24
     )
     gauge.getReward({"from": whale})

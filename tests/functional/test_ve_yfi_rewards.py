@@ -1,8 +1,6 @@
-from pathlib import Path
-
+import brownie
 import pytest
 from brownie import chain
-import brownie
 
 
 def test_ve_yfi_distribution(yfi, ve_yfi, whale, whale_amount, ve_yfi_rewards, gov):
