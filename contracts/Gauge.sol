@@ -203,7 +203,7 @@ contract Gauge is IGauge {
         if (IVotingEscrow(veToken).unlocked()) return PRECISON_FACTOR;
 
         uint256 lockedUntil = IVotingEscrow(veToken).locked__end(acccount);
-        if (lockedUntil == 0) return 0;
+        if (lockedUntil == 0 || lockedUntil <= block.timestamp) return 0;
 
         uint256 timeLeft = lockedUntil - block.timestamp;
         if (MAX_LOCK - timeLeft < GRACE_PERIOD) {
