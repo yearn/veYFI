@@ -91,6 +91,13 @@ contract Gauge is IGauge {
         address _veYfiRewardPool
     ) external {
         assert(address(rewardToken) == address(0x0));
+
+        require(address(_rewardToken) != address(0x0), "zero address");
+        require(address(_stakingToken) != address(0x0), "zero address");
+        require(address(_gov) != address(0x0), "zero address");
+        require(address(_ve) != address(0x0), "zero address");
+        require(address(_veYfiRewardPool) != address(0x0), "zero address");
+
         stakingToken = IERC20(_stakingToken);
         rewardToken = IERC20(_rewardToken);
         gov = _gov;
