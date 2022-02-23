@@ -75,28 +75,28 @@ contract Gauge is IGauge {
 
     /** @notice initialize the contract
      *  @dev Initialize called after contract is cloned.
-     *  @param stakingToken_ The vault token to stake
-     *  @param rewardToken_ the reward token YFI
-     *  @param gov_ governance address
-     *  @param rewardManager_ reward manager address
-     *  @param ve_ veYFI address
-     *  @param veYfiRewardPool_ veYfiRewardPool address
+     *  @param _stakingToken The vault token to stake
+     *  @param _rewardToken the reward token YFI
+     *  @param _gov governance address
+     *  @param _rewardManager reward manager address
+     *  @param _ve veYFI address
+     *  @param _veYfiRewardPool veYfiRewardPool address
      */
     function initialize(
-        address stakingToken_,
-        address rewardToken_,
-        address gov_,
-        address rewardManager_,
-        address ve_,
-        address veYfiRewardPool_
+        address _stakingToken,
+        address _rewardToken,
+        address _gov,
+        address _rewardManager,
+        address _ve,
+        address _veYfiRewardPool
     ) external {
         assert(address(rewardToken) == address(0x0));
-        stakingToken = IERC20(stakingToken_);
-        rewardToken = IERC20(rewardToken_);
-        rewardManager = rewardManager_;
-        veToken = ve_;
-        gov = gov_;
-        veYfiRewardPool = veYfiRewardPool_;
+        stakingToken = IERC20(_stakingToken);
+        rewardToken = IERC20(_rewardToken);
+        gov = _gov;
+        veToken = _ve;
+        rewardManager = _rewardManager;
+        veYfiRewardPool = _veYfiRewardPool;
     }
 
     /** @return total of the staked vault token
