@@ -51,7 +51,7 @@ contract ExtraReward is IExtraReward {
     }
 
     function _updateReward(address account) internal {
-        rewardPerTokenStored = _rewardPerToken();
+        rewardPerTokenStored = rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
         if (account != address(0)) {
             uint256 newEarning = _newEarning(account);
@@ -77,11 +77,7 @@ contract ExtraReward is IExtraReward {
      *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
      *  @return rewardPerToken
      */
-    function rewardPerToken() external view returns (uint256) {
-        return _rewardPerToken();
-    }
-
-    function _rewardPerToken() internal view returns (uint256) {
+    function rewardPerToken() public view returns (uint256) {
         if (gauge.totalSupply() == 0) {
             return rewardPerTokenStored;
         }
@@ -95,13 +91,13 @@ contract ExtraReward is IExtraReward {
     function _newEarning(address account) internal view returns (uint256) {
         return
             (gauge.boostedBalanceOf(account) *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
+                (rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
     function _maxEarning(address account) internal view returns (uint256) {
         return
             (gauge.balanceOf(account) *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
+                (rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
     /** @notice earning for an account

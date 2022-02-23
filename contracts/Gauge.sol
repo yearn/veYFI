@@ -55,7 +55,8 @@ contract Gauge is IGauge {
     uint256 public queuedPenalty;
     uint256 public currentRewards;
     uint256 public historicalRewards;
-    uint256 private _totalSupply;
+    //// @notice total of the staked vault token
+    uint256 public totalSupply;
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
     mapping(address => uint256) private _balances;
@@ -97,12 +98,6 @@ contract Gauge is IGauge {
         veToken = _ve;
         rewardManager = _rewardManager;
         veYfiRewardPool = _veYfiRewardPool;
-    }
-
-    /** @return total of the staked vault token
-     */
-    function totalSupply() public view returns (uint256) {
-        return _totalSupply;
     }
 
     /** @param account to look balance for
@@ -171,14 +166,14 @@ contract Gauge is IGauge {
     }
 
     function _updateReward(address account) internal {
-        rewardPerTokenStored = _rewardPerToken();
+        rewardPerTokenStored = rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
         if (account != address(0)) {
             if (_balances[account] != 0) {
                 uint256 newEarning = _newEarning(account);
                 uint256 maxEarning = _maxEarning(account);
 
-                uint256 penalty = ((PRECISON_FACTOR - _lockingRatio(account)) *
+                uint256 penalty = ((PRECISON_FACTOR - lockingRatio(account)) *
                     newEarning) / PRECISON_FACTOR;
 
                 rewards[account] += (newEarning - penalty);
@@ -195,14 +190,10 @@ contract Gauge is IGauge {
      * @dev locking ratio is expressed in PRECISON_FACTOR, it's used to calculate the penalty due to the lock duration.
      * @return lockingRatio
      */
-    function lockingRatio(address account) external view returns (uint256) {
-        return _lockingRatio(account);
-    }
-
-    function _lockingRatio(address acccount) internal view returns (uint256) {
+    function lockingRatio(address account) public view returns (uint256) {
         if (IVotingEscrow(veToken).unlocked()) return PRECISON_FACTOR;
 
-        uint256 lockedUntil = IVotingEscrow(veToken).locked__end(acccount);
+        uint256 lockedUntil = IVotingEscrow(veToken).locked__end(account);
         if (lockedUntil == 0) return 0;
 
         uint256 timeLeft = lockedUntil - block.timestamp;
@@ -224,19 +215,15 @@ contract Gauge is IGauge {
      *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
      *  @return rewardPerToken
      */
-    function rewardPerToken() external view returns (uint256) {
-        return _rewardPerToken();
-    }
-
-    function _rewardPerToken() internal view returns (uint256) {
-        if (totalSupply() == 0) {
+    function rewardPerToken() public view returns (uint256) {
+        if (totalSupply == 0) {
             return rewardPerTokenStored;
         }
         return
             rewardPerTokenStored +
             (((lastTimeRewardApplicable() - lastUpdateTime) *
                 rewardRate *
-                1e18) / totalSupply());
+                1e18) / totalSupply);
     }
 
     /** @notice earning for an account
@@ -247,21 +234,21 @@ contract Gauge is IGauge {
         uint256 newEarning = _newEarning(account);
 
         return
-            (_lockingRatio(account) * newEarning) /
+            (lockingRatio(account) * newEarning) /
             PRECISON_FACTOR +
             rewards[account];
     }
 
     function _newEarning(address account) internal view returns (uint256) {
         return
-            (_boostedBalanceOf(account) *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
+            (boostedBalanceOf(account) *
+                (rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
     function _maxEarning(address account) internal view returns (uint256) {
         return
             (_balances[account] *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
+                (rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
     /** @notice boosted balance of based on veYFI balance
@@ -269,21 +256,13 @@ contract Gauge is IGauge {
      *  @return boosted balance
      */
     function boostedBalanceOf(address account) public view returns (uint256) {
-        return _boostedBalanceOf(account);
-    }
-
-    function _boostedBalanceOf(address account)
-        internal
-        view
-        returns (uint256)
-    {
         uint256 veTotalSupply = IVotingEscrow(veToken).totalSupply();
         if (veTotalSupply == 0) return _balances[account];
 
         return
             Math.min(
                 ((_balances[account] * 40) +
-                    (((_totalSupply *
+                    (((totalSupply *
                         IVotingEscrow(veToken).balanceOf(account)) /
                         veTotalSupply) * 60)) / 100,
                 _balances[account]
@@ -308,7 +287,7 @@ contract Gauge is IGauge {
             IExtraReward(extraRewards[i]).rewardCheckpoint(msg.sender);
         }
 
-        _totalSupply = _totalSupply + _amount;
+        totalSupply += _amount;
         _balances[msg.sender] = _balances[msg.sender] + _amount;
 
         stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -352,7 +331,7 @@ contract Gauge is IGauge {
         }
 
         //give to _for
-        _totalSupply = _totalSupply + _amount;
+        totalSupply += _amount;
         _balances[_for] = _balances[_for] + _amount;
 
         //take away from sender
@@ -380,7 +359,7 @@ contract Gauge is IGauge {
             IExtraReward(extraRewards[i]).rewardCheckpoint(msg.sender);
         }
 
-        _totalSupply = _totalSupply - _amount;
+        totalSupply -= _amount;
         _balances[msg.sender] = _balances[msg.sender] - _amount;
 
         if (_claim) {
