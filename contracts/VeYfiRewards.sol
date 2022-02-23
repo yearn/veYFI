@@ -32,12 +32,12 @@ contract VeYfiRewards {
     event UpdatedGov(address gov);
 
     constructor(
-        address veToken_,
-        address rewardToken_,
+        address _veToken,
+        address _rewardToken,
         address _gov
     ) {
-        veToken = IVotingEscrow(veToken_);
-        rewardToken = IERC20(rewardToken_);
+        veToken = IVotingEscrow(_veToken);
+        rewardToken = IERC20(_rewardToken);
         gov = _gov;
     }
 

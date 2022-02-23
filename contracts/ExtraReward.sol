@@ -36,13 +36,13 @@ contract ExtraReward is IExtraReward {
 
     /**
     @notice Initialize the contract after a clone.
-    @param gauge_ the associated Gauge address
-    @param reward_ the reward token to be distributed
+    @param _gauge the associated Gauge address
+    @param _reward the reward token to be distributed
     */
-    function initialize(address gauge_, address reward_) external {
+    function initialize(address _gauge, address _reward) external {
         assert(address(gauge) == address(0x0));
-        gauge = IGauge(gauge_);
-        rewardToken = IERC20(reward_);
+        gauge = IGauge(_gauge);
+        rewardToken = IERC20(_reward);
     }
 
     modifier updateReward(address account) {
