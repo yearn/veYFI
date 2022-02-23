@@ -6,7 +6,7 @@ def test_set_reward_manager(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    with brownie.reverts("already set"):
+    with brownie.reverts("zero address"):
         gauge.setRewardManager(ZERO_ADDRESS, {"from": gov})
     with brownie.reverts("!authorized"):
         gauge.setRewardManager(panda, {"from": panda})
@@ -22,29 +22,13 @@ def test_set_gov(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    with brownie.reverts("already set"):
+    with brownie.reverts("zero address"):
         gauge.setGov(ZERO_ADDRESS, {"from": gov})
     with brownie.reverts("!authorized"):
         gauge.setGov(panda, {"from": panda})
 
     gauge.setGov(panda, {"from": gov})
     assert gauge.gov() == panda
-
-
-def test_change_reward_manager(
-    create_vault,
-    create_gauge,
-    panda,
-    gov,
-):
-    vault = create_vault()
-    tx = create_gauge(vault)
-    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    with brownie.reverts():
-        gauge.updateRewardManager(panda, {"from": panda})
-
-    gauge.updateRewardManager(panda, {"from": gov})
-    assert gauge.rewardManager() == panda
 
 
 def test_do_not_queue_zero_rewards(create_vault, create_gauge, panda):

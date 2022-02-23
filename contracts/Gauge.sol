@@ -165,14 +165,6 @@ contract Gauge is IGauge {
         delete extraRewards;
     }
 
-    /** @notice update reward manager
-     *  @dev can only be done by rewardManager
-     */
-    function updateRewardManager(address _rewardManager) external {
-        require(msg.sender == rewardManager, "!authorized");
-        rewardManager = _rewardManager;
-    }
-
     modifier updateReward(address account) {
         _updateReward(account);
         _;
@@ -601,7 +593,7 @@ contract Gauge is IGauge {
             "!authorized"
         );
 
-        require(_rewardManager != address(0), "already set");
+        require(_rewardManager != address(0), "zero address");
         rewardManager = _rewardManager;
         emit UpdatedRewardManager(rewardManager);
         return true;
@@ -618,7 +610,7 @@ contract Gauge is IGauge {
     function setGov(address _gov) external returns (bool) {
         require(msg.sender == gov, "!authorized");
 
-        require(_gov != address(0), "already set");
+        require(_gov != address(0), "zero address");
         gov = _gov;
         emit UpdatedGov(_gov);
         return true;
