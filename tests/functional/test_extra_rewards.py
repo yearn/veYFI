@@ -104,7 +104,7 @@ def test_extra_rewards_no_boost(
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12 * 0.4
 
 
-def test_donate_and_multiple_queue_rewards(
+def test_donate(
     yfi,
     ve_yfi,
     whale,
@@ -137,14 +137,40 @@ def test_donate_and_multiple_queue_rewards(
     extra_reward.donate(10**18, {"from": whale})
     assert extra_reward.queuedRewards() == 10**18
 
+
+def test_multiple_queue_rewards(
+    yfi,
+    ve_yfi,
+    whale,
+    whale_amount,
+    create_vault,
+    create_gauge,
+    create_token,
+    create_extra_reward,
+    gov,
+):
+    yfi.approve(ve_yfi, whale_amount, {"from": whale})
+    ve_yfi.create_lock(
+        whale_amount, chain.time() + 4 * 3600 * 24 * 365, {"from": whale}
+    )
+    assert yfi.balanceOf(whale) == 0
+
+    vault = create_vault()
+    tx = create_gauge(vault)
+    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
+    yfo = create_token("YFO")
+
+    tx = create_extra_reward(gauge, yfo)
+    extra_reward = ExtraReward.at(tx.events["ExtraRewardCreated"]["extraReward"])
+    gauge.addExtraReward(extra_reward, {"from": gov})
+
     yfo.mint(gov, 2 * 10**18)
     yfo.approve(extra_reward, 2 * 10**18, {"from": gov})
     with brownie.reverts("==0"):
         extra_reward.queueNewRewards(0, {"from": gov})
     extra_reward.queueNewRewards(10**18, {"from": gov})
     assert (
-        pytest.approx(extra_reward.rewardRate(), rel=10e-4)
-        == 2 * 10**18 / 3600 / 7 / 24
+        pytest.approx(extra_reward.rewardRate(), rel=10e-4) == 10**18 / 3600 / 7 / 24
     )
 
     chain.sleep(3600 * 24)
@@ -152,6 +178,6 @@ def test_donate_and_multiple_queue_rewards(
     # 6/7 of prior reward + current reward
     assert (
         pytest.approx(extra_reward.rewardRate(), rel=10e-4)
-        == (2 * 6 / 7 + 1) * 10**18 / 3600 / 7 / 24
+        == (6 / 7 + 1) * 10**18 / 3600 / 7 / 24
     )
     assert extra_reward.queuedRewards() == 0
