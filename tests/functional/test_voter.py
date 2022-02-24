@@ -139,20 +139,28 @@ def test_poke(yfi, ve_yfi, whale, whale_amount, voter, create_vault, create_gaug
     ve_yfi.create_lock(
         whale_amount / 2, chain.time() + 3600 * 24 * 365, {"from": whale}
     )
+    half_lock = ve_yfi.balanceOf(whale)
 
     voter.vote([vault_a, vault_b], [1, 2], {"from": whale})
-    assert pytest.approx(voter.totalWeight()) == ve_yfi.balanceOf(whale)
-    assert pytest.approx(voter.usedWeights(whale)) == ve_yfi.balanceOf(whale)
-    assert pytest.approx(voter.weights(vault_a)) == ve_yfi.balanceOf(whale) / 3
-    assert pytest.approx(voter.weights(vault_b)) == ve_yfi.balanceOf(whale) * 2 / 3
+    assert pytest.approx(voter.totalWeight()) == half_lock
+    assert pytest.approx(voter.usedWeights(whale)) == half_lock
+    assert pytest.approx(voter.weights(vault_a)) == half_lock / 3
+    assert pytest.approx(voter.weights(vault_b)) == half_lock * 2 / 3
 
     ve_yfi.increase_amount(whale_amount / 2, {"from": whale})
-    voter.poke(whale, {"from": whale})
+    full_lock = ve_yfi.balanceOf(whale)
+    assert full_lock > half_lock
 
-    assert pytest.approx(voter.totalWeight()) == ve_yfi.balanceOf(whale)
-    assert pytest.approx(voter.usedWeights(whale)) == ve_yfi.balanceOf(whale)
-    assert pytest.approx(voter.weights(vault_a)) == ve_yfi.balanceOf(whale) / 3
-    assert pytest.approx(voter.weights(vault_b)) == ve_yfi.balanceOf(whale) * 2 / 3
+    voter.poke(whale, {"from": whale})
+    assert pytest.approx(voter.totalWeight()) == full_lock
+    assert pytest.approx(voter.usedWeights(whale)) == full_lock
+    assert pytest.approx(voter.weights(vault_a)) == full_lock / 3
+    assert pytest.approx(voter.weights(vault_b)) == full_lock * 2 / 3
+
+    chain.sleep(3600 * 24 * 90)
+    ve_yfi.checkpoint()
+    decayed_lock = ve_yfi.balanceOf(whale)
+    assert full_lock > decayed_lock
 
 
 def test_reset_voter(
