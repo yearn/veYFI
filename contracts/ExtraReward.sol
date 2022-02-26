@@ -119,7 +119,6 @@ contract ExtraReward is IExtraReward {
      */
     function rewardCheckpoint(address _account)
         external
-        override
         updateReward(_account)
         returns (bool)
     {
@@ -135,7 +134,6 @@ contract ExtraReward is IExtraReward {
      */
     function getRewardFor(address _account)
         public
-        override
         updateReward(_account)
         returns (bool)
     {
@@ -148,7 +146,7 @@ contract ExtraReward is IExtraReward {
         return true;
     }
 
-    function getReward() external override returns (bool) {
+    function getReward() external returns (bool) {
         getRewardFor(msg.sender);
         return true;
     }
