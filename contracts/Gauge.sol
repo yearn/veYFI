@@ -546,8 +546,12 @@ contract Gauge is IGauge {
             queuedRewards = 0;
             return true;
         }
+        uint256 elapsedSinceBeginingOfPeriod = block.timestamp -
+            (periodFinish - DURATION);
+        uint256 distributedSoFar = elapsedSinceBeginingOfPeriod * rewardRate;
+        // we only restart a new week if _amount is 120% of distributedSoFar.
 
-        if (_amount / DURATION > (rewardRate * 2) / 10) {
+        if ((distributedSoFar * 12) / 10 < _amount) {
             _notifyRewardAmount(_amount);
             queuedRewards = 0;
         } else {
