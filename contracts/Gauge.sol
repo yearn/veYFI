@@ -541,8 +541,18 @@ contract Gauge is IGauge {
         );
         _amount = _amount + queuedRewards;
 
-        _notifyRewardAmount(_amount);
-        queuedRewards = 0;
+        if (block.timestamp >= periodFinish) {
+            _notifyRewardAmount(_amount);
+            queuedRewards = 0;
+            return true;
+        }
+
+        if (_amount / DURATION > (rewardRate * 2) / 10) {
+            _notifyRewardAmount(_amount);
+            queuedRewards = 0;
+        } else {
+            queuedRewards = _amount;
+        }
         return true;
     }
 
