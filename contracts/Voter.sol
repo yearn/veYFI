@@ -253,6 +253,7 @@ contract Voter {
     /**
     @notice Delegate voting power to an address.
     @param _to the address that can use the voting power
+    @param reset_ reset prior votes.
      */
     function delegate(address _to, bool reset_) external {
         if (reset_) _reset(msg.sender);
