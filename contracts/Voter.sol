@@ -26,6 +26,7 @@ contract Voter {
     mapping(address => address) public delegation;
     mapping(address => address[]) public delegated;
 
+    uint256 MAX_DELAGATED = 1_000;
     address public gov;
 
     event UpdatedGov(address gov);
@@ -272,7 +273,11 @@ contract Voter {
         }
 
         delegation[msg.sender] = _to;
-        if (_to != address(0x0)) delegated[_to].push(msg.sender);
+        if (_to != address(0x0)) {
+            require(IVotingEscrow(ve).balanceOf(msg.sender) != 0, "no power");
+            require(delegated[_to].length < MAX_DELAGATED, "max delegated");
+            delegated[_to].push(msg.sender);
+        }
         emit Delegation(msg.sender, _to);
     }
 }
