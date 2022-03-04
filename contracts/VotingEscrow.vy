@@ -48,7 +48,7 @@ interface ERC20:
 
 interface IVeYfiRewards:
     def updateReward(_account: address) -> bool: nonpayable
-    def donate(_amount: uint256) -> bool: nonpayable
+    def queueNewRewards(_amount: uint256) -> bool: nonpayable
 
 # Interface for checking whether address belongs to a whitelisted
 # type of a smart wallet.
@@ -108,6 +108,7 @@ user_point_history: public(HashMap[address, Point[1000000000]])  # user -> Point
 user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 unlocked: public(bool)
+queuedPenalty: public(uint256)
 
 # Aragon's view methods for compatibility
 controller: public(address)
@@ -559,8 +560,7 @@ def force_withdraw():
     penalty: uint256 = value * penalty_ratio / MULTIPLIER
     assert ERC20(self.token).transfer(msg.sender, value - penalty)
     if penalty != 0:
-        assert ERC20(self.token).approve(self.reward_pool, penalty)
-        IVeYfiRewards(self.reward_pool).donate(penalty)
+        self.queuedPenalty += penalty
 
     log Withdraw(msg.sender, value, block.timestamp)
     log Supply(supply_before, supply_before - value)
@@ -759,6 +759,22 @@ def totalSupplyAt(_block: uint256) -> uint256:
 
     return self.supply_at(point, point.ts + dt)
 
+
+@external
+def transferQueuedPenalty() ->bool:
+    """
+    @notice
+    Transfer penalty to the veYFIRewardContract
+    @dev Penalty are queued in this contract.
+    @return true
+    """
+    toTransfer: uint256 = self.queuedPenalty
+    self.queuedPenalty = 0
+
+    assert ERC20(self.token).approve(self.reward_pool, toTransfer)
+    IVeYfiRewards(self.reward_pool).queueNewRewards(toTransfer)
+
+    return True
 
 
 # Dummy methods for compatibility with Aragon

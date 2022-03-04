@@ -39,19 +39,6 @@ def test_do_not_queue_zero_rewards(create_vault, create_gauge, panda):
         gauge.queueNewRewards(0, {"from": panda})
 
 
-def test_donate(create_vault, create_gauge, yfi, whale):
-    vault = create_vault()
-    tx = create_gauge(vault)
-    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    yfi.approve(gauge, 10**18, {"from": whale})
-    with brownie.reverts("==0"):
-        gauge.donate(0, {"from": whale})
-    gauge.donate(10**18, {"from": whale})
-
-    assert yfi.balanceOf(gauge) == 10**18
-    assert gauge.queuedRewards() == 10**18
-
-
 def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     vault = create_vault()
     tx = create_gauge(vault)

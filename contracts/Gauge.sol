@@ -508,25 +508,6 @@ contract Gauge is IGauge {
 
     /**
      * @notice
-     *  Donate tokens to distribute as rewards
-     * @dev Do not trigger rewardRate recalculation
-     * @param _amount token to donate
-     * @return true
-     */
-
-    function donate(uint256 _amount) external returns (bool) {
-        require(_amount != 0, "==0");
-        IERC20(rewardToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _amount
-        );
-        queuedRewards = queuedRewards + _amount;
-        return true;
-    }
-
-    /**
-     * @notice
      * Add new rewards to be distributed over a week
      * @dev Triger rewardRate recalculation using _amount and queuedRewards
      * @param _amount token to add to rewards

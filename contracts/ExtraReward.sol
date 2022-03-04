@@ -155,30 +155,13 @@ contract ExtraReward is IExtraReward {
 
     /**
      * @notice
-     *  Donate tokens to distribute as rewards
-     * @dev Do not trigger rewardRate recalculation
-     * @param _amount token to donate
-     * @return true
-     */
-    function donate(uint256 _amount) external returns (bool) {
-        IERC20(rewardToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _amount
-        );
-        queuedRewards = queuedRewards + _amount;
-        return true;
-    }
-
-    /**
-     * @notice
      * Add new rewards to be distributed over a week
-     * @dev Trigger rewardRate recalculation using _amount and queuedRewards
+     * @dev Triger rewardRate recalculation using _amount and queuedRewards
      * @param _amount token to add to rewards
      * @return true
      */
     function queueNewRewards(uint256 _amount) external returns (bool) {
-        require(_amount > 0, "==0");
+        require(_amount != 0, "==0");
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
@@ -186,8 +169,22 @@ contract ExtraReward is IExtraReward {
         );
         _amount = _amount + queuedRewards;
 
-        _notifyRewardAmount(_amount);
-        queuedRewards = 0;
+        if (block.timestamp >= periodFinish) {
+            _notifyRewardAmount(_amount);
+            queuedRewards = 0;
+            return true;
+        }
+        uint256 elapsedSinceBeginingOfPeriod = block.timestamp -
+            (periodFinish - DURATION);
+        uint256 distributedSoFar = elapsedSinceBeginingOfPeriod * rewardRate;
+        // we only restart a new week if _amount is 120% of distributedSoFar.
+
+        if ((distributedSoFar * 12) / 10 < _amount) {
+            _notifyRewardAmount(_amount);
+            queuedRewards = 0;
+        } else {
+            queuedRewards = _amount;
+        }
         return true;
     }
 
