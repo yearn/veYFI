@@ -190,7 +190,7 @@ def test_reset_voter(
 def test_set_gov(voter, gov, panda):
     with brownie.reverts("!authorized"):
         voter.setGov(panda, {"from": panda})
-    with brownie.reverts("zero address"):
+    with brownie.reverts("0x0 address"):
         voter.setGov(ZERO_ADDRESS, {"from": gov})
     voter.setGov(panda, {"from": gov})
     assert voter.gov() == panda
