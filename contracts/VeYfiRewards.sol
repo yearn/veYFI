@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -146,7 +146,7 @@ contract VeYfiRewards {
         if (reward == 0) return;
 
         if (_lock) {
-            SafeERC20.safeApprove(rewardToken, address(veToken), reward);
+            rewardToken.approve(address(veToken), reward);
             veToken.deposit_for(msg.sender, reward);
         } else {
             SafeERC20.safeTransfer(rewardToken, _account, reward);

@@ -135,7 +135,15 @@ def test_gauge_yfi_distribution_no_lock_no_rewards(
 
 
 def test_gauge_yfi_distribution_max_boost_only_two_years_lock(
-    yfi, ve_yfi, whale, panda, whale_amount, create_vault, create_gauge, gov
+    yfi,
+    ve_yfi,
+    whale,
+    ve_yfi_rewards,
+    whale_amount,
+    create_vault,
+    create_gauge,
+    panda,
+    gov,
 ):
     yfi.approve(ve_yfi, whale_amount, {"from": whale})
     ve_yfi.create_lock(
@@ -175,6 +183,12 @@ def test_gauge_yfi_distribution_max_boost_only_two_years_lock(
         pytest.approx(gauge.queuedPenalty(), rel=10e-3)
         == yfi_to_distribute / (7 * 24) / 2
     )
+    assert yfi.balanceOf(ve_yfi_rewards) == 0
+    tx = gauge.transferQueuedPenalty({"from": panda})
+    assert yfi.balanceOf(ve_yfi_rewards) == tx.events["RewardAdded"]["reward"]
+    assert gauge.queuedPenalty() == 0
+
+    assert tx.events["RewardAdded"]["reward"] == ve_yfi_rewards.currentRewards()
     assert gauge.queuedRewards() == 0
 
 

@@ -114,8 +114,8 @@ def test_withdraw_from_gauge_claim_extra_rewards(
     gauge.deposit({"from": whale})
     chain.sleep(3600)
     extra_reward.getReward({"from": whale})
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24 * 0.4
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24
 
     chain.sleep(3600)
     gauge.withdraw(True, {"from": whale})
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12 * 0.4
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12

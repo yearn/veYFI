@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.12;
 
 interface IVeYfiRewardPool {
-    function donate(uint256) external returns (bool);
+    function queueNewRewards(uint256) external returns (bool);
 }

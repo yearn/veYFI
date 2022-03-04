@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.12;
 
 import "./interfaces/IExtraReward.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -490,7 +490,7 @@ contract Gauge is IGauge {
         if (reward > 0) {
             rewards[_account] = 0;
             if (_lock) {
-                rewardToken.safeApprove(address(veToken), reward);
+                rewardToken.approve(address(veToken), reward);
                 IVotingEscrow(veToken).deposit_for(msg.sender, reward);
             } else {
                 rewardToken.safeTransfer(_account, reward);
@@ -589,8 +589,8 @@ contract Gauge is IGauge {
         uint256 toTransfer = queuedPenalty;
         queuedPenalty = 0;
 
-        IERC20(rewardToken).safeApprove(veYfiRewardPool, toTransfer);
-        IVeYfiRewardPool(veYfiRewardPool).donate(toTransfer);
+        IERC20(rewardToken).approve(veYfiRewardPool, toTransfer);
+        IVeYfiRewardPool(veYfiRewardPool).queueNewRewards(toTransfer);
         return true;
     }
 
