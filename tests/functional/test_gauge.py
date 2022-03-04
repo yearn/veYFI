@@ -1,5 +1,5 @@
 import brownie
-from brownie import Gauge, ExtraReward, ZERO_ADDRESS
+from brownie import Gauge, ExtraReward, ZERO_ADDRESS, chain
 
 
 def test_set_reward_manager(create_vault, create_gauge, panda, gov):
@@ -143,3 +143,27 @@ def test_clear_extra_rewards(
 
     gauge.clearExtraRewards({"from": gov})
     assert gauge.extraRewardsLength() == 0
+
+
+def test_small_queued_rewards_duration_extension(create_vault, create_gauge, yfi, gov):
+    vault = create_vault()
+    tx = create_gauge(vault)
+    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
+    yfi_to_distribute = 10**20
+    yfi.mint(gov, yfi_to_distribute * 2)
+    yfi.approve(gauge, yfi_to_distribute * 2, {"from": gov})
+
+    gauge.queueNewRewards(yfi_to_distribute, {"from": gov})
+    finish = gauge.periodFinish()
+    # distribution started, do not extend the duration unless rewards are 120% of what has been distributed.
+    chain.sleep(24 * 3600)
+    # Should have distributed 1/7, adding 1% will not trigger an update.
+    gauge.queueNewRewards(10**18, {"from": gov})
+    assert gauge.queuedRewards() == 10**18
+    assert gauge.periodFinish() == finish
+    chain.sleep(10)
+
+    # If more than 120% of what has been distributed is queued -> make a new period
+    gauge.queueNewRewards(10**20 / 7 * 1.2, {"from": gov})
+    assert finish != gauge.periodFinish()
+    assert gauge.periodFinish() != finish

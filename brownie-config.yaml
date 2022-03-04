@@ -20,3 +20,4 @@ reports:
     - VaultMock
     - SafeERC20
     - Address
+    - Token.sol

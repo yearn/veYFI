@@ -90,3 +90,32 @@ def test_extra_rewards_no_boost(
     chain.sleep(3600)
     gauge.getReward({"from": whale})
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12 * 0.4
+
+
+def test_withdraw_from_gauge_claim_extra_rewards(
+    create_vault, create_gauge, create_token, create_extra_reward, gov, whale
+):
+    lp_amount = 10**18
+    vault = create_vault()
+    tx = create_gauge(vault)
+    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
+    yfo = create_token("YFO")
+
+    tx = create_extra_reward(gauge, yfo)
+    extra_reward = ExtraReward.at(tx.events["ExtraRewardCreated"]["extraReward"])
+    gauge.addExtraReward(extra_reward, {"from": gov})
+
+    yfo.mint(gov, 10**18)
+    yfo.approve(extra_reward, 10**18)
+    extra_reward.queueNewRewards(10**18, {"from": gov})
+
+    vault.mint(whale, lp_amount)
+    vault.approve(gauge, lp_amount, {"from": whale})
+    gauge.deposit({"from": whale})
+    chain.sleep(3600)
+    extra_reward.getReward({"from": whale})
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24 * 0.4
+
+    chain.sleep(3600)
+    gauge.withdraw(True, {"from": whale})
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12 * 0.4

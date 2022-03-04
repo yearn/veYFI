@@ -31,8 +31,14 @@ def test_gauge_yfi_distribution_full_rewards(
 
     gauge.queueNewRewards(yfi_to_distribute, {"from": gov})
     assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
+
     chain.sleep(3600)
+    chain.mine()
+    assert pytest.approx(gauge.earned(whale), rel=5 * 10e-4) == yfi_to_distribute / (
+        7 * 24
+    )
     gauge.getReward({"from": whale})
+    assert gauge.rewardPerToken() > 0
 
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
         7 * 24
@@ -114,6 +120,7 @@ def test_gauge_yfi_distribution_no_lock_no_rewards(
     assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
     chain.sleep(3600)
     gauge.getReward({"from": panda})
+    assert gauge.lockingRatio(panda) == 0
 
     assert yfi.balanceOf(panda) == 0
 
@@ -157,6 +164,8 @@ def test_gauge_yfi_distribution_max_boost_only_two_years_lock(
     assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
     chain.sleep(3600)
     gauge.getReward({"from": whale})
+
+    assert pytest.approx(gauge.lockingRatio(whale), rel=10e-2) == 500_000
 
     assert (
         pytest.approx(yfi.balanceOf(whale), rel=10e-3)
@@ -348,3 +357,34 @@ def test_gauge_yfi_distribution_no_more_ve_yfi(
     )
     assert gauge.queuedPenalty() == 0
     assert gauge.queuedRewards() == 0
+
+
+def test_claim_and_lock_rewards(
+    create_vault, create_gauge, whale_amount, yfi, ve_yfi, whale, gov
+):
+    lp_amount = 10**18
+    vault = create_vault()
+    tx = create_gauge(vault)
+    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
+
+    yfi.approve(ve_yfi, whale_amount, {"from": whale})
+    ve_yfi.create_lock(
+        whale_amount, chain.time() + 4 * 3600 * 24 * 365, {"from": whale}
+    )
+
+    vault.mint(whale, lp_amount)
+    vault.approve(gauge, lp_amount, {"from": whale})
+    gauge.deposit({"from": whale})
+    chain.sleep(3600)
+
+    yfi_to_distribute = 10**16
+    yfi.mint(gov, yfi_to_distribute)
+    yfi.approve(gauge, yfi_to_distribute, {"from": gov})
+
+    gauge.queueNewRewards(yfi_to_distribute, {"from": gov})
+    chain.sleep(3600)
+    tx = gauge.getReward(True, False, {"from": whale})
+    assert (
+        ve_yfi.locked(whale).dict()["amount"]
+        == whale_amount + tx.events["RewardPaid"]["reward"]
+    )
