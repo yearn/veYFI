@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.12;
 import "./interfaces/IVotingEscrow.sol";
-
 import "./interfaces/IGaugeFactory.sol";
 
 /** @title Voter
@@ -58,7 +58,6 @@ contract Voter {
     /** 
     @return The list of vaults with gauge that are possible to vote for.
     */
-
     function getVaults() external view returns (address[] memory) {
         return vaults;
     }
@@ -154,9 +153,8 @@ contract Voter {
     @dev 100% of the power of account is used.
     @param _accounts accounts to use for voting.
     @param _vaultVote list of vaults to vote for
-    @param _weights list of power atributed to vaults.
+    @param _weights list of power attributed to vaults.
     */
-
     function vote(
         address[] calldata _accounts,
         address[] calldata _vaultVote,
@@ -177,7 +175,7 @@ contract Voter {
     @notice Vote for gauges
     @dev 100% of the power of account is used.
     @param _vaultVote list of vaults to vote for
-    @param _weights list of power atributed to vaults.
+    @param _weights list of power attributed to vaults.
     */
     function vote(address[] calldata _vaultVote, uint256[] calldata _weights)
         external
