@@ -1,12 +1,12 @@
 import brownie
-from brownie import Gauge, ExtraReward, ZERO_ADDRESS
+from brownie import Gauge, ExtraReward, ZERO_ADDRESS, chain
 
 
 def test_set_reward_manager(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    with brownie.reverts("zero address"):
+    with brownie.reverts("0x0 address"):
         gauge.setRewardManager(ZERO_ADDRESS, {"from": gov})
     with brownie.reverts("!authorized"):
         gauge.setRewardManager(panda, {"from": panda})
@@ -22,7 +22,7 @@ def test_set_gov(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    with brownie.reverts("zero address"):
+    with brownie.reverts("0x0 address"):
         gauge.setGov(ZERO_ADDRESS, {"from": gov})
     with brownie.reverts("!authorized"):
         gauge.setGov(panda, {"from": panda})
@@ -39,19 +39,6 @@ def test_do_not_queue_zero_rewards(create_vault, create_gauge, panda):
         gauge.queueNewRewards(0, {"from": panda})
 
 
-def test_donate(create_vault, create_gauge, yfi, whale):
-    vault = create_vault()
-    tx = create_gauge(vault)
-    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    yfi.approve(gauge, 10**18, {"from": whale})
-    with brownie.reverts("==0"):
-        gauge.donate(0, {"from": whale})
-    gauge.donate(10**18, {"from": whale})
-
-    assert yfi.balanceOf(gauge) == 10**18
-    assert gauge.queuedRewards() == 10**18
-
-
 def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     vault = create_vault()
     tx = create_gauge(vault)
@@ -60,9 +47,9 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     yfo.mint(gauge, 10**18)
     with brownie.reverts("!authorized"):
         gauge.sweep(yfo, {"from": whale})
-    with brownie.reverts("!rewardToken"):
+    with brownie.reverts("protected token"):
         gauge.sweep(yfi, {"from": gov})
-    with brownie.reverts("!stakingToken"):
+    with brownie.reverts("protected token"):
         gauge.sweep(vault, {"from": gov})
     gauge.sweep(yfo, {"from": gov})
     assert yfo.balanceOf(gov) == 10**18
@@ -143,3 +130,27 @@ def test_clear_extra_rewards(
 
     gauge.clearExtraRewards({"from": gov})
     assert gauge.extraRewardsLength() == 0
+
+
+def test_small_queued_rewards_duration_extension(create_vault, create_gauge, yfi, gov):
+    vault = create_vault()
+    tx = create_gauge(vault)
+    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
+    yfi_to_distribute = 10**20
+    yfi.mint(gov, yfi_to_distribute * 2)
+    yfi.approve(gauge, yfi_to_distribute * 2, {"from": gov})
+
+    gauge.queueNewRewards(yfi_to_distribute, {"from": gov})
+    finish = gauge.periodFinish()
+    # distribution started, do not extend the duration unless rewards are 120% of what has been distributed.
+    chain.sleep(24 * 3600)
+    # Should have distributed 1/7, adding 1% will not trigger an update.
+    gauge.queueNewRewards(10**18, {"from": gov})
+    assert gauge.queuedRewards() == 10**18
+    assert gauge.periodFinish() == finish
+    chain.sleep(10)
+
+    # If more than 120% of what has been distributed is queued -> make a new period
+    gauge.queueNewRewards(10**20 / 7 * 1.2, {"from": gov})
+    assert finish != gauge.periodFinish()
+    assert gauge.periodFinish() != finish

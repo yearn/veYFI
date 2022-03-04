@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.12;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./IBaseGauge.sol";
 
-interface IExtraReward {
+interface IExtraReward is IBaseGauge {
     function initialize(address gauge_, address reward_) external;
 
     function rewardCheckpoint(address _account) external returns (bool);
@@ -10,10 +11,4 @@ interface IExtraReward {
     function getRewardFor(address) external returns (bool);
 
     function getReward() external returns (bool);
-
-    function queueNewRewards(uint256) external returns (bool);
-
-    function rewardToken() external view returns (IERC20);
-
-    function earned(address account) external view returns (uint256);
 }

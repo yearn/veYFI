@@ -44,7 +44,7 @@ def test_sweep(yfi, ve_yfi, ve_yfi_rewards, create_token, whale, whale_amount, g
     yfo.mint(ve_yfi_rewards, 10**18)
     with brownie.reverts("!authorized"):
         ve_yfi_rewards.sweep(yfo, {"from": whale})
-    with brownie.reverts("!rewardToken"):
+    with brownie.reverts("protected token"):
         ve_yfi_rewards.sweep(yfi, {"from": gov})
     ve_yfi_rewards.sweep(yfo, {"from": gov})
     assert yfo.balanceOf(gov) == 10**18

@@ -10,13 +10,12 @@ dependencies:
 
 compiler:
   solc:
-    version: 0.8.11
+    version: 0.8.12
     remappings:
       - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.5.0"
 
 reports:
   exclude_contracts:
-    - Yfi
-    - VaultMock
     - SafeERC20
     - Address
+    - Token

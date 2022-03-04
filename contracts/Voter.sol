@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
 
+pragma solidity 0.8.12;
 import "./interfaces/IVotingEscrow.sol";
 import "./interfaces/IGaugeFactory.sol";
 
@@ -26,6 +26,7 @@ contract Voter {
     mapping(address => address) public delegation;
     mapping(address => address[]) public delegated;
 
+    uint256 MAX_DELAGATED = 1_000;
     address public gov;
 
     event UpdatedGov(address gov);
@@ -189,7 +190,8 @@ contract Voter {
     */
     function setGov(address _gov) external {
         require(msg.sender == gov, "!authorized");
-        require(_gov != address(0), "zero address");
+
+        require(_gov != address(0), "0x0 address");
         gov = _gov;
         emit UpdatedGov(_gov);
     }
@@ -250,6 +252,7 @@ contract Voter {
     /**
     @notice Delegate voting power to an address.
     @param _to the address that can use the voting power
+    @param reset_ reset prior votes.
      */
     function delegate(address _to, bool reset_) external {
         if (reset_) _reset(msg.sender);
@@ -268,7 +271,11 @@ contract Voter {
         }
 
         delegation[msg.sender] = _to;
-        if (_to != address(0x0)) delegated[_to].push(msg.sender);
+        if (_to != address(0x0)) {
+            require(IVotingEscrow(ve).balanceOf(msg.sender) != 0, "no power");
+            require(delegated[_to].length < MAX_DELAGATED, "max delegated");
+            delegated[_to].push(msg.sender);
+        }
         emit Delegation(msg.sender, _to);
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.12;
 
 import "./interfaces/IExtraReward.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IGauge.sol";
 import "./interfaces/IVeYfiRewardPool.sol";
+import "./BaseGauge.sol";
 
 import "./interfaces/IVotingEscrow.sol";
 
@@ -16,62 +17,40 @@ import "./interfaces/IVotingEscrow.sol";
     @dev this contract is used behind multiple delegate proxies.
  */
 
-contract Gauge is IGauge {
+contract Gauge is BaseGauge, IGauge {
     using SafeERC20 for IERC20;
 
-    IERC20 public rewardToken;
     IERC20 public stakingToken;
     //// @notice veYFI
     address public veToken;
     //// @notice the veYFI YFI reward pool, penalty are sent to this contract.
     address public veYfiRewardPool;
-    //// @notice rewards are distributed during 7 days when queued.
-    uint256 public constant DURATION = 7 days;
     //// @notice a copy of the veYFI max lock duration
     uint256 public constant MAX_LOCK = 4 * 365 * 86400;
     uint256 public constant PRECISON_FACTOR = 10**6;
     //// @notice Penalty do not apply for locks expiring after 3y11m
     uint256 public constant GRACE_PERIOD = 30 days;
 
-    //// @notice gov can sweep token airdrop
-    address public gov;
     //// @notice rewardManager is in charge of adding/removing additional rewards
     address public rewardManager;
 
-    uint256 public periodFinish;
-    uint256 public rewardRate;
-    uint256 public lastUpdateTime;
-    uint256 public rewardPerTokenStored;
-    /**
-    @notice that are queued to be distributed on a `queueNewRewards` call
-    @dev rewards are queued using `donate`.
-    @dev rewards are queued when an account `_updateReward`.
-    */
-    uint256 public queuedRewards;
     /**
     @notice penalty queued to be transfer later to veYfiRewardPool using `transferQueuedPenalty`
     @dev rewards are queued when an account `_updateReward`.
     */
     uint256 public queuedPenalty;
-    uint256 public currentRewards;
-    uint256 public historicalRewards;
     uint256 private _totalSupply;
-    mapping(address => uint256) public userRewardPerTokenPaid;
-    mapping(address => uint256) public rewards;
     mapping(address => uint256) private _balances;
 
     //// @notice list of extraRewards pool.
     address[] public extraRewards;
 
-    event RewardAdded(uint256 reward);
     event Staked(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
-    event RewardPaid(address indexed user, uint256 reward);
     event AddedExtraReward(address reward);
     event DeletedExtraRewards();
     event RemovedExtraReward(address reward);
     event UpdatedRewardManager(address rewardManaager);
-    event UpdatedGov(address gov);
 
     /** @notice initialize the contract
      *  @dev Initialize called after contract is cloned.
@@ -165,12 +144,7 @@ contract Gauge is IGauge {
         delete extraRewards;
     }
 
-    modifier updateReward(address account) {
-        _updateReward(account);
-        _;
-    }
-
-    function _updateReward(address account) internal {
+    function _updateReward(address account) internal override {
         rewardPerTokenStored = _rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
         if (account != address(0)) {
@@ -213,22 +187,7 @@ contract Gauge is IGauge {
         return (PRECISON_FACTOR * timeLeft) / MAX_LOCK;
     }
 
-    /**
-     *  @return timestamp until rewards are distributed
-     */
-    function lastTimeRewardApplicable() public view returns (uint256) {
-        return Math.min(block.timestamp, periodFinish);
-    }
-
-    /** @notice reward per token deposited
-     *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
-     *  @return rewardPerToken
-     */
-    function rewardPerToken() external view returns (uint256) {
-        return _rewardPerToken();
-    }
-
-    function _rewardPerToken() internal view returns (uint256) {
+    function _rewardPerToken() internal view override returns (uint256) {
         if (totalSupply() == 0) {
             return rewardPerTokenStored;
         }
@@ -243,7 +202,12 @@ contract Gauge is IGauge {
      *  @dev earning are based on lock duration and boost
      *  @return amount of tokens earned
      */
-    function earned(address account) external view returns (uint256) {
+    function earned(address account)
+        external
+        view
+        override(BaseGauge, IBaseGauge)
+        returns (uint256)
+    {
         uint256 newEarning = _newEarning(account);
 
         return
@@ -252,7 +216,12 @@ contract Gauge is IGauge {
             rewards[account];
     }
 
-    function _newEarning(address account) internal view returns (uint256) {
+    function _newEarning(address account)
+        internal
+        view
+        override
+        returns (uint256)
+    {
         return
             (_boostedBalanceOf(account) *
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
@@ -490,7 +459,7 @@ contract Gauge is IGauge {
         if (reward > 0) {
             rewards[_account] = 0;
             if (_lock) {
-                rewardToken.safeApprove(address(veToken), reward);
+                rewardToken.approve(address(veToken), reward);
                 IVotingEscrow(veToken).deposit_for(msg.sender, reward);
             } else {
                 rewardToken.safeTransfer(_account, reward);
@@ -508,65 +477,6 @@ contract Gauge is IGauge {
 
     /**
      * @notice
-     *  Donate tokens to distribute as rewards
-     * @dev Do not trigger rewardRate recalculation
-     * @param _amount token to donate
-     * @return true
-     */
-
-    function donate(uint256 _amount) external returns (bool) {
-        require(_amount != 0, "==0");
-        IERC20(rewardToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _amount
-        );
-        queuedRewards = queuedRewards + _amount;
-        return true;
-    }
-
-    /**
-     * @notice
-     * Add new rewards to be distributed over a week
-     * @dev Triger rewardRate recalculation using _amount and queuedRewards
-     * @param _amount token to add to rewards
-     * @return true
-     */
-    function queueNewRewards(uint256 _amount) external returns (bool) {
-        require(_amount != 0, "==0");
-        IERC20(rewardToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _amount
-        );
-        _amount = _amount + queuedRewards;
-
-        _notifyRewardAmount(_amount);
-        queuedRewards = 0;
-        return true;
-    }
-
-    function _notifyRewardAmount(uint256 reward)
-        internal
-        updateReward(address(0))
-    {
-        historicalRewards = historicalRewards + reward;
-        if (block.timestamp >= periodFinish) {
-            rewardRate = reward / DURATION;
-        } else {
-            uint256 remaining = periodFinish - block.timestamp;
-            uint256 leftover = remaining * rewardRate;
-            reward = reward + leftover;
-            rewardRate = reward / DURATION;
-        }
-        currentRewards = reward;
-        lastUpdateTime = block.timestamp;
-        periodFinish = block.timestamp + DURATION;
-        emit RewardAdded(reward);
-    }
-
-    /**
-     * @notice
      * Transfer penalty to the veYFIRewardContract
      * @dev Penalty are queued in this contract.
      * @return true
@@ -575,8 +485,8 @@ contract Gauge is IGauge {
         uint256 toTransfer = queuedPenalty;
         queuedPenalty = 0;
 
-        IERC20(rewardToken).safeApprove(veYfiRewardPool, toTransfer);
-        IVeYfiRewardPool(veYfiRewardPool).donate(toTransfer);
+        IERC20(rewardToken).approve(veYfiRewardPool, toTransfer);
+        IVeYfiRewardPool(veYfiRewardPool).queueNewRewards(toTransfer);
         return true;
     }
 
@@ -593,47 +503,19 @@ contract Gauge is IGauge {
             "!authorized"
         );
 
-        require(_rewardManager != address(0), "zero address");
+        require(_rewardManager != address(0), "0x0 address");
         rewardManager = _rewardManager;
         emit UpdatedRewardManager(rewardManager);
         return true;
     }
 
-    /**
-     * @notice
-     * set gov
-     * @dev Can be called by gov
-     * @param _gov new gov
-     * @return true
-     */
-
-    function setGov(address _gov) external returns (bool) {
-        require(msg.sender == gov, "!authorized");
-
-        require(_gov != address(0), "zero address");
-        gov = _gov;
-        emit UpdatedGov(_gov);
-        return true;
-    }
-
-    /**
-     * @notice
-     * sweep airdropped token
-     * @dev Can't sweep vault tokens nor reward token
-     * @dev token are sweep to gov
-     * @param _token token to sweep
-     * @return true
-     */
-    function sweep(address _token) external returns (bool) {
-        require(msg.sender == gov, "!authorized");
-        require(_token != address(stakingToken), "!stakingToken");
-        require(_token != address(rewardToken), "!rewardToken");
-
-        SafeERC20.safeTransfer(
-            IERC20(_token),
-            gov,
-            IERC20(_token).balanceOf(address(this))
-        );
-        return true;
+    function _notProtectedTokens(address _token)
+        internal
+        view
+        override
+        returns (bool)
+    {
+        return
+            _token != address(rewardToken) && _token != address(stakingToken);
     }
 }
