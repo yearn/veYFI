@@ -6,7 +6,7 @@ def test_set_reward_manager(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    with brownie.reverts("zero address"):
+    with brownie.reverts("0x0 address"):
         gauge.setRewardManager(ZERO_ADDRESS, {"from": gov})
     with brownie.reverts("!authorized"):
         gauge.setRewardManager(panda, {"from": panda})
@@ -22,7 +22,7 @@ def test_set_gov(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    with brownie.reverts("zero address"):
+    with brownie.reverts("0x0 address"):
         gauge.setGov(ZERO_ADDRESS, {"from": gov})
     with brownie.reverts("!authorized"):
         gauge.setGov(panda, {"from": panda})
@@ -47,9 +47,9 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     yfo.mint(gauge, 10**18)
     with brownie.reverts("!authorized"):
         gauge.sweep(yfo, {"from": whale})
-    with brownie.reverts("!rewardToken"):
+    with brownie.reverts("protected token"):
         gauge.sweep(yfi, {"from": gov})
-    with brownie.reverts("!stakingToken"):
+    with brownie.reverts("protected token"):
         gauge.sweep(vault, {"from": gov})
     gauge.sweep(yfo, {"from": gov})
     assert yfo.balanceOf(gov) == 10**18

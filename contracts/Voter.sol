@@ -193,7 +193,7 @@ contract Voter {
     function setGov(address _gov) external {
         require(msg.sender == gov, "!authorized");
 
-        require(_gov != address(0), "0 address");
+        require(_gov != address(0), "0x0 address");
         gov = _gov;
         emit UpdatedGov(_gov);
     }

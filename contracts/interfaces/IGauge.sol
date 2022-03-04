@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
+import "./IBaseGauge.sol";
 
-interface IGauge {
+interface IGauge is IBaseGauge {
     function initialize(
         address stakingToken_,
         address rewardToken_,

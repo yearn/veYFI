@@ -6,33 +6,16 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IExtraReward.sol";
+import "./BaseGauge.sol";
 
 /** @title Extra Rewards for a Gauge
     @notice An ExtraReward is associated with a gauge and a token.
     Balances are managed by the associated Gauge. Gauge will
     @dev this contract is used behind multiple delegate proxies.
  */
-contract ExtraReward is IExtraReward {
+contract ExtraReward is IExtraReward, BaseGauge {
     using SafeERC20 for IERC20;
-
-    IERC20 public rewardToken;
-    uint256 public constant DURATION = 7 days;
     IGauge public gauge;
-
-    uint256 public periodFinish = 0;
-    uint256 public rewardRate = 0;
-    uint256 public lastUpdateTime;
-    uint256 public rewardPerTokenStored;
-    uint256 public queuedRewards = 0;
-    uint256 public currentRewards = 0;
-    uint256 public historicalRewards = 0;
-    mapping(address => uint256) public userRewardPerTokenPaid;
-    mapping(address => uint256) public rewards;
-
-    event RewardAdded(uint256 reward);
-    event Deposited(address indexed user, uint256 amount);
-    event Withdrawn(address indexed user, uint256 amount);
-    event RewardPaid(address indexed user, uint256 reward);
 
     /**
     @notice Initialize the contract after a clone.
@@ -45,12 +28,7 @@ contract ExtraReward is IExtraReward {
         rewardToken = IERC20(_reward);
     }
 
-    modifier updateReward(address account) {
-        _updateReward(account);
-        _;
-    }
-
-    function _updateReward(address account) internal {
+    function _updateReward(address account) internal override {
         rewardPerTokenStored = _rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
         if (account != address(0)) {
@@ -66,22 +44,7 @@ contract ExtraReward is IExtraReward {
         }
     }
 
-    /**
-     *  @return timestamp until rewards are distributed
-     */
-    function lastTimeRewardApplicable() public view returns (uint256) {
-        return Math.min(block.timestamp, periodFinish);
-    }
-
-    /** @notice reward per token deposited
-     *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
-     *  @return rewardPerToken
-     */
-    function rewardPerToken() external view returns (uint256) {
-        return _rewardPerToken();
-    }
-
-    function _rewardPerToken() internal view returns (uint256) {
+    function _rewardPerToken() internal view override returns (uint256) {
         if (gauge.totalSupply() == 0) {
             return rewardPerTokenStored;
         }
@@ -92,7 +55,12 @@ contract ExtraReward is IExtraReward {
                 1e18) / gauge.totalSupply());
     }
 
-    function _newEarning(address account) internal view returns (uint256) {
+    function _newEarning(address account)
+        internal
+        view
+        override
+        returns (uint256)
+    {
         return
             (gauge.boostedBalanceOf(account) *
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
@@ -102,14 +70,6 @@ contract ExtraReward is IExtraReward {
         return
             (gauge.balanceOf(account) *
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
-    }
-
-    /** @notice earning for an account
-     *  @dev earning are based on lock duration and boost
-     *  @return amount of tokens earned
-     */
-    function earned(address account) external view returns (uint256) {
-        return _newEarning(account);
     }
 
     /** @notice update reward for an account
@@ -151,59 +111,5 @@ contract ExtraReward is IExtraReward {
     function getReward() external override returns (bool) {
         getRewardFor(msg.sender);
         return true;
-    }
-
-    /**
-     * @notice
-     * Add new rewards to be distributed over a week
-     * @dev Triger rewardRate recalculation using _amount and queuedRewards
-     * @param _amount token to add to rewards
-     * @return true
-     */
-    function queueNewRewards(uint256 _amount) external returns (bool) {
-        require(_amount != 0, "==0");
-        IERC20(rewardToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _amount
-        );
-        _amount = _amount + queuedRewards;
-
-        if (block.timestamp >= periodFinish) {
-            _notifyRewardAmount(_amount);
-            queuedRewards = 0;
-            return true;
-        }
-        uint256 elapsedSinceBeginingOfPeriod = block.timestamp -
-            (periodFinish - DURATION);
-        uint256 distributedSoFar = elapsedSinceBeginingOfPeriod * rewardRate;
-        // we only restart a new week if _amount is 120% of distributedSoFar.
-
-        if ((distributedSoFar * 12) / 10 < _amount) {
-            _notifyRewardAmount(_amount);
-            queuedRewards = 0;
-        } else {
-            queuedRewards = _amount;
-        }
-        return true;
-    }
-
-    function _notifyRewardAmount(uint256 reward)
-        internal
-        updateReward(address(0))
-    {
-        historicalRewards = historicalRewards + reward;
-        if (block.timestamp >= periodFinish) {
-            rewardRate = reward / DURATION;
-        } else {
-            uint256 remaining = periodFinish - block.timestamp;
-            uint256 leftover = remaining * rewardRate;
-            reward = reward + leftover;
-            rewardRate = reward / DURATION;
-        }
-        currentRewards = reward;
-        lastUpdateTime = block.timestamp;
-        periodFinish = block.timestamp + DURATION;
-        emit RewardAdded(reward);
     }
 }

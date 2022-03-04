@@ -47,7 +47,7 @@ interface ERC20:
     def approve(spender: address, amount: uint256) -> bool: nonpayable
 
 interface IVeYfiRewards:
-    def updateReward(_account: address) -> bool: nonpayable
+    def rewardCheckpoint(_account: address) -> bool: nonpayable
     def queueNewRewards(_amount: uint256) -> bool: nonpayable
 
 # Interface for checking whether address belongs to a whitelisted
@@ -380,7 +380,7 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
     assert(self.unlocked == False) # dev: no more lock
     _locked: LockedBalance = locked_balance
     supply_before: uint256 = self.supply
-    IVeYfiRewards(self.reward_pool).updateReward(_addr) # Reward pool snapshot
+    IVeYfiRewards(self.reward_pool).rewardCheckpoint(_addr) # Reward pool snapshot
 
     self.supply = supply_before + _value
     old_locked: LockedBalance = _locked
@@ -506,7 +506,7 @@ def withdraw():
         return
 
     assert block.timestamp >= _locked.end, "The lock didn't expire"
-    IVeYfiRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
+    IVeYfiRewards(self.reward_pool).rewardCheckpoint(msg.sender) # Reward pool snapshot
 
     old_locked: LockedBalance = _locked
     _locked.end = 0
@@ -543,7 +543,7 @@ def force_withdraw():
     penalty_ratio: uint256 = min(MULTIPLIER * 3 / 4,  MULTIPLIER * time_left / MAXTIME)
 
     value: uint256 = convert(_locked.amount, uint256)
-    IVeYfiRewards(self.reward_pool).updateReward(msg.sender) # Reward pool snapshot
+    IVeYfiRewards(self.reward_pool).rewardCheckpoint(msg.sender) # Reward pool snapshot
 
     old_locked: LockedBalance = _locked
     _locked.end = 0

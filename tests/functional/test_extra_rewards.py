@@ -88,7 +88,9 @@ def test_extra_rewards_no_boost(
     gauge.deposit({"from": whale})
     chain.sleep(3600)
     chain.mine()
-    assert pytest.approx(extra_reward.earned(whale), rel=10e-4) == 10**18 / 7 / 24 * 0.4
+    assert (
+        pytest.approx(extra_reward.earned(whale), rel=10e-4) == 10**18 / 7 / 24 * 0.4
+    )
     extra_reward.getReward({"from": whale})
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24 * 0.4
 
@@ -126,7 +128,9 @@ def test_withdraw_from_gauge_claim_extra_rewards(
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12
 
 
-def test_small_queued_rewards_duration_extension(create_vault, create_gauge, create_token, create_extra_reward, gov):
+def test_small_queued_rewards_duration_extension(
+    create_vault, create_gauge, create_token, create_extra_reward, gov
+):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
