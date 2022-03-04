@@ -16,8 +16,6 @@ compiler:
 
 reports:
   exclude_contracts:
-    - Yfi
-    - VaultMock
     - SafeERC20
     - Address
-    - Token.sol
+    - Token

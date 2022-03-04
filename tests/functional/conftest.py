@@ -93,9 +93,9 @@ def voter(Voter, gov, ve_yfi, yfi, gauge_factory, ve_yfi_rewards):
 
 
 @pytest.fixture
-def create_vault(VaultMock, gov):
+def create_vault(Token, gov):
     def create_vault():
-        return gov.deploy(VaultMock)
+        return gov.deploy(Token, "Yearn vault")
 
     return create_vault
 
