@@ -1,5 +1,6 @@
 import pytest
-from brownie import chain, Gauge, ExtraReward
+from brownie import chain, Gauge, ExtraReward, ZERO_ADDRESS
+import brownie
 
 
 def test_extra_rewards_full_boost(
@@ -160,3 +161,43 @@ def test_small_queued_rewards_duration_extension(
     extra_reward.queueNewRewards(10**20 / 7 * 1.2, {"from": gov})
     assert finish != extra_reward.periodFinish()
     assert extra_reward.periodFinish() != finish
+
+
+def test_set_gov(
+    create_vault, create_gauge, panda, gov, create_token, create_extra_reward
+):
+    vault = create_vault()
+    tx = create_gauge(vault)
+    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
+    yfo = create_token("YFO")
+    tx = create_extra_reward(gauge, yfo)
+    extra_reward = ExtraReward.at(tx.events["ExtraRewardCreated"]["extraReward"])
+
+    with brownie.reverts("0x0 address"):
+        extra_reward.setGov(ZERO_ADDRESS, {"from": gov})
+    with brownie.reverts("!authorized"):
+        extra_reward.setGov(panda, {"from": panda})
+
+    extra_reward.setGov(panda, {"from": gov})
+    assert extra_reward.gov() == panda
+
+
+def test_sweep(
+    create_vault, create_gauge, create_token, create_extra_reward, whale, gov
+):
+    vault = create_vault()
+    tx = create_gauge(vault)
+    gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
+    yfo = create_token("YFO")
+    tx = create_extra_reward(gauge, yfo)
+    extra_reward = ExtraReward.at(tx.events["ExtraRewardCreated"]["extraReward"])
+
+    yfx = create_token("YFX")
+    yfx.mint(extra_reward, 10**18)
+    with brownie.reverts("!authorized"):
+        extra_reward.sweep(yfo, {"from": whale})
+    with brownie.reverts("protected token"):
+        extra_reward.sweep(yfo, {"from": gov})
+
+    extra_reward.sweep(yfx, {"from": gov})
+    assert yfx.balanceOf(gov) == 10**18

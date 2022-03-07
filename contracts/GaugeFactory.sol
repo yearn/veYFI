@@ -57,12 +57,12 @@ contract GaugeFactory is IGaugeFactory {
         @param reward The token to distribute as a rewards
         @return ExtraReward address
     */
-    function createExtraReward(address gauge, address reward)
+    function createExtraReward(address gauge, address reward, address gov)
         external
         returns (address)
     {
         address newExtraReward = _clone(deployedExtra);
-        IExtraReward(newExtraReward).initialize(gauge, reward);
+        IExtraReward(newExtraReward).initialize(gauge, reward, gov);
         emit ExtraRewardCreated(newExtraReward);
 
         return newExtraReward;

@@ -109,9 +109,9 @@ def create_gauge(voter, gov):
 
 
 @pytest.fixture
-def create_extra_reward(gauge_factory):
+def create_extra_reward(gauge_factory, gov):
     def create_extra_reward(gauge, token):
-        return gauge_factory.createExtraReward(gauge, token)
+        return gauge_factory.createExtraReward(gauge, token, gov)
 
     yield create_extra_reward
 
