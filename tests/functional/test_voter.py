@@ -68,8 +68,10 @@ def test_vote_delegation(
     ve_yfi,
     whale,
     shark,
+    fish,
     whale_amount,
     shark_amount,
+    fish_amount,
     voter,
     create_vault,
     create_gauge,
@@ -80,6 +82,12 @@ def test_vote_delegation(
     assert voter.getDelegated(shark) == [whale]
     assert voter.delegation(whale) == shark
 
+    yfi.approve(ve_yfi, fish_amount, {"from": fish})
+    ve_yfi.create_lock(fish_amount, chain.time() + 3600 * 24 * 365, {"from": fish})
+    voter.delegate(shark, True, {"from": fish})
+    assert voter.getDelegated(shark) == [whale, fish]
+    assert voter.delegation(fish) == shark
+
     yfi.approve(ve_yfi, shark_amount, {"from": shark})
     ve_yfi.create_lock(shark_amount, chain.time() + 3600 * 24 * 365, {"from": shark})
 
@@ -87,20 +95,27 @@ def test_vote_delegation(
     create_gauge(vault_a)
 
     assert voter.usedWeights(whale) == 0
-    voter.vote([whale, shark], [vault_a], [1], {"from": shark})
-    assert voter.totalWeight() == ve_yfi.balanceOf(whale) + ve_yfi.balanceOf(shark)
+    voter.vote([whale, shark, fish], [vault_a], [1], {"from": shark})
+    assert voter.totalWeight() == ve_yfi.balanceOf(whale) + ve_yfi.balanceOf(
+        shark
+    ) + ve_yfi.balanceOf(fish)
+
     whaleBalanceOf = ve_yfi.balanceOf(whale)
     assert voter.usedWeights(whale) == ve_yfi.balanceOf(whale)
     assert voter.usedWeights(shark) == ve_yfi.balanceOf(shark)
-    assert voter.weights(vault_a) == ve_yfi.balanceOf(whale) + ve_yfi.balanceOf(shark)
+    assert voter.usedWeights(fish) == ve_yfi.balanceOf(fish)
+    assert voter.weights(vault_a) == ve_yfi.balanceOf(whale) + ve_yfi.balanceOf(
+        shark
+    ) + ve_yfi.balanceOf(fish)
 
-    voter.delegate(ZERO_ADDRESS, False, {"from": whale})
-    assert voter.delegation(whale) == ZERO_ADDRESS
-    assert voter.getDelegated(shark) == []
+    voter.delegate(ZERO_ADDRESS, False, {"from": fish})
+    assert voter.delegation(fish) == ZERO_ADDRESS
+    assert voter.getDelegated(shark) == [whale]
 
     assert voter.usedWeights(whale) == whaleBalanceOf
-    with brownie.reverts("!=length"):
-        voter.vote([whale, shark], [1], {"from": shark})
+    voter.vote([whale, shark], [vault_a], [1], {"from": shark})
+    with brownie.reverts("!authorized"):
+        voter.vote([whale, fish], [vault_a], [1], {"from": shark})
 
 
 def test_remove_vault_from_rewards(
@@ -115,17 +130,21 @@ def test_remove_vault_from_rewards(
 
     vault_b = create_vault()
     tx = create_gauge(vault_b)
+    gauge_b = Gauge.at(tx.events["GaugeCreated"]["gauge"])
 
-    voter.vote([vault_a], [1], {"from": whale})
-    voter.removeVaultFromRewards(vault_a)
-    assert voter.gauges(vault_a) == ZERO_ADDRESS
-    assert voter.isGauge(gauge_a) == False
-    assert voter.vaultForGauge(gauge_a) == ZERO_ADDRESS
-    assert voter.getVaults() == [vault_b]
+    vault_c = create_vault()
+    tx = create_gauge(vault_c)
+
+    voter.vote([vault_b], [1], {"from": whale})
+    voter.removeVaultFromRewards(vault_b)
+    assert voter.gauges(vault_b) == ZERO_ADDRESS
+    assert voter.isGauge(gauge_b) == False
+    assert voter.vaultForGauge(gauge_b) == ZERO_ADDRESS
+    assert voter.getVaults() == [vault_a, vault_c]
     assert voter.usedWeights(whale) != 0
-    assert voter.weights(vault_a) == voter.usedWeights(whale)
-    voter.vote([vault_a], [1], {"from": whale})
-    assert voter.weights(vault_a) == 0
+    assert voter.weights(vault_b) == voter.usedWeights(whale)
+    voter.vote([vault_b], [1], {"from": whale})
+    assert voter.weights(vault_b) == 0
     assert voter.usedWeights(whale) == 0
 
 

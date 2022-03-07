@@ -39,7 +39,9 @@ def test_ve_yfi_distribution_relock(
     assert pytest.approx(ve_yfi.locked(whale)[0]) == rewards + whale_amount
 
 
-def test_ve_yfi_get_rewards_for(yfi, ve_yfi, whale, fish, whale_amount, ve_yfi_rewards, gov):
+def test_ve_yfi_get_rewards_for(
+    yfi, ve_yfi, whale, fish, whale_amount, ve_yfi_rewards, gov
+):
     yfi.approve(ve_yfi, whale_amount, {"from": whale})
     ve_yfi.create_lock(whale_amount, chain.time() + 3600 * 24 * 365, {"from": whale})
     rewards = 10**18
@@ -50,6 +52,7 @@ def test_ve_yfi_get_rewards_for(yfi, ve_yfi, whale, fish, whale_amount, ve_yfi_r
     chain.sleep(3600)
     ve_yfi_rewards.getRewardFor(whale, {"from": fish})
     assert pytest.approx(yfi.balanceOf(whale), rel=10e-3) == rewards / 7 / 24
+
 
 def test_sweep(yfi, ve_yfi, ve_yfi_rewards, create_token, whale, whale_amount, gov):
     yfi.approve(ve_yfi, whale_amount, {"from": whale})
@@ -63,6 +66,7 @@ def test_sweep(yfi, ve_yfi, ve_yfi_rewards, create_token, whale, whale_amount, g
     ve_yfi_rewards.sweep(yfo, {"from": gov})
     assert yfo.balanceOf(gov) == 10**18
 
+
 def test_set_gov(ve_yfi_rewards, panda, gov):
     with brownie.reverts("0x0 address"):
         ve_yfi_rewards.setGov(ZERO_ADDRESS, {"from": gov})
@@ -72,10 +76,12 @@ def test_set_gov(ve_yfi_rewards, panda, gov):
     ve_yfi_rewards.setGov(panda, {"from": gov})
     assert ve_yfi_rewards.gov() == panda
 
+
 def test_reward_checkpoint(ve_yfi_rewards, ve_yfi, panda, gov):
     with brownie.reverts():
         ve_yfi_rewards.rewardCheckpoint(panda, {"from": panda})
     ve_yfi_rewards.rewardCheckpoint(panda, {"from": ve_yfi})
+
 
 def test_small_queued_rewards_duration_extension(ve_yfi_rewards, yfi, gov):
 
