@@ -430,7 +430,6 @@ def deposit_for(_addr: address, _value: uint256):
 
     self._deposit_for(msg.sender, _addr, _value, 0, self.locked[_addr], DEPOSIT_FOR_TYPE)
 
-
 @external
 @nonreentrant('lock')
 def create_lock(_value: uint256, _unlock_time: uint256):
@@ -450,6 +449,26 @@ def create_lock(_value: uint256, _unlock_time: uint256):
 
     self._deposit_for(msg.sender, msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
 
+@external
+@nonreentrant('lock')
+def create_lock_for(_addr: address, _value: uint256, _unlock_time: uint256):
+    """
+    @notice Deposit `_value` tokens for `msg.sender` and lock until `_unlock_time`
+    This called from multisig to create new vesting locks.
+    @param _value Amount to deposit
+    @param _unlock_time Epoch time when tokens unlock, rounded down to whole weeks
+    """
+    assert msg.sender == self.admin
+    assert(self.unlocked == False) # dev: no more lock
+    unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
+    _locked: LockedBalance = self.locked[msg.sender]
+
+    assert _value > 0  # dev: need non-zero value
+    assert _locked.amount == 0, "Withdraw old tokens first"
+    assert unlock_time > block.timestamp, "Can only lock until time in the future"
+    assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max"
+
+    self._deposit_for(msg.sender, _addr, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
 
 @external
 @nonreentrant('lock')
