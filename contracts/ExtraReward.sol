@@ -22,7 +22,11 @@ contract ExtraReward is IExtraReward, BaseGauge {
     @param _gauge the associated Gauge address
     @param _reward the reward token to be distributed
     */
-    function initialize(address _gauge, address _reward, address _gov) external {
+    function initialize(
+        address _gauge,
+        address _reward,
+        address _gov
+    ) external {
         assert(address(gauge) == address(0x0));
         gauge = IGauge(_gauge);
         rewardToken = IERC20(_reward);
