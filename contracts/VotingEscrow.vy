@@ -458,10 +458,10 @@ def create_lock_for(_addr: address, _value: uint256, _unlock_time: uint256):
     @param _value Amount to deposit
     @param _unlock_time Epoch time when tokens unlock, rounded down to whole weeks
     """
-    assert msg.sender == self.admin
+    assert msg.sender == self.admin #dev: only admin
     assert(self.unlocked == False) # dev: no more lock
     unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
-    _locked: LockedBalance = self.locked[msg.sender]
+    _locked: LockedBalance = self.locked[_addr]
 
     assert _value > 0  # dev: need non-zero value
     assert _locked.amount == 0, "Withdraw old tokens first"

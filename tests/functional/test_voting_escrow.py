@@ -1,4 +1,5 @@
 from pytest import approx
+import brownie
 
 H = 3600
 DAY = 86400
@@ -314,3 +315,61 @@ def test_unlock_all_locks(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
 
     assert yfi.balanceOf(alice) == amount
     assert yfi.balanceOf(bob) == amount
+
+
+def test_create_lock_for(
+    web3, chain, accounts, yfi, ve_yfi, gov, panda, doggie, ve_yfi_rewards
+):
+    amount = 1000 * 10**18
+    yfi.mint(gov, amount, {"from": gov})
+    yfi.mint(gov, amount, {"from": panda})
+
+    yfi.approve(ve_yfi.address, amount * 10, {"from": gov})
+    yfi.approve(ve_yfi.address, amount * 10, {"from": panda})
+
+    chain.sleep((chain[-1].timestamp // WEEK + 1) * WEEK - chain[-1].timestamp)
+    chain.mine()
+
+    chain.sleep(H)
+
+    with brownie.reverts("dev: only admin"):
+        ve_yfi.create_lock_for(
+            doggie, amount, chain[-1].timestamp + 2 * WEEK, {"from": panda}
+        )
+    ve_yfi.create_lock_for(
+        doggie, amount, chain[-1].timestamp + 2 * WEEK, {"from": gov}
+    )
+
+    with brownie.reverts("Withdraw old tokens first"):
+        ve_yfi.create_lock_for(
+            doggie, amount, chain[-1].timestamp + 2 * WEEK, {"from": gov}
+        )
+
+
+def test_commit_admin_only(ve_yfi, accounts):
+    with brownie.reverts("dev: admin only"):
+        ve_yfi.commit_transfer_ownership(accounts[1], {"from": accounts[1]})
+
+
+def test_apply_admin_only(ve_yfi, accounts):
+    with brownie.reverts("dev: admin only"):
+        ve_yfi.apply_transfer_ownership({"from": accounts[1]})
+
+
+def test_commit_transfer_ownership(ve_yfi, accounts):
+    ve_yfi.commit_transfer_ownership(accounts[1], {"from": accounts[0]})
+
+    assert ve_yfi.admin() == accounts[0]
+    assert ve_yfi.future_admin() == accounts[1]
+
+
+def test_apply_transfer_ownership(ve_yfi, accounts):
+    ve_yfi.commit_transfer_ownership(accounts[1], {"from": accounts[0]})
+    ve_yfi.apply_transfer_ownership({"from": accounts[0]})
+
+    assert ve_yfi.admin() == accounts[1]
+
+
+def test_apply_without_commit(ve_yfi, accounts):
+    with brownie.reverts("dev: admin not set"):
+        ve_yfi.apply_transfer_ownership({"from": accounts[0]})
