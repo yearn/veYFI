@@ -135,7 +135,7 @@ contract Gauge is BaseGauge, IGauge {
                 break;
             }
         }
-        require(index <= extraRewards.length, "extra reward not found");
+        require(index < extraRewards.length, "extra reward not found");
         emit RemovedExtraReward(_extraReward);
         extraRewards[index] = extraRewards[extraRewards.length - 1];
         extraRewards.pop();
