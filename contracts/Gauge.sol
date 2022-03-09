@@ -129,7 +129,8 @@ contract Gauge is BaseGauge, IGauge {
     function removeExtraReward(address _extraReward) external returns (bool) {
         require(msg.sender == rewardManager, "!authorized");
         uint256 index = type(uint256).max;
-        for (uint256 i = 0; i < extraRewards.length; i++) {
+        uint256 length = extraRewards.length;
+        for (uint256 i = 0; i < length; i++) {
             if (extraRewards[i] == _extraReward) {
                 index = i;
                 break;
@@ -280,7 +281,8 @@ contract Gauge is BaseGauge, IGauge {
         require(_amount > 0, "RewardPool : Cannot deposit 0");
 
         //also deposit to linked rewards
-        for (uint256 i = 0; i < extraRewards.length; i++) {
+        uint256 length = extraRewards.length;
+        for (uint256 i = 0; i < length; i++) {
             IExtraReward(extraRewards[i]).rewardCheckpoint(msg.sender);
         }
 
@@ -323,7 +325,8 @@ contract Gauge is BaseGauge, IGauge {
         require(_amount > 0, "RewardPool : Cannot deposit 0");
 
         //also deposit to linked rewards
-        for (uint256 i = 0; i < extraRewards.length; i++) {
+        uint256 length = extraRewards.length;
+        for (uint256 i = 0; i < length; i++) {
             IExtraReward(extraRewards[i]).rewardCheckpoint(_for);
         }
 
@@ -352,7 +355,8 @@ contract Gauge is BaseGauge, IGauge {
         require(_amount > 0, "RewardPool : Cannot withdraw 0");
 
         //also withdraw from linked rewards
-        for (uint256 i = 0; i < extraRewards.length; i++) {
+        uint256 length = extraRewards.length;
+        for (uint256 i = 0; i < length; i++) {
             IExtraReward(extraRewards[i]).rewardCheckpoint(msg.sender);
         }
 
@@ -476,7 +480,8 @@ contract Gauge is BaseGauge, IGauge {
         }
         //also get rewards from linked rewards
         if (_claimExtras) {
-            for (uint256 i = 0; i < extraRewards.length; i++) {
+            uint256 length = extraRewards.length;
+            for (uint256 i = 0; i < length; i++) {
                 IExtraReward(extraRewards[i]).getRewardFor(msg.sender);
             }
         }

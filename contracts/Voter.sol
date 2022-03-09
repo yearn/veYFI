@@ -161,7 +161,8 @@ contract Voter {
         uint256[] calldata _weights
     ) external {
         require(_vaultVote.length == _weights.length, "!=length");
-        for (uint256 i = 0; i < _accounts.length; i++) {
+        uint256 length = _accounts.length;
+        for (uint256 i = 0; i < length; i++) {
             require(
                 _accounts[i] == msg.sender ||
                     delegation[_accounts[i]] == msg.sender,
