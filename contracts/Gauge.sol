@@ -71,11 +71,20 @@ contract Gauge is BaseGauge, IGauge {
     ) external {
         assert(address(rewardToken) == address(0x0));
 
-        require(address(_rewardToken) != address(0x0), "zero address");
-        require(address(_stakingToken) != address(0x0), "zero address");
-        require(address(_gov) != address(0x0), "zero address");
-        require(address(_ve) != address(0x0), "zero address");
-        require(address(_veYfiRewardPool) != address(0x0), "zero address");
+        require(
+            address(_rewardToken) != address(0x0),
+            "_rewardToken 0x0 address"
+        );
+        require(
+            address(_stakingToken) != address(0x0),
+            "_stakingToken 0x0 address"
+        );
+        require(address(_gov) != address(0x0), "_gov 0x0 address");
+        require(address(_ve) != address(0x0), "_ve 0x0 address");
+        require(
+            address(_veYfiRewardPool) != address(0x0),
+            "_veYfiRewardPool 0x0 address"
+        );
 
         stakingToken = IERC20(_stakingToken);
         rewardToken = IERC20(_rewardToken);
@@ -515,7 +524,7 @@ contract Gauge is BaseGauge, IGauge {
             "!authorized"
         );
 
-        require(_rewardManager != address(0), "0x0 address");
+        require(_rewardManager != address(0), "_rewardManager 0x0 address");
         rewardManager = _rewardManager;
         emit UpdatedRewardManager(rewardManager);
         return true;

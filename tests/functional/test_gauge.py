@@ -6,7 +6,7 @@ def test_set_reward_manager(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    with brownie.reverts("0x0 address"):
+    with brownie.reverts("_rewardManager 0x0 address"):
         gauge.setRewardManager(ZERO_ADDRESS, {"from": gov})
     with brownie.reverts("!authorized"):
         gauge.setRewardManager(panda, {"from": panda})
@@ -22,7 +22,7 @@ def test_set_gov(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    with brownie.reverts("0x0 address"):
+    with brownie.reverts("_gov 0x0 address"):
         gauge.setGov(ZERO_ADDRESS, {"from": gov})
     with brownie.reverts("!authorized"):
         gauge.setGov(panda, {"from": panda})

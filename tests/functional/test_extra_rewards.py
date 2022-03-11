@@ -173,7 +173,7 @@ def test_set_gov(
     tx = create_extra_reward(gauge, yfo)
     extra_reward = ExtraReward.at(tx.events["ExtraRewardCreated"]["extraReward"])
 
-    with brownie.reverts("0x0 address"):
+    with brownie.reverts("_gov 0x0 address"):
         extra_reward.setGov(ZERO_ADDRESS, {"from": gov})
     with brownie.reverts("!authorized"):
         extra_reward.setGov(panda, {"from": panda})
