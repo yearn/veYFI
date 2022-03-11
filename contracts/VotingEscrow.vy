@@ -93,6 +93,8 @@ event Supply:
     prevSupply: uint256
     supply: uint256
 
+event Unlocked: pass
+
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
 MULTIPLIER: constant(uint256) = 10 ** 18
@@ -207,6 +209,7 @@ def unlock():
     """
     assert msg.sender == self.unlocker
     self.unlocked = True
+    log Unlocked()
 
 @external
 @view
