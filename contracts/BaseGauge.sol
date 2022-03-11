@@ -27,7 +27,14 @@ abstract contract BaseGauge is IBaseGauge {
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
 
-    event RewardAdded(uint256 reward);
+    event RewardsAdded(
+        uint256 currentRewards,
+        uint256 lastUpdateTime,
+        uint256 periodFinish,
+        uint256 rewardRate,
+        uint256 historicalRewards
+    );
+
     event RewardPaid(address indexed user, uint256 reward);
     event UpdatedGov(address gov);
 
@@ -154,6 +161,12 @@ abstract contract BaseGauge is IBaseGauge {
         currentRewards = reward;
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp + DURATION;
-        emit RewardAdded(reward);
+        emit RewardsAdded(
+            currentRewards,
+            lastUpdateTime,
+            periodFinish,
+            rewardRate,
+            historicalRewards
+        );
     }
 }

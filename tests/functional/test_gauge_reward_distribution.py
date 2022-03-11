@@ -185,10 +185,12 @@ def test_gauge_yfi_distribution_max_boost_only_two_years_lock(
     )
     assert yfi.balanceOf(ve_yfi_rewards) == 0
     tx = gauge.transferQueuedPenalty({"from": panda})
-    assert yfi.balanceOf(ve_yfi_rewards) == tx.events["RewardAdded"]["reward"]
+    assert yfi.balanceOf(ve_yfi_rewards) == tx.events["RewardsAdded"]["currentRewards"]
     assert gauge.queuedPenalty() == 0
 
-    assert tx.events["RewardAdded"]["reward"] == ve_yfi_rewards.currentRewards()
+    assert (
+        tx.events["RewardsAdded"]["currentRewards"] == ve_yfi_rewards.currentRewards()
+    )
     assert gauge.queuedRewards() == 0
 
 
