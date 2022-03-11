@@ -33,6 +33,13 @@ contract VeYfiRewards is BaseGauge {
         if (account != address(0)) {
             rewards[account] = _earnedReward(account);
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
+            emit UpdatedRewards(
+                account,
+                rewardPerTokenStored,
+                lastUpdateTime,
+                rewards[account],
+                userRewardPerTokenPaid[account]
+            );
         }
     }
 

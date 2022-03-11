@@ -195,6 +195,13 @@ contract Gauge is BaseGauge, IGauge {
                 queuedRewards += (maxEarning - newEarning);
             }
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
+            emit UpdatedRewards(
+                account,
+                rewardPerTokenStored,
+                lastUpdateTime,
+                rewards[account],
+                userRewardPerTokenPaid[account]
+            );
         }
     }
 
