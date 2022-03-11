@@ -95,6 +95,10 @@ event Supply:
 
 event Unlocked: pass
 
+event Initialized:
+    token: address
+    version: String[32]
+
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
 MULTIPLIER: constant(uint256) = 10 ** 18
@@ -152,6 +156,7 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], _versi
     self.name = _name
     self.symbol = _symbol
     self.version = _version
+    log Initialized(token_addr, _version)
 
 @external
 def set_reward_pool(addr: address):
