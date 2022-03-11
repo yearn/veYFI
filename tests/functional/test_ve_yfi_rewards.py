@@ -68,7 +68,7 @@ def test_sweep(yfi, ve_yfi, ve_yfi_rewards, create_token, whale, whale_amount, g
 
 
 def test_set_gov(ve_yfi_rewards, panda, gov):
-    with brownie.reverts("0x0 address"):
+    with brownie.reverts("_gov 0x0 address"):
         ve_yfi_rewards.setGov(ZERO_ADDRESS, {"from": gov})
     with brownie.reverts("!authorized"):
         ve_yfi_rewards.setGov(panda, {"from": panda})

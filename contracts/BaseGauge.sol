@@ -67,7 +67,7 @@ abstract contract BaseGauge is IBaseGauge {
     function setGov(address _gov) external returns (bool) {
         require(msg.sender == gov, "!authorized");
 
-        require(_gov != address(0), "0x0 address");
+        require(_gov != address(0), "_gov 0x0 address");
         gov = _gov;
         emit UpdatedGov(_gov);
         return true;
