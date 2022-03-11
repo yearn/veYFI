@@ -37,6 +37,7 @@ abstract contract BaseGauge is IBaseGauge {
         uint256 rewards,
         uint256 userRewardPerTokenPaid
     );
+    event Sweep(address token, uint256 amount);
 
     function _newEarning(address) internal view virtual returns (uint256);
 
@@ -92,12 +93,10 @@ abstract contract BaseGauge is IBaseGauge {
     function sweep(address _token) external returns (bool) {
         require(msg.sender == gov, "!authorized");
         require(_notProtectedTokens(_token), "protected token");
+        uint256 amount = IERC20(_token).balanceOf(address(this));
 
-        SafeERC20.safeTransfer(
-            IERC20(_token),
-            gov,
-            IERC20(_token).balanceOf(address(this))
-        );
+        SafeERC20.safeTransfer(IERC20(_token), gov, amount);
+        emit Sweep(_token, amount);
         return true;
     }
 
