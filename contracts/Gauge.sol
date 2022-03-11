@@ -48,7 +48,7 @@ contract Gauge is BaseGauge, IGauge {
     event Staked(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
     event AddedExtraReward(address reward);
-    event DeletedExtraRewards();
+    event DeletedExtraRewards(address[] rewards);
     event RemovedExtraReward(address reward);
     event UpdatedRewardManager(address rewardManaager);
 
@@ -157,7 +157,7 @@ contract Gauge is BaseGauge, IGauge {
      */
     function clearExtraRewards() external {
         require(msg.sender == rewardManager, "!authorized");
-        emit DeletedExtraRewards();
+        emit DeletedExtraRewards(extraRewards);
         delete extraRewards;
     }
 
