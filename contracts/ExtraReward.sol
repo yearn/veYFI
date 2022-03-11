@@ -46,6 +46,13 @@ contract ExtraReward is IExtraReward, BaseGauge {
             queuedRewards += (maxEarning - newEarning);
 
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
+            emit UpdatedRewards(
+                account,
+                rewardPerTokenStored,
+                lastUpdateTime,
+                rewards[account],
+                userRewardPerTokenPaid[account]
+            );
         }
     }
 

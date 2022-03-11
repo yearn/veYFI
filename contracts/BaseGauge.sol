@@ -30,6 +30,13 @@ abstract contract BaseGauge is IBaseGauge {
     event RewardAdded(uint256 reward);
     event RewardPaid(address indexed user, uint256 reward);
     event UpdatedGov(address gov);
+    event UpdatedRewards(
+        address account,
+        uint256 rewardPerTokenStored,
+        uint256 lastUpdateTime,
+        uint256 rewards,
+        uint256 userRewardPerTokenPaid
+    );
 
     function _newEarning(address) internal view virtual returns (uint256);
 
