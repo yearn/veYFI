@@ -51,6 +51,14 @@ contract Gauge is BaseGauge, IGauge {
     event DeletedExtraRewards();
     event RemovedExtraReward(address reward);
     event UpdatedRewardManager(address rewardManaager);
+    event Initialized(
+        address _stakingToken,
+        address _rewardToken,
+        address _gov,
+        address _rewardManager,
+        address _ve,
+        address _veYfiRewardPool
+    );
 
     /** @notice initialize the contract
      *  @dev Initialize called after contract is cloned.
@@ -92,6 +100,14 @@ contract Gauge is BaseGauge, IGauge {
         veToken = _ve;
         rewardManager = _rewardManager;
         veYfiRewardPool = _veYfiRewardPool;
+        emit Initialized(
+            _stakingToken,
+            _rewardToken,
+            _gov,
+            _rewardManager,
+            _ve,
+            _veYfiRewardPool
+        );
     }
 
     /** @return total of the staked vault token
