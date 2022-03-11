@@ -15,7 +15,6 @@ abstract contract BaseGauge is IBaseGauge {
     uint256 public rewardPerTokenStored;
     /**
     @notice that are queued to be distributed on a `queueNewRewards` call
-    @dev rewards are queued using `donate`.
     @dev rewards are queued when an account `_updateReward`.
     */
     uint256 public queuedRewards;
@@ -34,6 +33,8 @@ abstract contract BaseGauge is IBaseGauge {
         uint256 rewardRate,
         uint256 historicalRewards
     );
+
+    event RewardsQueued(address from, uint256 amount);
 
     event RewardPaid(address indexed user, uint256 reward);
     event UpdatedGov(address gov);
@@ -130,6 +131,7 @@ abstract contract BaseGauge is IBaseGauge {
             address(this),
             _amount
         );
+        emit RewardsQueued(msg.sender, _amount);
         _amount = _amount + queuedRewards;
 
         if (block.timestamp >= periodFinish) {
