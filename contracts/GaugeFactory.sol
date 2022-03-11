@@ -39,6 +39,7 @@ contract GaugeFactory is IGaugeFactory {
         address veYfiRewardPool
     ) external override returns (address) {
         address newGauge = _clone(deployedGauge);
+        emit GaugeCreated(newGauge);
         IGauge(newGauge).initialize(
             _vault,
             yfi,
@@ -47,7 +48,6 @@ contract GaugeFactory is IGaugeFactory {
             ve,
             veYfiRewardPool
         );
-        emit GaugeCreated(newGauge);
 
         return newGauge;
     }
