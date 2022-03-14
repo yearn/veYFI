@@ -1,0 +1,14 @@
+plugins:
+  - name: solidity
+  - name: vyper
+  - name: hardhat
+
+# require OpenZepplin Contracts
+dependencies:
+  - name: openzeppelin
+    github: OpenZeppelin/openzeppelin-contracts
+    version: 4.5.0
+
+solidity:
+  import_remapping:
+    - "@openzeppelin/contracts=openzeppelin/v4.5.0"

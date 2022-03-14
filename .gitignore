@@ -2,9 +2,10 @@ __pycache__
 .env
 .history
 .hypothesis/
-build/
+.build/
 reports/
 node_modules
+package-lock.json
 yarn-error.log
 artifacts
-cache
+contracts/.cache
