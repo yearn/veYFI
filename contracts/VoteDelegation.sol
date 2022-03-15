@@ -5,14 +5,19 @@ import "./interfaces/IVotingEscrow.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract VoteDelegation is Ownable {
-    mapping(address => address) public delegation;
+    struct Delegation {
+        address to;
+        uint256 until;
+    }
+
+    mapping(address => Delegation) public delegation;
     mapping(address => address[]) public delegated;
 
     uint256 MAX_DELAGATED = 1_000;
 
     address public veToken;
 
-    event Delegation(address sender, address recipient);
+    event Delegate(address sender, address recipient, uint256 until);
 
     constructor(address _ve) {
         veToken = _ve;
@@ -34,23 +39,33 @@ contract VoteDelegation is Ownable {
     /**
     @notice Delegate voting power to an address.
     @param _to the address that can use the voting power
+    @param _until delegate until, if under block.timestamp delegation can change immediately
+     */
+    function delegate(address _to, uint256 _until) external {
+        _delegate(_to, _until);
+    }
+
+    /**
+    @notice Delegate voting power to an address.
+    @param _to the address that can use the voting power
      */
     function delegate(address _to) external {
-        address oldTo = delegation[msg.sender];
+        _delegate(_to, 0);
+    }
 
-        if (oldTo != address(0x0)) {
-            address[] storage delgateList = delegated[oldTo];
-            uint256 length = delgateList.length;
-            for (uint256 i = 0; i < length; i++) {
-                if (delgateList[i] == msg.sender) {
-                    delgateList[i] = delegated[oldTo][length - 1];
-                    delegated[oldTo].pop();
-                    break;
-                }
-            }
+    function _delegate(address _to, uint256 _until) internal {
+        Delegation memory existingDelegation = delegation[msg.sender];
+
+        require(
+            existingDelegation.until < block.timestamp,
+            "can't change delegation"
+        );
+
+        if (existingDelegation.to != address(0x0)) {
+            removeOldDelegation(msg.sender, existingDelegation.to);
         }
 
-        delegation[msg.sender] = _to;
+        delegation[msg.sender] = Delegation(_to, _until);
         if (_to != address(0x0)) {
             require(
                 IVotingEscrow(veToken).balanceOf(msg.sender) != 0,
@@ -59,6 +74,39 @@ contract VoteDelegation is Ownable {
             require(delegated[_to].length < MAX_DELAGATED, "max delegated");
             delegated[_to].push(msg.sender);
         }
-        emit Delegation(msg.sender, _to);
+        emit Delegate(msg.sender, _to, _until);
+    }
+
+    function removeDelegation() external {
+        Delegation memory existingDelegation = delegation[msg.sender];
+
+        require(
+            existingDelegation.until < block.timestamp,
+            "can't change delegation"
+        );
+
+        if (existingDelegation.to != address(0x0)) {
+            removeOldDelegation(msg.sender, existingDelegation.to);
+        }
+        delete delegation[msg.sender];
+    }
+
+    function increaseDelegationDuration(uint256 _until) external {
+        Delegation storage existingDelegation = delegation[msg.sender];
+
+        require(existingDelegation.until < _until, "must increase");
+        existingDelegation.until = _until;
+    }
+
+    function removeOldDelegation(address from, address to) internal {
+        address[] storage delgateList = delegated[to];
+        uint256 length = delgateList.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (delgateList[i] == from) {
+                delgateList[i] = delegated[to][length - 1];
+                delegated[to].pop();
+                break;
+            }
+        }
     }
 }

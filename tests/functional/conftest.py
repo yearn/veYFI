@@ -88,8 +88,8 @@ def gauge_factory(GaugeFactory, Gauge, ExtraReward, gov):
 
 
 @pytest.fixture
-def vote_delefation(VoteDeleagation, gov, ve_yfi):
-    yield gov.deploy(VoteDeleagation, ve_yfi)
+def vote_delegation(VoteDelegation, gov, ve_yfi):
+    yield gov.deploy(VoteDelegation, ve_yfi)
 
 
 @pytest.fixture
