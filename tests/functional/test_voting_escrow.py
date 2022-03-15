@@ -373,3 +373,19 @@ def test_apply_transfer_ownership(ve_yfi, accounts):
 def test_apply_without_commit(ve_yfi, accounts):
     with brownie.reverts("dev: admin not set"):
         ve_yfi.apply_transfer_ownership({"from": accounts[0]})
+
+
+def test_migrate_lock(
+    chain, accounts, yfi, ve_yfi, gov, panda, doggie, ve_yfi_rewards, NextVe
+):
+    amount = 1000 * 10**18
+    yfi.mint(panda, amount, {"from": panda})
+    yfi.approve(ve_yfi.address, amount, {"from": panda})
+
+    ve_yfi.create_lock(amount, chain[-1].timestamp + 2 * WEEK, {"from": panda})
+    next_ve = gov.deploy(NextVe, yfi)
+    ve_yfi.set_next_ve_contract(next_ve)
+    ve_yfi.migrate({"from": panda})
+    assert ve_yfi.balanceOf(panda) == 0
+
+    assert yfi.balanceOf(next_ve) == amount

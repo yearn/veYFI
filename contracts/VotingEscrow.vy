@@ -50,6 +50,8 @@ interface IVeYfiRewards:
     def rewardCheckpoint(_account: address) -> bool: nonpayable
     def queueNewRewards(_amount: uint256) -> bool: nonpayable
 
+interface Migrator:
+    def migrateLock(_account: address, _amount: uint256):nonpayable
 # Interface for checking whether address belongs to a whitelisted
 # type of a smart wallet.
 # When new types are added - the whole contract is changed
@@ -102,6 +104,11 @@ event Initialized:
 event NewRewardPool:
     reward_pool: address
 
+event Migrate:
+    account: address
+    amount: uint256
+    to: address
+
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
 MULTIPLIER: constant(uint256) = 10 ** 18
@@ -132,6 +139,7 @@ admin: public(address)  # Can and will be a smart contract
 future_admin: public(address)
 unlocker: public(address)
 future_unlocker: public(address)
+next_ve_contract: public(address)
 
 reward_pool: public(address)
 
@@ -169,6 +177,12 @@ def set_reward_pool(addr: address):
     log NewRewardPool(addr)
 
 @external
+def set_next_ve_contract(addr: address):
+    assert msg.sender == self.admin  # dev: admin only
+    assert addr != ZERO_ADDRESS
+    self.next_ve_contract = addr
+
+@external
 def commit_transfer_ownership(addr: address):
     """
     @notice Transfer ownership of VotingEscrow contract to `addr`
@@ -177,7 +191,6 @@ def commit_transfer_ownership(addr: address):
     assert msg.sender == self.admin  # dev: admin only
     self.future_admin = addr
     log CommitOwnership(addr)
-
 
 @external
 def apply_transfer_ownership():
@@ -390,6 +403,7 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
     @param locked_balance Previous locked amount / timestamp
     """
     assert(self.unlocked == False) # dev: no more lock
+    assert(self.next_ve_contract == ZERO_ADDRESS) # dev: must migrate
     _locked: LockedBalance = locked_balance
     supply_before: uint256 = self.supply
     IVeYfiRewards(self.reward_pool).rewardCheckpoint(_addr) # Reward pool snapshot
@@ -596,6 +610,29 @@ def force_withdraw():
     log Withdraw(msg.sender, value, block.timestamp)
     log Supply(supply_before, supply_before - value)
 
+
+@external
+@nonreentrant('lock')
+def migrate():
+    assert(self.next_ve_contract != ZERO_ADDRESS) # dev: no next ve contract
+    assert(self.unlocked == False) # dev: funds are unlocked
+
+    _locked: LockedBalance = self.locked[msg.sender]
+    assert block.timestamp < _locked.end, "lock expired"
+    value: uint256 = convert(_locked.amount, uint256)
+
+    ERC20(self.token).approve(self.next_ve_contract, value)
+    Migrator(self.next_ve_contract).migrateLock(msg.sender, value)
+
+    old_locked: LockedBalance = _locked
+    _locked.end = 0
+    _locked.amount = 0
+    self.locked[msg.sender] = _locked
+    supply_before: uint256 = self.supply
+    self.supply = supply_before - value
+    self._checkpoint(msg.sender, old_locked, _locked)
+
+    log Migrate(msg.sender, value, self.next_ve_contract)
 
 # The following ERC20/minime-compatible methods are not real balanceOf and supply!
 # They measure the weights for the purpose of voting, so they don't represent
