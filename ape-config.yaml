@@ -12,3 +12,7 @@ dependencies:
 solidity:
   import_remapping:
     - "@openzeppelin/contracts=openzeppelin/v4.5.0"
+
+ethereum:
+  local:
+    default_provider: hardhat
