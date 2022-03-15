@@ -25,12 +25,12 @@ contract ExtraReward is IExtraReward, BaseGauge {
     function initialize(
         address _gauge,
         address _reward,
-        address _gov
-    ) external {
-        assert(address(gauge) == address(0x0));
+        address owner
+    ) external initializer {
         gauge = IGauge(_gauge);
         rewardToken = IERC20(_reward);
-        gov = _gov;
+        _transferOwnership(owner);
+        duration = 7 days;
     }
 
     function _updateReward(address account) internal override {

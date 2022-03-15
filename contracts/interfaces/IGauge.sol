@@ -6,7 +6,7 @@ interface IGauge is IBaseGauge {
     function initialize(
         address stakingToken_,
         address rewardToken_,
-        address gov,
+        address owner,
         address rewardManager_,
         address ve_,
         address veYfiRewardPool_

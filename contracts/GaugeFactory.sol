@@ -24,7 +24,7 @@ contract GaugeFactory is IGaugeFactory {
     /** @notice Create a new reward Gauge clone
         @param _vault the vault address.
         @param yfi the YFI token address.
-        @param gov governance
+        @param owner owner
         @param manager manager
         @param ve veYFI
         @param veYfiRewardPool veYfi RewardPool
@@ -33,7 +33,7 @@ contract GaugeFactory is IGaugeFactory {
     function createGauge(
         address _vault,
         address yfi,
-        address gov,
+        address owner,
         address manager,
         address ve,
         address veYfiRewardPool
@@ -43,7 +43,7 @@ contract GaugeFactory is IGaugeFactory {
         IGauge(newGauge).initialize(
             _vault,
             yfi,
-            gov,
+            owner,
             manager,
             ve,
             veYfiRewardPool
@@ -55,15 +55,16 @@ contract GaugeFactory is IGaugeFactory {
     /** @notice Create ExtraReward clone
         @param gauge the gauge associated with.
         @param reward The token to distribute as a rewards
+        @param owner owner 
         @return ExtraReward address
     */
     function createExtraReward(
         address gauge,
         address reward,
-        address gov
+        address owner
     ) external returns (address) {
         address newExtraReward = _clone(deployedExtra);
-        IExtraReward(newExtraReward).initialize(gauge, reward, gov);
+        IExtraReward(newExtraReward).initialize(gauge, reward, owner);
         emit ExtraRewardCreated(newExtraReward);
 
         return newExtraReward;

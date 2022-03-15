@@ -22,13 +22,13 @@ def test_set_gov(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     tx = create_gauge(vault)
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
-    with brownie.reverts("_gov 0x0 address"):
-        gauge.setGov(ZERO_ADDRESS, {"from": gov})
-    with brownie.reverts("!authorized"):
-        gauge.setGov(panda, {"from": panda})
+    with brownie.reverts("Ownable: new owner is the zero address"):
+        gauge.transferOwnership(ZERO_ADDRESS, {"from": gov})
+    with brownie.reverts("Ownable: caller is not the owner"):
+        gauge.transferOwnership(panda, {"from": panda})
 
-    gauge.setGov(panda, {"from": gov})
-    assert gauge.gov() == panda
+    gauge.transferOwnership(panda, {"from": gov})
+    assert gauge.owner() == panda
 
 
 def test_do_not_queue_zero_rewards(create_vault, create_gauge, panda):
@@ -45,7 +45,7 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     gauge = Gauge.at(tx.events["GaugeCreated"]["gauge"])
     yfo = create_token("YFO")
     yfo.mint(gauge, 10**18)
-    with brownie.reverts("!authorized"):
+    with brownie.reverts("Ownable: caller is not the owner"):
         gauge.sweep(yfo, {"from": whale})
     with brownie.reverts("protected token"):
         gauge.sweep(yfi, {"from": gov})
