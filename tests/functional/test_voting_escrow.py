@@ -1,5 +1,5 @@
 from pytest import approx
-import brownie
+import ape
 
 H = 3600
 DAY = 86400
@@ -8,7 +8,7 @@ MAXTIME = 126144000
 TOL = 120 / WEEK
 
 
-def test_voting_powers(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
+def test_voting_powers(chain, accounts, yfi, ve_yfi):
     """
     Test voting power in the following scenario.
     Alice:
@@ -33,45 +33,47 @@ def test_voting_powers(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
     After the test is done, check all over again with balanceOfAt / totalSupplyAt
     """
     alice, bob = accounts[:2]
-    amount = 1000 * 10**18
-    yfi.mint(bob, amount, {"from": bob})
-    yfi.mint(alice, amount, {"from": alice})
+    amount = 1000 * 10 ** 18
+    yfi.mint(bob, amount, sender=bob)
+    yfi.mint(alice, amount, sender=alice)
 
     stages = {}
 
-    yfi.approve(ve_yfi.address, amount * 10, {"from": alice})
-    yfi.approve(ve_yfi.address, amount * 10, {"from": bob})
+    yfi.approve(ve_yfi.address, amount * 10, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 10, sender=bob)
 
     assert ve_yfi.totalSupply() == 0
     assert ve_yfi.balanceOf(alice) == 0
     assert ve_yfi.balanceOf(bob) == 0
 
     # Move to timing which is good for testing - beginning of a UTC week
-    chain.sleep((chain[-1].timestamp // WEEK + 1) * WEEK - chain[-1].timestamp)
+    chain.pending_timestamp += (
+        chain.blocks.head.timestamp // WEEK + 1
+    ) * WEEK - chain.blocks.head.timestamp
     chain.mine()
 
-    chain.sleep(H)
+    chain.pending_timestamp += H
 
-    stages["before_deposits"] = (web3.eth.blockNumber, chain[-1].timestamp)
+    stages["before_deposits"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
-    ve_yfi.create_lock(amount, chain[-1].timestamp + WEEK, {"from": alice})
-    stages["alice_deposit"] = (web3.eth.blockNumber, chain[-1].timestamp)
+    ve_yfi.create_lock(amount, chain.blocks.head.timestamp + WEEK, sender=alice)
+    stages["alice_deposit"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
-    chain.sleep(H)
+    chain.pending_timestamp += H
     chain.mine()
 
     assert approx(ve_yfi.totalSupply(), amount // MAXTIME * (WEEK - 2 * H), TOL)
     assert approx(ve_yfi.balanceOf(alice), amount // MAXTIME * (WEEK - 2 * H), TOL)
     assert ve_yfi.balanceOf(bob) == 0
-    t0 = chain[-1].timestamp
+    t0 = chain.blocks.head.timestamp
 
     stages["alice_in_0"] = []
-    stages["alice_in_0"].append((web3.eth.blockNumber, chain[-1].timestamp))
+    stages["alice_in_0"].append((chain.blocks.head.number, chain.blocks.head.timestamp))
     for i in range(7):
         for _ in range(24):
-            chain.sleep(H)
+            chain.pending_timestamp += H
             chain.mine()
-        dt = chain[-1].timestamp - t0
+        dt = chain.blocks.head.timestamp - t0
         assert approx(
             ve_yfi.totalSupply(),
             amount // MAXTIME * max(WEEK - 2 * H - dt, 0),
@@ -83,40 +85,44 @@ def test_voting_powers(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
             TOL,
         )
         assert ve_yfi.balanceOf(bob) == 0
-        stages["alice_in_0"].append((web3.eth.blockNumber, chain[-1].timestamp))
+        stages["alice_in_0"].append(
+            (chain.blocks.head.number, chain.blocks.head.timestamp)
+        )
 
-    chain.sleep(H)
+    chain.pending_timestamp += H
 
     assert ve_yfi.balanceOf(alice) == 0
-    ve_yfi.withdraw({"from": alice})
-    stages["alice_withdraw"] = (web3.eth.blockNumber, chain[-1].timestamp)
+    ve_yfi.withdraw(sender=alice)
+    stages["alice_withdraw"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
     assert ve_yfi.totalSupply() == 0
     assert ve_yfi.balanceOf(alice) == 0
     assert ve_yfi.balanceOf(bob) == 0
 
-    chain.sleep(H)
+    chain.pending_timestamp += H
     chain.mine()
 
     # Next week (for round counting)
-    chain.sleep((chain[-1].timestamp // WEEK + 1) * WEEK - chain[-1].timestamp)
+    chain.pending_timestamp += (
+        chain.blocks.head.timestamp // WEEK + 1
+    ) * WEEK - chain.blocks.head.timestamp
     chain.mine()
 
-    ve_yfi.create_lock(amount, chain[-1].timestamp + 2 * WEEK, {"from": alice})
-    stages["alice_deposit_2"] = (web3.eth.blockNumber, chain[-1].timestamp)
+    ve_yfi.create_lock(amount, chain.blocks.head.timestamp + 2 * WEEK, sender=alice)
+    stages["alice_deposit_2"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
     assert approx(ve_yfi.totalSupply(), amount // MAXTIME * 2 * WEEK, TOL)
     assert approx(ve_yfi.balanceOf(alice), amount // MAXTIME * 2 * WEEK, TOL)
     assert ve_yfi.balanceOf(bob) == 0
 
-    ve_yfi.create_lock(amount, chain[-1].timestamp + WEEK, {"from": bob})
-    stages["bob_deposit_2"] = (web3.eth.blockNumber, chain[-1].timestamp)
+    ve_yfi.create_lock(amount, chain.blocks.head.timestamp + WEEK, sender=bob)
+    stages["bob_deposit_2"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
     assert approx(ve_yfi.totalSupply(), amount // MAXTIME * 3 * WEEK, TOL)
     assert approx(ve_yfi.balanceOf(alice), amount // MAXTIME * 2 * WEEK, TOL)
     assert approx(ve_yfi.balanceOf(bob), amount // MAXTIME * WEEK, TOL)
 
-    t0 = chain[-1].timestamp
-    chain.sleep(H)
+    t0 = chain.blocks.head.timestamp
+    chain.pending_timestamp += H
     chain.mine()
 
     stages["alice_bob_in_2"] = []
@@ -124,53 +130,57 @@ def test_voting_powers(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
     # End of week: weight 1
     for i in range(7):
         for _ in range(24):
-            chain.sleep(H)
+            chain.pending_timestamp += H
             chain.mine()
-        dt = chain[-1].timestamp - t0
+        dt = chain.blocks.head.timestamp - t0
         w_total = ve_yfi.totalSupply()
         w_alice = ve_yfi.balanceOf(alice)
         w_bob = ve_yfi.balanceOf(bob)
         assert w_total == w_alice + w_bob
         assert approx(w_alice, amount // MAXTIME * max(2 * WEEK - dt, 0), TOL)
         assert approx(w_bob, amount // MAXTIME * max(WEEK - dt, 0), TOL)
-        stages["alice_bob_in_2"].append((web3.eth.blockNumber, chain[-1].timestamp))
+        stages["alice_bob_in_2"].append(
+            (chain.blocks.head.number, chain.blocks.head.timestamp)
+        )
 
-    chain.sleep(H)
+    chain.pending_timestamp += H
     chain.mine()
 
-    ve_yfi.withdraw({"from": bob})
-    t0 = chain[-1].timestamp
-    stages["bob_withdraw_1"] = (web3.eth.blockNumber, chain[-1].timestamp)
+    ve_yfi.withdraw(sender=bob)
+    t0 = chain.blocks.head.timestamp
+    stages["bob_withdraw_1"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
     w_total = ve_yfi.totalSupply()
     w_alice = ve_yfi.balanceOf(alice)
     assert w_alice == w_total
     assert approx(w_total, amount // MAXTIME * (WEEK - 2 * H), TOL)
     assert ve_yfi.balanceOf(bob) == 0
 
-    chain.sleep(H)
+    chain.pending_timestamp += H
     chain.mine()
 
     stages["alice_in_2"] = []
     for i in range(7):
         for _ in range(24):
-            chain.sleep(H)
+            chain.pending_timestamp += H
             chain.mine()
-        dt = chain[-1].timestamp - t0
+        dt = chain.blocks.head.timestamp - t0
         w_total = ve_yfi.totalSupply()
         w_alice = ve_yfi.balanceOf(alice)
         assert w_total == w_alice
         assert approx(w_total, amount // MAXTIME * max(WEEK - dt - 2 * H, 0), TOL)
         assert ve_yfi.balanceOf(bob) == 0
-        stages["alice_in_2"].append((web3.eth.blockNumber, chain[-1].timestamp))
+        stages["alice_in_2"].append(
+            (chain.blocks.head.number, chain.blocks.head.timestamp)
+        )
 
-    ve_yfi.withdraw({"from": alice})
-    stages["alice_withdraw_2"] = (web3.eth.blockNumber, chain[-1].timestamp)
+    ve_yfi.withdraw(sender=alice)
+    stages["alice_withdraw_2"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
-    chain.sleep(H)
+    chain.pending_timestamp += H
     chain.mine()
 
-    ve_yfi.withdraw({"from": bob})
-    stages["bob_withdraw_2"] = (web3.eth.blockNumber, chain[-1].timestamp)
+    ve_yfi.withdraw(sender=bob)
+    stages["bob_withdraw_2"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
     assert ve_yfi.totalSupply() == 0
     assert ve_yfi.balanceOf(alice) == 0
@@ -258,132 +268,137 @@ def test_voting_powers(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
     assert w_total == w_alice == w_bob == 0
 
 
-def test_early_exit(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
+def test_early_exit(chain, accounts, yfi, ve_yfi):
     alice, bob = accounts[:2]
-    amount = 1000 * 10**18
-    yfi.mint(bob, amount, {"from": bob})
-    yfi.mint(alice, amount, {"from": alice})
+    amount = 1000 * 10 ** 18
+    yfi.mint(bob, amount, sender=bob)
+    yfi.mint(alice, amount, sender=alice)
 
-    yfi.approve(ve_yfi.address, amount * 10, {"from": alice})
-    yfi.approve(ve_yfi.address, amount * 10, {"from": bob})
+    yfi.approve(ve_yfi.address, amount * 10, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 10, sender=bob)
 
-    chain.sleep((chain[-1].timestamp // WEEK + 1) * WEEK - chain[-1].timestamp)
+    chain.pending_timestamp += (
+        chain.blocks.head.timestamp // WEEK + 1
+    ) * WEEK - chain.blocks.head.timestamp
     chain.mine()
 
-    chain.sleep(H)
-    ve_yfi.create_lock(amount, chain[-1].timestamp + 2 * WEEK, {"from": alice})
-    ve_yfi.create_lock(amount, chain[-1].timestamp + WEEK, {"from": bob})
-    ve_yfi.force_withdraw({"from": bob})
+    chain.pending_timestamp += H
+    ve_yfi.create_lock(amount, chain.blocks.head.timestamp + 2 * WEEK, sender=alice)
+    ve_yfi.create_lock(amount, chain.blocks.head.timestamp + WEEK, sender=bob)
+    ve_yfi.force_withdraw(sender=bob)
     assert ve_yfi.totalSupply() == ve_yfi.balanceOf(alice)
 
-    point_history_1 = ve_yfi.point_history(1).dict()
-    point_history_3 = ve_yfi.point_history(3).dict()
+    #
+    point_history_1 = dict(zip(["bias", "slope", "ts", "blk"], ve_yfi.point_history(1)))
+    point_history_3 = dict(zip(["bias", "slope", "ts", "blk"], ve_yfi.point_history(3)))
     assert approx(point_history_1["bias"], rel=10e-4) == point_history_3["bias"]
     assert approx(point_history_1["slope"], rel=10e-4) == point_history_3["slope"]
-    ve_yfi.force_withdraw({"from": alice})
+    ve_yfi.force_withdraw(sender=alice)
     assert ve_yfi.totalSupply() == 0
-    point_history_4 = ve_yfi.point_history(4).dict()
-    assert point_history_4["ts"] == chain[-1].timestamp
+    point_history_4 = dict(zip(["bias", "slope", "ts", "blk"], ve_yfi.point_history(4)))
+    assert point_history_4["ts"] == chain.blocks.head.timestamp
     assert point_history_4["bias"] == 0
     assert point_history_4["slope"] == 0
 
 
-def test_migrate_set_balance_to_zero(
-    web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards, gov, NextVe
-):
+def test_migrate_set_balance_to_zero(chain, accounts, yfi, ve_yfi, gov, project):
     alice, bob = accounts[:2]
-    amount = 1000 * 10**18
-    yfi.mint(bob, amount, {"from": bob})
-    yfi.mint(alice, amount, {"from": alice})
+    amount = 1000 * 10 ** 18
+    yfi.mint(bob, amount, sender=bob)
+    yfi.mint(alice, amount, sender=alice)
 
-    yfi.approve(ve_yfi.address, amount * 10, {"from": alice})
-    yfi.approve(ve_yfi.address, amount * 10, {"from": bob})
+    yfi.approve(ve_yfi.address, amount * 10, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 10, sender=bob)
 
-    chain.sleep((chain[-1].timestamp // WEEK + 1) * WEEK - chain[-1].timestamp)
+    chain.pending_timestamp += (
+        chain.blocks.head.timestamp // WEEK + 1
+    ) * WEEK - chain.blocks.head.timestamp
     chain.mine()
 
-    chain.sleep(H)
+    chain.pending_timestamp += H
 
-    ve_yfi.create_lock(amount, chain[-1].timestamp + 2 * WEEK, {"from": alice})
-    ve_yfi.create_lock(amount, chain[-1].timestamp + WEEK, {"from": bob})
+    ve_yfi.create_lock(amount, chain.blocks.head.timestamp + 2 * WEEK, sender=alice)
+    ve_yfi.create_lock(amount, chain.blocks.head.timestamp + WEEK, sender=bob)
 
-    next_ve = gov.deploy(NextVe, yfi)
-    ve_yfi.set_next_ve_contract(next_ve)
+    next_ve = gov.deploy(project.NextVe, yfi)
+    ve_yfi.set_next_ve_contract(next_ve, sender=gov)
 
     assert ve_yfi.balanceOf(alice) == 0
     assert ve_yfi.balanceOf(bob) == 0
     assert ve_yfi.totalSupply() == 0
 
 
-def test_create_lock_for(
-    web3, chain, accounts, yfi, ve_yfi, gov, panda, doggie, ve_yfi_rewards
-):
-    amount = 1000 * 10**18
-    yfi.mint(gov, amount, {"from": gov})
-    yfi.mint(gov, amount, {"from": panda})
+def test_create_lock_for(chain, yfi, ve_yfi, gov, panda, doggie):
+    amount = 1000 * 10 ** 18
+    yfi.mint(gov, amount, sender=gov)
+    yfi.mint(gov, amount, sender=panda)
 
-    yfi.approve(ve_yfi.address, amount * 10, {"from": gov})
-    yfi.approve(ve_yfi.address, amount * 10, {"from": panda})
+    yfi.approve(ve_yfi.address, amount * 10, sender=gov)
+    yfi.approve(ve_yfi.address, amount * 10, sender=panda)
 
-    chain.sleep((chain[-1].timestamp // WEEK + 1) * WEEK - chain[-1].timestamp)
+    chain.pending_timestamp += (
+        chain.blocks.head.timestamp // WEEK + 1
+    ) * WEEK - chain.blocks.head.timestamp
     chain.mine()
 
-    chain.sleep(H)
+    chain.pending_timestamp += H
 
-    with brownie.reverts("dev: only admin"):
+    # TODO: No dev revert strings
+    with ape.reverts():  # "dev: only admin"):
         ve_yfi.create_lock_for(
-            doggie, amount, chain[-1].timestamp + 2 * WEEK, {"from": panda}
+            doggie, amount, chain.blocks.head.timestamp + 2 * WEEK, sender=panda
         )
     ve_yfi.create_lock_for(
-        doggie, amount, chain[-1].timestamp + 2 * WEEK, {"from": gov}
+        doggie, amount, chain.blocks.head.timestamp + 2 * WEEK, sender=gov
     )
 
-    with brownie.reverts("Withdraw old tokens first"):
+    with ape.reverts("Withdraw old tokens first"):
         ve_yfi.create_lock_for(
-            doggie, amount, chain[-1].timestamp + 2 * WEEK, {"from": gov}
+            doggie, amount, chain.blocks.head.timestamp + 2 * WEEK, sender=gov
         )
 
 
 def test_commit_admin_only(ve_yfi, accounts):
-    with brownie.reverts("dev: admin only"):
-        ve_yfi.commit_transfer_ownership(accounts[1], {"from": accounts[1]})
+    # TODO: No dev revert strings
+    with ape.reverts():  # "dev: admin only"):
+        ve_yfi.commit_transfer_ownership(accounts[1], sender=accounts[1])
 
 
 def test_apply_admin_only(ve_yfi, accounts):
-    with brownie.reverts("dev: admin only"):
-        ve_yfi.apply_transfer_ownership({"from": accounts[1]})
+    # TODO: No dev revert strings
+    with ape.reverts():  # "dev: admin only"):
+        ve_yfi.apply_transfer_ownership(sender=accounts[1])
 
 
 def test_commit_transfer_ownership(ve_yfi, accounts):
-    ve_yfi.commit_transfer_ownership(accounts[1], {"from": accounts[0]})
+    ve_yfi.commit_transfer_ownership(accounts[1], sender=accounts[0])
 
     assert ve_yfi.admin() == accounts[0]
     assert ve_yfi.future_admin() == accounts[1]
 
 
 def test_apply_transfer_ownership(ve_yfi, accounts):
-    ve_yfi.commit_transfer_ownership(accounts[1], {"from": accounts[0]})
-    ve_yfi.apply_transfer_ownership({"from": accounts[0]})
+    ve_yfi.commit_transfer_ownership(accounts[1], sender=accounts[0])
+    ve_yfi.apply_transfer_ownership(sender=accounts[0])
 
     assert ve_yfi.admin() == accounts[1]
 
 
 def test_apply_without_commit(ve_yfi, accounts):
-    with brownie.reverts("dev: admin not set"):
-        ve_yfi.apply_transfer_ownership({"from": accounts[0]})
+    # TODO: No dev revert strings
+    with ape.reverts():  # "dev: admin not set"):
+        ve_yfi.apply_transfer_ownership(sender=accounts[0])
 
 
-def test_migrate_lock(
-    chain, accounts, yfi, ve_yfi, gov, panda, doggie, ve_yfi_rewards, NextVe
-):
-    amount = 1000 * 10**18
-    yfi.mint(panda, amount, {"from": panda})
-    yfi.approve(ve_yfi.address, amount, {"from": panda})
+def test_migrate_lock(chain, yfi, ve_yfi, gov, panda, project):
+    amount = 1000 * 10 ** 18
+    yfi.mint(panda, amount, sender=panda)
+    yfi.approve(ve_yfi.address, amount, sender=panda)
 
-    ve_yfi.create_lock(amount, chain[-1].timestamp + 2 * WEEK, {"from": panda})
-    next_ve = gov.deploy(NextVe, yfi)
-    ve_yfi.set_next_ve_contract(next_ve)
-    ve_yfi.migrate({"from": panda})
+    ve_yfi.create_lock(amount, chain.blocks.head.timestamp + 2 * WEEK, sender=panda)
+    next_ve = gov.deploy(project.NextVe, yfi)
+    ve_yfi.set_next_ve_contract(next_ve, sender=gov)
+    ve_yfi.migrate(sender=panda)
     assert ve_yfi.balanceOf(panda) == 0
 
     assert yfi.balanceOf(next_ve) == amount
