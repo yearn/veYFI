@@ -50,7 +50,7 @@ contract Gauge is BaseGauge, IGauge {
     event AddedExtraReward(address reward);
     event DeletedExtraRewards(address[] rewards);
     event RemovedExtraReward(address reward);
-    event UpdatedRewardManager(address rewardManaager);
+    event UpdatedRewardManager(address rewardManager);
     event Initialized(
         address stakingToken,
         address rewardToken,
