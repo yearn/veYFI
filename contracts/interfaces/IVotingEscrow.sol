@@ -8,8 +8,6 @@ interface IVotingEscrow is IERC20 {
         uint256 end;
     }
 
-    function balanceOf(address) external view returns (uint256);
-
     function totalSupply() external view returns (uint256);
 
     function locked__end(address) external view returns (uint256);

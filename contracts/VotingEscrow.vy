@@ -108,7 +108,8 @@ event Migrate:
     account: address
     amount: uint256
     to: address
-
+event NextVeContractSet:
+    ve: address
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
 MULTIPLIER: constant(uint256) = 10 ** 18
@@ -181,6 +182,7 @@ def set_next_ve_contract(addr: address):
     assert msg.sender == self.admin  # dev: admin only
     assert addr != ZERO_ADDRESS
     self.next_ve_contract = addr
+    log NextVeContractSet(addr)
 
 @external
 def commit_transfer_ownership(addr: address):
