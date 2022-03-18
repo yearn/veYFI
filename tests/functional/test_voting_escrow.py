@@ -288,7 +288,9 @@ def test_early_exit(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
     assert point_history_4["slope"] == 0
 
 
-def test_unlock_all_locks(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
+def test_migrate_set_balance_to_zero(
+    web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards, gov, NextVe
+):
     alice, bob = accounts[:2]
     amount = 1000 * 10**18
     yfi.mint(bob, amount, {"from": bob})
@@ -305,16 +307,12 @@ def test_unlock_all_locks(web3, chain, accounts, yfi, ve_yfi, ve_yfi_rewards):
     ve_yfi.create_lock(amount, chain[-1].timestamp + 2 * WEEK, {"from": alice})
     ve_yfi.create_lock(amount, chain[-1].timestamp + WEEK, {"from": bob})
 
-    ve_yfi.unlock()
+    next_ve = gov.deploy(NextVe, yfi)
+    ve_yfi.set_next_ve_contract(next_ve)
+
     assert ve_yfi.balanceOf(alice) == 0
     assert ve_yfi.balanceOf(bob) == 0
     assert ve_yfi.totalSupply() == 0
-
-    ve_yfi.withdraw({"from": alice})
-    ve_yfi.withdraw({"from": bob})
-
-    assert yfi.balanceOf(alice) == amount
-    assert yfi.balanceOf(bob) == amount
 
 
 def test_create_lock_for(
