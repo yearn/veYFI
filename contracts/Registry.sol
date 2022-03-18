@@ -4,18 +4,20 @@ pragma solidity 0.8.12;
 import "./interfaces/IVotingEscrow.sol";
 import "./interfaces/IGaugeFactory.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /** @title Voter
     @notice veYFI holders will vote for gauge allocation to vault tokens.
  */
 
 contract Registry is Ownable {
+   using EnumerableSet for EnumerableSet.AddressSet;
     address public veToken; // the ve token that governs these contracts
     address public yfi; // immutable // reward token
     address public veYfiRewardPool; // immutable
     address public gaugefactory; // immutable
 
-    address[] public vaults; // all vaults viable for incentives
+    EnumerableSet.AddressSet private vaults;
     mapping(address => address) public gauges; // vault => gauge
     mapping(address => address) public vaultForGauge; // gauge => vault
     mapping(address => bool) public isGauge;
@@ -45,7 +47,7 @@ contract Registry is Ownable {
     @return The list of vaults with gauge that are possible to vote for.
     */
     function getVaults() external view returns (address[] memory) {
-        return vaults;
+        return vaults.values();
     }
 
     /** 
@@ -72,7 +74,7 @@ contract Registry is Ownable {
         gauges[_vault] = _gauge;
         vaultForGauge[_gauge] = _vault;
         isGauge[_gauge] = true;
-        vaults.push(_vault);
+        vaults.add(_vault);
         emit VaultAdded(_vault);
         return _gauge;
     }
@@ -85,14 +87,7 @@ contract Registry is Ownable {
         require(gauges[_vault] != address(0x0), "!exist");
         address gauge = gauges[_vault];
 
-        uint256 length = vaults.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (vaults[i] == _vault) {
-                vaults[i] = vaults[length - 1];
-                vaults.pop();
-                break;
-            }
-        }
+        vaults.remove(_vault);
 
         gauges[_vault] = address(0x0);
         vaultForGauge[gauge] = address(0x0);
