@@ -77,12 +77,6 @@ contract Gauge is BaseGauge, IGauge {
         address _ve,
         address _veYfiRewardPool
     ) external initializer {
-        assert(address(rewardToken) == address(0x0));
-
-        require(
-            address(_rewardToken) != address(0x0),
-            "_rewardToken 0x0 address"
-        );
         require(
             address(_stakingToken) != address(0x0),
             "_stakingToken 0x0 address"
@@ -93,13 +87,11 @@ contract Gauge is BaseGauge, IGauge {
             "_veYfiRewardPool 0x0 address"
         );
 
+        __initialize(_rewardToken, _owner);
         stakingToken = IERC20(_stakingToken);
-        rewardToken = IERC20(_rewardToken);
         veToken = _ve;
         rewardManager = _rewardManager;
         veYfiRewardPool = _veYfiRewardPool;
-        duration = 7 days;
-        _transferOwnership(_owner);
 
         emit Initialized(
             _stakingToken,

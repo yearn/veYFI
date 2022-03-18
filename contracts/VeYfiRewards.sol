@@ -21,10 +21,8 @@ contract VeYfiRewards is BaseGauge {
         address _rewardToken,
         address _owner
     ) {
+        __initialize(_rewardToken, _owner);
         veToken = _veToken;
-        rewardToken = IERC20(_rewardToken);
-        duration = 7 days;
-        _transferOwnership(_owner);
     }
 
     function setVe(address _ve) external onlyOwner {

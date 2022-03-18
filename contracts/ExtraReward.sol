@@ -17,20 +17,23 @@ contract ExtraReward is IExtraReward, BaseGauge {
     using SafeERC20 for IERC20;
     IGauge public gauge;
 
+    event Initialized(address _gauge, address rewardToken, address owner);
+
     /**
     @notice Initialize the contract after a clone.
     @param _gauge the associated Gauge address
-    @param _reward the reward token to be distributed
+    @param _rewardToken the reward token to be distributed
+    @param _owner owner
     */
     function initialize(
         address _gauge,
-        address _reward,
-        address owner
+        address _rewardToken,
+        address _owner
     ) external initializer {
+        __initialize(_rewardToken, _owner);
         gauge = IGauge(_gauge);
-        rewardToken = IERC20(_reward);
-        _transferOwnership(owner);
-        duration = 7 days;
+        rewardToken = IERC20(_rewardToken);
+        emit Initialized(_gauge, _rewardToken, _owner);
     }
 
     function _updateReward(address account) internal override {

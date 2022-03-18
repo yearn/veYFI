@@ -21,6 +21,8 @@ contract Registry is Ownable {
     mapping(address => bool) public isGauge;
 
     event VaultAdded(address vault);
+    event VaultRemoved(address vault);
+    event VeTokenUpdated(address ve);
 
     constructor(
         address _ve,
@@ -36,6 +38,7 @@ contract Registry is Ownable {
 
     function setVe(address _ve) external onlyOwner {
         veToken = _ve;
+        emit VeTokenUpdated(_ve);
     }
 
     /** 
@@ -94,5 +97,6 @@ contract Registry is Ownable {
         gauges[_vault] = address(0x0);
         vaultForGauge[gauge] = address(0x0);
         isGauge[gauge] = false;
+        emit VaultRemoved(_vault);
     }
 }

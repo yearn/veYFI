@@ -64,8 +64,8 @@ contract GaugeFactory is IGaugeFactory {
         address owner
     ) external returns (address) {
         address newExtraReward = _clone(deployedExtra);
-        IExtraReward(newExtraReward).initialize(gauge, reward, owner);
         emit ExtraRewardCreated(newExtraReward);
+        IExtraReward(newExtraReward).initialize(gauge, reward, owner);
 
         return newExtraReward;
     }

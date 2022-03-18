@@ -13,11 +13,13 @@ contract VoteDelegation is Ownable {
     mapping(address => Delegation) public delegation;
     mapping(address => address[]) public delegated;
 
-    uint256 MAX_DELAGATED = 1_000;
+    uint256 public constant MAX_DELAGATED = 1_000;
 
     address public veToken;
 
     event Delegate(address sender, address recipient, uint256 until);
+    event DelegationRemoved(address from, address to);
+    event DelegationDurationIncreased(address from, address to, uint256 until);
 
     constructor(address _ve) {
         veToken = _ve;
@@ -62,7 +64,7 @@ contract VoteDelegation is Ownable {
         );
 
         if (existingDelegation.to != address(0x0)) {
-            removeOldDelegation(msg.sender, existingDelegation.to);
+            _removeOldDelegation(msg.sender, existingDelegation.to);
         }
 
         delegation[msg.sender] = Delegation(_to, _until);
@@ -71,7 +73,7 @@ contract VoteDelegation is Ownable {
                 IVotingEscrow(veToken).balanceOf(msg.sender) != 0,
                 "no power"
             );
-            require(delegated[_to].length < MAX_DELAGATED, "max delegated");
+            require(delegated[_to].length <= MAX_DELAGATED, "max delegated");
             delegated[_to].push(msg.sender);
         }
         emit Delegate(msg.sender, _to, _until);
@@ -84,11 +86,12 @@ contract VoteDelegation is Ownable {
             existingDelegation.until < block.timestamp,
             "can't change delegation"
         );
-
-        if (existingDelegation.to != address(0x0)) {
-            removeOldDelegation(msg.sender, existingDelegation.to);
+        address to = existingDelegation.to;
+        if (to != address(0x0)) {
+            _removeOldDelegation(msg.sender, to);
         }
         delete delegation[msg.sender];
+        emit DelegationRemoved(msg.sender, to);
     }
 
     function increaseDelegationDuration(uint256 _until) external {
@@ -96,14 +99,19 @@ contract VoteDelegation is Ownable {
 
         require(existingDelegation.until < _until, "must increase");
         existingDelegation.until = _until;
+        emit DelegationDurationIncreased(
+            msg.sender,
+            existingDelegation.to,
+            _until
+        );
     }
 
-    function removeOldDelegation(address from, address to) internal {
-        address[] storage delgateList = delegated[to];
-        uint256 length = delgateList.length;
+    function _removeOldDelegation(address from, address to) internal {
+        address[] storage delegatedList = delegated[to];
+        uint256 length = delegatedList.length;
         for (uint256 i = 0; i < length; i++) {
-            if (delgateList[i] == from) {
-                delgateList[i] = delegated[to][length - 1];
+            if (delegatedList[i] == from) {
+                delegatedList[i] = delegated[to][length - 1];
                 delegated[to].pop();
                 break;
             }
