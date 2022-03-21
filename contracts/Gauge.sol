@@ -302,25 +302,8 @@ contract Gauge is BaseGauge, IGauge {
      * @param _amount of vault token
      * @return true
      */
-    function deposit(uint256 _amount)
-        public
-        updateReward(msg.sender)
-        returns (bool)
-    {
-        require(_amount > 0, "RewardPool : Cannot deposit 0");
-
-        //also deposit to linked rewards
-        uint256 length = extraRewards.length;
-        for (uint256 i = 0; i < length; i++) {
-            IExtraReward(extraRewards[i]).rewardCheckpoint(msg.sender);
-        }
-
-        _totalSupply = _totalSupply + _amount;
-        _balances[msg.sender] = _balances[msg.sender] + _amount;
-
-        stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
-        emit Staked(msg.sender, _amount);
-
+    function deposit(uint256 _amount) public returns (bool) {
+        _deposit(msg.sender, _amount);
         return true;
     }
 
@@ -335,7 +318,7 @@ contract Gauge is BaseGauge, IGauge {
             stakingToken.balanceOf(msg.sender),
             stakingToken.allowance(msg.sender, address(this))
         );
-        deposit(balance);
+        _deposit(msg.sender, balance);
         return true;
     }
 
@@ -346,10 +329,14 @@ contract Gauge is BaseGauge, IGauge {
      *    @param _amount to deposit
      *    @return true
      */
-    function depositFor(address _for, uint256 _amount)
-        external
+    function depositFor(address _for, uint256 _amount) external returns (bool) {
+        _deposit(_for, _amount);
+        return true;
+    }
+
+    function _deposit(address _for, uint256 _amount)
+        internal
         updateReward(_for)
-        returns (bool)
     {
         require(_amount > 0, "RewardPool : Cannot deposit 0");
 
@@ -366,7 +353,6 @@ contract Gauge is BaseGauge, IGauge {
         //take away from sender
         stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
         emit Staked(_for, _amount);
-        return true;
     }
 
     /** @notice withdraw vault token from the gauge
