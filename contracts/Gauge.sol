@@ -50,21 +50,21 @@ contract Gauge is BaseGauge, IGauge {
     event AddedExtraReward(address reward);
     event DeletedExtraRewards(address[] rewards);
     event RemovedExtraReward(address reward);
-    event UpdatedRewardManager(address rewardManaager);
+    event UpdatedRewardManager(address rewardManager);
     event Initialized(
-        address _stakingToken,
-        address _rewardToken,
-        address _gov,
-        address _rewardManager,
-        address _ve,
-        address _veYfiRewardPool
+        address stakingToken,
+        address rewardToken,
+        address owner,
+        address rewardManager,
+        address ve,
+        address veYfiRewardPool
     );
 
     /** @notice initialize the contract
      *  @dev Initialize called after contract is cloned.
      *  @param _stakingToken The vault token to stake
      *  @param _rewardToken the reward token YFI
-     *  @param _gov governance address
+     *  @param _owner owner address
      *  @param _rewardManager reward manager address
      *  @param _ve veYFI address
      *  @param _veYfiRewardPool veYfiRewardPool address
@@ -72,42 +72,39 @@ contract Gauge is BaseGauge, IGauge {
     function initialize(
         address _stakingToken,
         address _rewardToken,
-        address _gov,
+        address _owner,
         address _rewardManager,
         address _ve,
         address _veYfiRewardPool
-    ) external {
-        assert(address(rewardToken) == address(0x0));
-
-        require(
-            address(_rewardToken) != address(0x0),
-            "_rewardToken 0x0 address"
-        );
+    ) external initializer {
         require(
             address(_stakingToken) != address(0x0),
             "_stakingToken 0x0 address"
         );
-        require(address(_gov) != address(0x0), "_gov 0x0 address");
         require(address(_ve) != address(0x0), "_ve 0x0 address");
         require(
             address(_veYfiRewardPool) != address(0x0),
             "_veYfiRewardPool 0x0 address"
         );
 
+        __initialize(_rewardToken, _owner);
         stakingToken = IERC20(_stakingToken);
-        rewardToken = IERC20(_rewardToken);
-        gov = _gov;
         veToken = _ve;
         rewardManager = _rewardManager;
         veYfiRewardPool = _veYfiRewardPool;
+
         emit Initialized(
             _stakingToken,
             _rewardToken,
-            _gov,
+            _owner,
             _rewardManager,
             _ve,
             _veYfiRewardPool
         );
+    }
+
+    function setVe(address _ve) external onlyOwner {
+        veToken = _ve;
     }
 
     /** @return total of the staked vault token
@@ -537,13 +534,13 @@ contract Gauge is BaseGauge, IGauge {
     /**
      * @notice
      * set reward manager
-     * @dev Can be called by rewardManager or gov
+     * @dev Can be called by rewardManager or owner
      * @param _rewardManager new reward manager
      * @return true
      */
     function setRewardManager(address _rewardManager) external returns (bool) {
         require(
-            msg.sender == rewardManager || msg.sender == gov,
+            msg.sender == rewardManager || msg.sender == owner(),
             "!authorized"
         );
 

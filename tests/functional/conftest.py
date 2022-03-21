@@ -88,8 +88,13 @@ def gauge_factory(GaugeFactory, Gauge, ExtraReward, gov):
 
 
 @pytest.fixture
-def voter(Voter, gov, ve_yfi, yfi, gauge_factory, ve_yfi_rewards):
-    yield gov.deploy(Voter, ve_yfi, yfi, gauge_factory, ve_yfi_rewards)
+def vote_delegation(VoteDelegation, gov, ve_yfi):
+    yield gov.deploy(VoteDelegation, ve_yfi)
+
+
+@pytest.fixture
+def registry(Registry, gov, ve_yfi, yfi, gauge_factory, ve_yfi_rewards):
+    yield gov.deploy(Registry, ve_yfi, yfi, gauge_factory, ve_yfi_rewards)
 
 
 @pytest.fixture
@@ -101,9 +106,9 @@ def create_vault(Token, gov):
 
 
 @pytest.fixture
-def create_gauge(voter, gov):
+def create_gauge(registry, gov):
     def create_gauge(vault):
-        return voter.addVaultToRewards(vault, gov, gov)
+        return registry.addVaultToRewards(vault, gov, gov)
 
     yield create_gauge
 

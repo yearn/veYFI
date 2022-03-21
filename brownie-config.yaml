@@ -12,7 +12,7 @@ compiler:
   solc:
     version: 0.8.12
     remappings:
-      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.5.0"
+      - "@openzeppelin/contracts=OpenZeppelin/openzeppelin-contracts@4.5.0/contracts"
 
 reports:
   exclude_contracts:

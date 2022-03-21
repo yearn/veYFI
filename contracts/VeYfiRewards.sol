@@ -14,16 +14,19 @@ import "./BaseGauge.sol";
 contract VeYfiRewards is BaseGauge {
     using SafeERC20 for IERC20;
 
-    IVotingEscrow public veToken; // immutable
+    address public veToken; // immutable
 
     constructor(
         address _veToken,
         address _rewardToken,
-        address _gov
+        address _owner
     ) {
-        veToken = IVotingEscrow(_veToken);
-        rewardToken = IERC20(_rewardToken);
-        gov = _gov;
+        __initialize(_rewardToken, _owner);
+        veToken = _veToken;
+    }
+
+    function setVe(address _ve) external onlyOwner {
+        veToken = _ve;
     }
 
     function _updateReward(address account) internal override {
@@ -44,7 +47,7 @@ contract VeYfiRewards is BaseGauge {
     }
 
     function _rewardPerToken() internal view override returns (uint256) {
-        uint256 supply = veToken.totalSupply();
+        uint256 supply = IVotingEscrow(veToken).totalSupply();
         if (supply == 0) {
             return rewardPerTokenStored;
         }
@@ -57,7 +60,7 @@ contract VeYfiRewards is BaseGauge {
 
     function _earnedReward(address account) internal view returns (uint256) {
         return
-            (veToken.balanceOf(account) *
+            (IVotingEscrow(veToken).balanceOf(account) *
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) /
             1e18 +
             rewards[account];
@@ -129,7 +132,7 @@ contract VeYfiRewards is BaseGauge {
 
         if (_lock) {
             rewardToken.approve(address(veToken), reward);
-            veToken.deposit_for(msg.sender, reward);
+            IVotingEscrow(veToken).deposit_for(msg.sender, reward);
         } else {
             SafeERC20.safeTransfer(rewardToken, _account, reward);
         }

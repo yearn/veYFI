@@ -59,7 +59,7 @@ def test_sweep(yfi, ve_yfi, ve_yfi_rewards, create_token, whale, whale_amount, g
     ve_yfi.create_lock(whale_amount, chain.time() + 3600 * 24 * 365, {"from": whale})
     yfo = create_token("YFO")
     yfo.mint(ve_yfi_rewards, 10**18)
-    with brownie.reverts("!authorized"):
+    with brownie.reverts("Ownable: caller is not the owner"):
         ve_yfi_rewards.sweep(yfo, {"from": whale})
     with brownie.reverts("protected token"):
         ve_yfi_rewards.sweep(yfi, {"from": gov})
@@ -68,13 +68,13 @@ def test_sweep(yfi, ve_yfi, ve_yfi_rewards, create_token, whale, whale_amount, g
 
 
 def test_set_gov(ve_yfi_rewards, panda, gov):
-    with brownie.reverts("_gov 0x0 address"):
-        ve_yfi_rewards.setGov(ZERO_ADDRESS, {"from": gov})
-    with brownie.reverts("!authorized"):
-        ve_yfi_rewards.setGov(panda, {"from": panda})
+    with brownie.reverts("Ownable: new owner is the zero address"):
+        ve_yfi_rewards.transferOwnership(ZERO_ADDRESS, {"from": gov})
+    with brownie.reverts("Ownable: caller is not the owner"):
+        ve_yfi_rewards.transferOwnership(panda, {"from": panda})
 
-    ve_yfi_rewards.setGov(panda, {"from": gov})
-    assert ve_yfi_rewards.gov() == panda
+    ve_yfi_rewards.transferOwnership(panda, {"from": gov})
+    assert ve_yfi_rewards.owner() == panda
 
 
 def test_reward_checkpoint(ve_yfi_rewards, ve_yfi, panda, gov):

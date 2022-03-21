@@ -173,13 +173,13 @@ def test_set_gov(
     tx = create_extra_reward(gauge, yfo)
     extra_reward = ExtraReward.at(tx.events["ExtraRewardCreated"]["extraReward"])
 
-    with brownie.reverts("_gov 0x0 address"):
-        extra_reward.setGov(ZERO_ADDRESS, {"from": gov})
-    with brownie.reverts("!authorized"):
-        extra_reward.setGov(panda, {"from": panda})
+    with brownie.reverts("Ownable: new owner is the zero address"):
+        extra_reward.transferOwnership(ZERO_ADDRESS, {"from": gov})
+    with brownie.reverts("Ownable: caller is not the owner"):
+        extra_reward.transferOwnership(panda, {"from": panda})
 
-    extra_reward.setGov(panda, {"from": gov})
-    assert extra_reward.gov() == panda
+    extra_reward.transferOwnership(panda, {"from": gov})
+    assert extra_reward.owner() == panda
 
 
 def test_sweep(
@@ -194,7 +194,7 @@ def test_sweep(
 
     yfx = create_token("YFX")
     yfx.mint(extra_reward, 10**18)
-    with brownie.reverts("!authorized"):
+    with brownie.reverts("Ownable: caller is not the owner"):
         extra_reward.sweep(yfo, {"from": whale})
     with brownie.reverts("protected token"):
         extra_reward.sweep(yfo, {"from": gov})

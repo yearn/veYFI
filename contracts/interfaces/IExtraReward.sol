@@ -7,7 +7,7 @@ interface IExtraReward is IBaseGauge {
     function initialize(
         address gauge_,
         address reward_,
-        address gov_
+        address owner_
     ) external;
 
     function rewardCheckpoint(address _account) external returns (bool);

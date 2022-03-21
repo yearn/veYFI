@@ -3,12 +3,14 @@ pragma solidity 0.8.12;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interfaces/IBaseGauge.sol";
 
-abstract contract BaseGauge is IBaseGauge {
+abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
     IERC20 public override rewardToken;
     //// @notice rewards are distributed during 7 days when queued.
-    uint256 public constant DURATION = 7 days;
+    uint256 public duration;
     uint256 public periodFinish;
     uint256 public rewardRate;
     uint256 public lastUpdateTime;
@@ -20,8 +22,6 @@ abstract contract BaseGauge is IBaseGauge {
     uint256 public queuedRewards;
     uint256 public currentRewards;
     uint256 public historicalRewards;
-    //// @notice gov can sweep token airdrop
-    address public gov;
 
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -37,7 +37,6 @@ abstract contract BaseGauge is IBaseGauge {
     event RewardsQueued(address from, uint256 amount);
 
     event RewardPaid(address indexed user, uint256 reward);
-    event UpdatedGov(address gov);
     event UpdatedRewards(
         address account,
         uint256 rewardPerTokenStored,
@@ -46,6 +45,8 @@ abstract contract BaseGauge is IBaseGauge {
         uint256 userRewardPerTokenPaid
     );
     event Sweep(address token, uint256 amount);
+
+    event DurationUpdated(uint256 duration, uint256 rewardRate);
 
     function _newEarning(address) internal view virtual returns (uint256);
 
@@ -56,6 +57,30 @@ abstract contract BaseGauge is IBaseGauge {
     modifier updateReward(address account) {
         _updateReward(account);
         _;
+    }
+
+    function __initialize(address _rewardToken, address _owner) internal {
+        require(
+            address(_rewardToken) != address(0x0),
+            "_rewardToken 0x0 address"
+        );
+        rewardToken = IERC20(_rewardToken);
+        duration = 7 days;
+        _transferOwnership(_owner);
+    }
+
+    function setDuration(uint256 newDuration)
+        external
+        onlyOwner
+        updateReward(address(0))
+    {
+        if (block.timestamp < periodFinish) {
+            uint256 remaining = periodFinish - block.timestamp;
+            uint256 leftover = remaining * rewardRate;
+            rewardRate = leftover / newDuration;
+        }
+        duration = newDuration;
+        emit DurationUpdated(newDuration, rewardRate);
     }
 
     /**
@@ -73,22 +98,6 @@ abstract contract BaseGauge is IBaseGauge {
         return _rewardPerToken();
     }
 
-    /**
-     * @notice
-     * set gov
-     * @dev Can be called by gov
-     * @param _gov new gov
-     * @return true
-     */
-    function setGov(address _gov) external returns (bool) {
-        require(msg.sender == gov, "!authorized");
-
-        require(_gov != address(0), "_gov 0x0 address");
-        gov = _gov;
-        emit UpdatedGov(_gov);
-        return true;
-    }
-
     function _notProtectedTokens(address _token)
         internal
         view
@@ -98,12 +107,11 @@ abstract contract BaseGauge is IBaseGauge {
         return _token != address(rewardToken);
     }
 
-    function sweep(address _token) external returns (bool) {
-        require(msg.sender == gov, "!authorized");
+    function sweep(address _token) external onlyOwner returns (bool) {
         require(_notProtectedTokens(_token), "protected token");
         uint256 amount = IERC20(_token).balanceOf(address(this));
 
-        SafeERC20.safeTransfer(IERC20(_token), gov, amount);
+        SafeERC20.safeTransfer(IERC20(_token), owner(), amount);
         emit Sweep(_token, amount);
         return true;
     }
@@ -140,7 +148,7 @@ abstract contract BaseGauge is IBaseGauge {
             return true;
         }
         uint256 elapsedSinceBeginingOfPeriod = block.timestamp -
-            (periodFinish - DURATION);
+            (periodFinish - duration);
         uint256 distributedSoFar = elapsedSinceBeginingOfPeriod * rewardRate;
         // we only restart a new week if _amount is 120% of distributedSoFar.
 
@@ -159,16 +167,16 @@ abstract contract BaseGauge is IBaseGauge {
     {
         historicalRewards = historicalRewards + reward;
         if (block.timestamp >= periodFinish) {
-            rewardRate = reward / DURATION;
+            rewardRate = reward / duration;
         } else {
             uint256 remaining = periodFinish - block.timestamp;
             uint256 leftover = remaining * rewardRate;
             reward = reward + leftover;
-            rewardRate = reward / DURATION;
+            rewardRate = reward / duration;
         }
         currentRewards = reward;
         lastUpdateTime = block.timestamp;
-        periodFinish = block.timestamp + DURATION;
+        periodFinish = block.timestamp + duration;
         emit RewardsAdded(
             currentRewards,
             lastUpdateTime,
