@@ -50,6 +50,8 @@ interface IVeYfiRewards:
     def rewardCheckpoint(_account: address) -> bool: nonpayable
     def queueNewRewards(_amount: uint256) -> bool: nonpayable
 
+interface Migrator:
+    def migrateLock(_account: address, _amount: uint256):nonpayable
 # Interface for checking whether address belongs to a whitelisted
 # type of a smart wallet.
 # When new types are added - the whole contract is changed
@@ -93,14 +95,20 @@ event Supply:
     prevSupply: uint256
     supply: uint256
 
-event Unlocked: pass
-
 event Initialized:
     token: address
     version: String[32]
 
 event NewRewardPool:
     reward_pool: address
+
+event Migrate:
+    account: address
+    amount: uint256
+    to: address
+
+event NextVeContractSet:
+    ve: address
 
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
@@ -116,7 +124,6 @@ point_history: public(Point[100000000000000000000000000000])  # epoch -> unsigne
 user_point_history: public(HashMap[address, Point[1000000000]])  # user -> Point[user_epoch]
 user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
-unlocked: public(bool)
 queuedPenalty: public(uint256)
 
 # Aragon's view methods for compatibility
@@ -132,6 +139,9 @@ admin: public(address)  # Can and will be a smart contract
 future_admin: public(address)
 unlocker: public(address)
 future_unlocker: public(address)
+
+next_ve_contract: public(address)
+migration: public(bool)
 
 reward_pool: public(address)
 
@@ -169,6 +179,14 @@ def set_reward_pool(addr: address):
     log NewRewardPool(addr)
 
 @external
+def set_next_ve_contract(addr: address):
+    assert msg.sender == self.admin  # dev: admin only
+    assert addr != ZERO_ADDRESS
+    self.next_ve_contract = addr
+    self.migration = True
+    log NextVeContractSet(addr)
+
+@external
 def commit_transfer_ownership(addr: address):
     """
     @notice Transfer ownership of VotingEscrow contract to `addr`
@@ -177,7 +195,6 @@ def commit_transfer_ownership(addr: address):
     assert msg.sender == self.admin  # dev: admin only
     self.future_admin = addr
     log CommitOwnership(addr)
-
 
 @external
 def apply_transfer_ownership():
@@ -212,15 +229,6 @@ def apply_transfer_unlocker():
     log ApplyUnlocker(_unlocker)
 
 @external
-def unlock():
-    """
-    @notice Remove lock from locked funds
-    """
-    assert msg.sender == self.unlocker
-    self.unlocked = True
-    log Unlocked()
-
-@external
 @view
 def get_last_user_slope(addr: address) -> int128:
     """
@@ -228,7 +236,7 @@ def get_last_user_slope(addr: address) -> int128:
     @param addr Address of the user wallet
     @return Value of the slope
     """
-    if self.unlocked:
+    if self.migration:
         return 0
     uepoch: uint256 = self.user_point_epoch[addr]
     return self.user_point_history[addr][uepoch].slope
@@ -243,7 +251,7 @@ def user_point_history__ts(_addr: address, _idx: uint256) -> uint256:
     @param _idx User epoch number
     @return Epoch time of the checkpoint
     """
-    if self.unlocked:
+    if self.migration:
         return 0
     return self.user_point_history[_addr][_idx].ts
 
@@ -256,7 +264,7 @@ def locked__end(_addr: address) -> uint256:
     @param _addr User wallet
     @return Epoch time of the lock end
     """
-    if self.unlocked:
+    if self.migration:
         return 0
     return self.locked[_addr].end
 
@@ -269,7 +277,6 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     @param old_locked Pevious locked amount / end lock time for the user
     @param new_locked New locked amount / end lock time for the user
     """
-    assert(self.unlocked == False)
     u_old: Point = empty(Point)
     u_new: Point = empty(Point)
     old_dslope: int128 = 0
@@ -379,6 +386,14 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
         self.user_point_history[addr][user_epoch] = u_new
 
 
+@external
+def checkpoint():
+    """
+    @notice Record global data to checkpoint
+    """
+    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
+
+
 @internal
 def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
     """
@@ -389,7 +404,7 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
     @param unlock_time New time when to unlock the tokens, or 0 if unchanged
     @param locked_balance Previous locked amount / timestamp
     """
-    assert(self.unlocked == False) # dev: no more lock
+    assert(self.migration == False) # dev: must migrate
     _locked: LockedBalance = locked_balance
     supply_before: uint256 = self.supply
     IVeYfiRewards(self.reward_pool).rewardCheckpoint(_addr) # Reward pool snapshot
@@ -416,14 +431,6 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
 
 
 @external
-def checkpoint():
-    """
-    @notice Record global data to checkpoint
-    """
-    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
-
-
-@external
 @nonreentrant('lock')
 def deposit_for(_addr: address, _value: uint256):
     """
@@ -433,7 +440,6 @@ def deposit_for(_addr: address, _value: uint256):
     @param _addr User's wallet address
     @param _value Amount to add to user's lock
     """
-    assert(self.unlocked == False) # dev: no more lock
     _locked: LockedBalance = self.locked[_addr]
 
     assert _value > 0  # dev: need non-zero value
@@ -450,7 +456,6 @@ def create_lock(_value: uint256, _unlock_time: uint256):
     @param _value Amount to deposit
     @param _unlock_time Epoch time when tokens unlock, rounded down to whole weeks
     """
-    assert(self.unlocked == False) # dev: no more lock
     unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
     _locked: LockedBalance = self.locked[msg.sender]
 
@@ -471,7 +476,6 @@ def create_lock_for(_addr: address, _value: uint256, _unlock_time: uint256):
     @param _unlock_time Epoch time when tokens unlock, rounded down to whole weeks
     """
     assert msg.sender == self.admin #dev: only admin
-    assert(self.unlocked == False) # dev: no more lock
     unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
     _locked: LockedBalance = self.locked[_addr]
 
@@ -490,7 +494,6 @@ def increase_amount(_value: uint256):
             without modifying the unlock time
     @param _value Amount of tokens to deposit and add to the lock
     """
-    assert(self.unlocked == False) # dev: no more lock
     _locked: LockedBalance = self.locked[msg.sender]
 
     assert _value > 0  # dev: need non-zero value
@@ -507,7 +510,6 @@ def increase_unlock_time(_unlock_time: uint256):
     @notice Extend the unlock time for `msg.sender` to `_unlock_time`
     @param _unlock_time New epoch time for unlocking
     """
-    assert(self.unlocked == False) # dev: no more lock
     _locked: LockedBalance = self.locked[msg.sender]
     unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
 
@@ -529,12 +531,6 @@ def withdraw():
         
     _locked: LockedBalance = self.locked[msg.sender]
     value: uint256 = convert(_locked.amount, uint256)
-
-    if self.unlocked:
-        _locked.end = 0
-        _locked.amount = 0
-        assert ERC20(self.token).transfer(msg.sender, value)
-        return
 
     assert block.timestamp >= _locked.end, "The lock didn't expire"
     IVeYfiRewards(self.reward_pool).rewardCheckpoint(msg.sender) # Reward pool snapshot
@@ -566,7 +562,7 @@ def force_withdraw():
     With a 4 years lock on withdraw, you pay 75% penalty during the first year.
     penalty decrease linearly to zero starting when time left is under 3 years.
     """
-    assert(self.unlocked == False)
+    assert(self.migration == False)
     _locked: LockedBalance = self.locked[msg.sender]
     assert block.timestamp < _locked.end, "lock expired"
     
@@ -596,6 +592,28 @@ def force_withdraw():
     log Withdraw(msg.sender, value, block.timestamp)
     log Supply(supply_before, supply_before - value)
 
+
+@external
+@nonreentrant('lock')
+def migrate():
+    assert(self.next_ve_contract != ZERO_ADDRESS) # dev: no next ve contract
+
+    _locked: LockedBalance = self.locked[msg.sender]
+    assert block.timestamp < _locked.end, "lock expired"
+    value: uint256 = convert(_locked.amount, uint256)
+
+    ERC20(self.token).approve(self.next_ve_contract, value)
+    Migrator(self.next_ve_contract).migrateLock(msg.sender, value)
+
+    old_locked: LockedBalance = _locked
+    _locked.end = 0
+    _locked.amount = 0
+    self.locked[msg.sender] = _locked
+    supply_before: uint256 = self.supply
+    self.supply = supply_before - value
+    self._checkpoint(msg.sender, old_locked, _locked)
+
+    log Migrate(msg.sender, value, self.next_ve_contract)
 
 # The following ERC20/minime-compatible methods are not real balanceOf and supply!
 # They measure the weights for the purpose of voting, so they don't represent
@@ -634,7 +652,7 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
     @param _t Epoch time to return voting power at
     @return User voting power
     """
-    if self.unlocked:
+    if self.migration:
         return 0
 
     _epoch: uint256 = self.user_point_epoch[addr]
@@ -671,7 +689,7 @@ def balanceOfAt(addr: address, _block: uint256) -> uint256:
     @param _block Block to calculate the voting power at
     @return Voting power
     """
-    if self.unlocked:
+    if self.migration:
         return 0
     # Copying and pasting totalSupply code because Vyper cannot pass by
     # reference yet
@@ -723,7 +741,7 @@ def supply_at(point: Point, t: uint256) -> uint256:
     @param t Time to calculate the total voting power at
     @return Total voting power at that time
     """
-    if self.unlocked:
+    if self.migration:
         return 0
 
     last_point: Point = point
@@ -754,7 +772,7 @@ def totalSupply(t: uint256 = block.timestamp) -> uint256:
     @dev Adheres to the ERC20 `totalSupply` interface for Aragon compatibility
     @return Total voting power
     """
-    if self.unlocked:
+    if self.migration:
         return 0
 
     _epoch: uint256 = self.epoch
@@ -770,7 +788,7 @@ def totalSupplyAt(_block: uint256) -> uint256:
     @param _block Block to calculate the total voting power at
     @return Total voting power at `_block`
     """
-    if self.unlocked:
+    if self.migration:
         return 0
 
     assert _block <= block.number
