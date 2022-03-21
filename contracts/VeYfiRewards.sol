@@ -143,6 +143,6 @@ contract VeYfiRewards is BaseGauge {
         override
         returns (bool)
     {
-        return _token != address(rewardToken) || veToken.unlocked();
+        return _token != address(rewardToken) || veToken.migration();
     }
 }

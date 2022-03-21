@@ -331,7 +331,7 @@ def test_withdraw(yfi, ve_yfi, whale, whale_amount, create_vault, create_gauge, 
 
 
 def test_gauge_yfi_distribution_no_more_ve_yfi(
-    yfi, ve_yfi, whale, whale_amount, create_vault, create_gauge, gov
+    yfi, ve_yfi, whale, whale_amount, create_vault, create_gauge, gov, NextVe
 ):
     # we create a big lock compared to what whale will deposit so he doesn't have a boost.
     # User should also suffer penalty since he only locked for a year but after veYFI unlocks
@@ -364,7 +364,8 @@ def test_gauge_yfi_distribution_no_more_ve_yfi(
     gauge.queueNewRewards(yfi_to_distribute, {"from": gov})
     assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
     chain.sleep(3600)
-    ve_yfi.unlock()
+    next_ve = gov.deploy(NextVe, yfi)
+    ve_yfi.set_next_ve_contract(next_ve)
 
     gauge.getReward({"from": whale})
 
