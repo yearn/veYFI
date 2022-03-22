@@ -24,7 +24,7 @@ contract Registry is Ownable {
 
     event VaultAdded(address vault);
     event VaultRemoved(address vault);
-    event VeTokenUpdated(address ve);
+    event UpdatedVeToken(address ve);
 
     constructor(
         address _ve,
@@ -40,7 +40,7 @@ contract Registry is Ownable {
 
     function setVe(address _ve) external onlyOwner {
         veToken = _ve;
-        emit VeTokenUpdated(_ve);
+        emit UpdatedVeToken(_ve);
     }
 
     /** 
