@@ -211,10 +211,14 @@ contract Gauge is BaseGauge, IGauge {
     }
 
     function _lockingRatio(address acccount) internal view returns (uint256) {
-        if (IVotingEscrow(veToken).migration()) return PRECISON_FACTOR;
+        if (IVotingEscrow(veToken).migration()) {
+            return PRECISON_FACTOR;
+        }
 
         uint256 lockedUntil = IVotingEscrow(veToken).locked__end(acccount);
-        if (lockedUntil == 0 || lockedUntil <= block.timestamp) return 0;
+        if (lockedUntil == 0 || lockedUntil <= block.timestamp) {
+            return 0;
+        }
 
         uint256 timeLeft = lockedUntil - block.timestamp;
         if (MAX_LOCK - timeLeft < GRACE_PERIOD) {
@@ -284,7 +288,9 @@ contract Gauge is BaseGauge, IGauge {
         returns (uint256)
     {
         uint256 veTotalSupply = IVotingEscrow(veToken).totalSupply();
-        if (veTotalSupply == 0) return _balances[account];
+        if (veTotalSupply == 0) {
+            return _balances[account];
+        }
 
         return
             Math.min(

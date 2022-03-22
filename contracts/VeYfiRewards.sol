@@ -128,7 +128,9 @@ contract VeYfiRewards is BaseGauge {
     {
         uint256 reward = rewards[_account];
         rewards[_account] = 0;
-        if (reward == 0) return;
+        if (reward == 0) {
+            return;
+        }
 
         if (_lock) {
             rewardToken.approve(address(veToken), reward);
