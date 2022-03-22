@@ -15,6 +15,7 @@ contract VeYfiRewards is BaseGauge {
     using SafeERC20 for IERC20;
 
     address public veToken; // immutable
+    event UpdatedVeToken(address ve);
 
     constructor(
         address _veToken,
@@ -27,6 +28,7 @@ contract VeYfiRewards is BaseGauge {
 
     function setVe(address _ve) external onlyOwner {
         veToken = _ve;
+        emit UpdatedVeToken(_ve);
     }
 
     function _updateReward(address account) internal override {

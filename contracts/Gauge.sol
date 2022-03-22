@@ -51,6 +51,7 @@ contract Gauge is BaseGauge, IGauge {
     event DeletedExtraRewards(address[] rewards);
     event RemovedExtraReward(address reward);
     event UpdatedRewardManager(address rewardManager);
+    event UpdatedVeToken(address ve);
     event Initialized(
         address stakingToken,
         address rewardToken,
@@ -105,6 +106,7 @@ contract Gauge is BaseGauge, IGauge {
 
     function setVe(address _ve) external onlyOwner {
         veToken = _ve;
+        emit UpdatedVeToken(_ve);
     }
 
     /** @return total of the staked vault token
