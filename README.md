@@ -18,12 +18,37 @@
 ![03-gauges](https://user-images.githubusercontent.com/87183122/152998641-39c8454d-4cfe-4440-b497-12f3b4d83754.svg)
 
 
-# Setup
+## Brownie Setup
 
 See [brownie setup](https://eth-brownie.readthedocs.io/en/stable/install.html)
 
-# Test
+## Brownie Test
 
 ```
 brownie test
 ```
+
+## Foundry Installation and Setup
+NOTE: we use foundry in this repository for fast fuzz testing.
+
+1. To install with [Foundry](https://github.com/gakonst/foundry).
+
+2. Pull git submodules `git submodule init && git submodule update`
+
+3. Build the project.
+
+```sh
+forge build
+```
+
+4. Run tests
+
+```sh
+forge test
+```
+Run tests with traces (very useful)
+
+```sh
+forge test -vvvv
+```
+
