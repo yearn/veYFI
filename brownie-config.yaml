@@ -13,6 +13,8 @@ compiler:
     version: 0.8.12
     remappings:
       - "@openzeppelin/contracts=OpenZeppelin/openzeppelin-contracts@4.5.0/contracts"
+      - "ds-test/=lib/ds-test/src/"
+      - "forge-std/=lib/forge-std/src/"
 
 reports:
   exclude_contracts:
