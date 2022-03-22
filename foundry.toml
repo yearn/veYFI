@@ -1,12 +1,12 @@
 [default]
 src = 'contracts'
-test = 'foundry-tests'
+test = 'test'
 out = 'out'
-libs = ['foundry-lib']
+libs = ['lib']
 remappings = [
-    'ds-test/=foundry-lib/ds-test/src/',
-    '@openzeppelin/=foundry-lib/openzeppelin-contracts/',
-    'forge-std/=foundry-lib/forge-std/src/'
+    'ds-test/=lib/ds-test/src/',
+    '@openzeppelin/=lib/openzeppelin-contracts/',
+    'forge-std/=lib/forge-std/src/'
 ]
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config
