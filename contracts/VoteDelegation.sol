@@ -17,9 +17,17 @@ contract VoteDelegation is Ownable {
 
     address public veToken;
 
-    event Delegate(address sender, address recipient, uint256 until);
-    event DelegationRemoved(address from, address to);
-    event DelegationDurationIncreased(address from, address to, uint256 until);
+    event Delegate(
+        address indexed sender,
+        address indexed recipient,
+        uint256 until
+    );
+    event DelegationRemoved(address indexed from, address indexed to);
+    event DelegationDurationIncreased(
+        address indexed from,
+        address indexed to,
+        uint256 until
+    );
 
     constructor(address _ve) {
         veToken = _ve;

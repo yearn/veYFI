@@ -17,7 +17,11 @@ contract ExtraReward is IExtraReward, BaseGauge {
     using SafeERC20 for IERC20;
     IGauge public gauge;
 
-    event Initialized(address _gauge, address rewardToken, address owner);
+    event Initialized(
+        address indexed _gauge,
+        address indexed rewardToken,
+        address indexed owner
+    );
 
     /**
     @notice Initialize the contract after a clone.

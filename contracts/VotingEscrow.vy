@@ -100,15 +100,15 @@ event Initialized:
     version: String[32]
 
 event NewRewardPool:
-    reward_pool: address
+    reward_pool: indexed(address)
 
 event Migrate:
-    account: address
+    account: indexed(address)
     amount: uint256
-    to: address
+    to: indexed(address)
 
 event NextVeContractSet:
-    ve: address
+    ve: indexed(address)
 
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years

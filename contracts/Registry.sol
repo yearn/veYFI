@@ -22,9 +22,9 @@ contract Registry is Ownable {
     mapping(address => address) public vaultForGauge; // gauge => vault
     mapping(address => bool) public isGauge;
 
-    event VaultAdded(address vault);
-    event VaultRemoved(address vault);
-    event UpdatedVeToken(address ve);
+    event VaultAdded(address indexed vault);
+    event VaultRemoved(address indexed vault);
+    event UpdatedVeToken(address indexed ve);
 
     constructor(
         address _ve,
