@@ -49,3 +49,52 @@ def test_delegate(
     delegation = vote_delegation.delegation(whale).dict()
     assert delegation["to"] == panda
     assert delegation["until"] == until + 10
+
+
+def test_delegate_gas(
+    vote_delegation, yfi, ve_yfi, ve_yfi_rewards, whale_amount, whale, panda
+):
+    yfi.approve(ve_yfi, whale_amount, {"from": whale})
+    ve_yfi.create_lock(whale_amount, chain.time() + 3600 * 24 * 365, {"from": whale})
+    # assert(False)
+    vote_delegation.delegate(panda, {"from": whale})  # gas used: 97738
+
+
+def test_delegate_gas_10(
+    accounts, yfi, ve_yfi, ve_yfi_rewards, whale, panda, fish_amount, vote_delegation
+):
+    for i in range(10):
+        accounts.add()
+        yfi.mint(accounts[-1], fish_amount)
+        yfi.approve(ve_yfi, fish_amount, {"from": accounts[-1]})
+        ve_yfi.create_lock(
+            fish_amount, chain.time() + 3600 * 24 * 365, {"from": accounts[-1]}
+        )
+
+    for i in range(11, 20):
+        vote_delegation.delegate(panda, {"from": accounts[i]})
+
+    # assert(False)
+    vote_delegation.delegate(whale, {"from": accounts[19]})  # gas used: 101626
+
+    accounts = accounts[:10]
+
+
+def test_delegate_gas_100(
+    accounts, yfi, ve_yfi, ve_yfi_rewards, whale, panda, fish_amount, vote_delegation
+):
+    for i in range(100):
+        accounts.add()
+        yfi.mint(accounts[-1], fish_amount)
+        yfi.approve(ve_yfi, fish_amount, {"from": accounts[-1]})
+        ve_yfi.create_lock(
+            fish_amount, chain.time() + 3600 * 24 * 365, {"from": accounts[-1]}
+        )
+
+    for i in range(11, 110):
+        vote_delegation.delegate(panda, {"from": accounts[i]})
+
+    # assert(False)
+    vote_delegation.delegate(whale, {"from": accounts[109]})  # gas used: 269476
+
+    accounts = accounts[:10]
