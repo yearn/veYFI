@@ -34,17 +34,17 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         uint256 historicalRewards
     );
 
-    event RewardsQueued(address from, uint256 amount);
+    event RewardsQueued(address indexed from, uint256 amount);
 
     event RewardPaid(address indexed user, uint256 reward);
     event UpdatedRewards(
-        address account,
+        address indexed account,
         uint256 rewardPerTokenStored,
         uint256 lastUpdateTime,
         uint256 rewards,
         uint256 userRewardPerTokenPaid
     );
-    event Sweep(address token, uint256 amount);
+    event Sweep(address indexed token, uint256 amount);
 
     event DurationUpdated(uint256 duration, uint256 rewardRate);
 

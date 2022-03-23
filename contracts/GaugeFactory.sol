@@ -13,8 +13,8 @@ contract GaugeFactory is IGaugeFactory {
     address public immutable deployedGauge;
     address public immutable deployedExtra;
 
-    event GaugeCreated(address gauge);
-    event ExtraRewardCreated(address extraReward);
+    event GaugeCreated(address indexed gauge);
+    event ExtraRewardCreated(address indexed extraReward);
 
     constructor(address _deployedGauge, address _deployedExtra) {
         deployedGauge = _deployedGauge;
