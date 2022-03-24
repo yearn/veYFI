@@ -17,7 +17,7 @@ contract Registry is Ownable {
     address public veYfiRewardPool; // immutable
     address public gaugefactory; // immutable
 
-    EnumerableSet.AddressSet private vaults;
+    EnumerableSet.AddressSet private _vaults;
     mapping(address => address) public gauges; // vault => gauge
     mapping(address => address) public vaultForGauge; // gauge => vault
     mapping(address => bool) public isGauge;
@@ -47,7 +47,7 @@ contract Registry is Ownable {
     @return The list of vaults with gauge that are possible to vote for.
     */
     function getVaults() external view returns (address[] memory) {
-        return vaults.values();
+        return _vaults.values();
     }
 
     /** 
@@ -74,7 +74,7 @@ contract Registry is Ownable {
         gauges[_vault] = _gauge;
         vaultForGauge[_gauge] = _vault;
         isGauge[_gauge] = true;
-        vaults.add(_vault);
+        _vaults.add(_vault);
         emit VaultAdded(_vault);
         return _gauge;
     }
@@ -87,7 +87,7 @@ contract Registry is Ownable {
         require(gauges[_vault] != address(0x0), "!exist");
         address gauge = gauges[_vault];
 
-        vaults.remove(_vault);
+        _vaults.remove(_vault);
 
         gauges[_vault] = address(0x0);
         vaultForGauge[gauge] = address(0x0);
