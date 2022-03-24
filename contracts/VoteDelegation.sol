@@ -81,8 +81,8 @@ contract VoteDelegation is Ownable {
                 IVotingEscrow(veToken).balanceOf(msg.sender) != 0,
                 "no power"
             );
-            require(delegated[_to].length <= MAX_DELAGATED, "max delegated");
             delegated[_to].push(msg.sender);
+            require(delegated[_to].length <= MAX_DELAGATED, "max delegated");
         }
         emit Delegate(msg.sender, _to, _until);
     }
