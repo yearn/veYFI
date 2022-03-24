@@ -10,5 +10,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: crytic/slither-action@v0.1.0
+      - uses: crytic/slither-action@v0.1.1
         continue-on-error: true
