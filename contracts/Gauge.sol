@@ -52,6 +52,7 @@ contract Gauge is BaseGauge, IGauge {
     event RemovedExtraReward(address indexed reward);
     event UpdatedRewardManager(address indexed rewardManager);
     event UpdatedVeToken(address indexed ve);
+    event TransferedQueuedPenalty(uint256 transfered);
 
     event Initialized(
         address indexed stakingToken,
@@ -523,6 +524,7 @@ contract Gauge is BaseGauge, IGauge {
 
         IERC20(rewardToken).approve(veYfiRewardPool, toTransfer);
         IVeYfiRewardPool(veYfiRewardPool).queueNewRewards(toTransfer);
+        emit TransferedQueuedPenalty(toTransfer);
         return true;
     }
 
