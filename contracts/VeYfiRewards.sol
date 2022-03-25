@@ -14,7 +14,7 @@ import "./BaseGauge.sol";
 contract VeYfiRewards is BaseGauge {
     using SafeERC20 for IERC20;
 
-    address public veToken; // immutable
+    address public veToken;
     event UpdatedVeToken(address ve);
 
     constructor(
