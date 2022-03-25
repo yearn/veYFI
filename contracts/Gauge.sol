@@ -51,6 +51,7 @@ contract Gauge is BaseGauge, IGauge {
     event RemovedExtraReward(address indexed reward);
     event UpdatedRewardManager(address indexed rewardManager);
     event UpdatedVeToken(address indexed ve);
+    event TransferedQueuedPenalty(uint256 transfered);
 
     event Initialized(
         address indexed stakingToken,
