@@ -30,6 +30,7 @@ contract VoteDelegation is Ownable {
     );
 
     constructor(address _ve) {
+        require(_ve != address(0x0), "_ve 0x0 address");
         veToken = _ve;
     }
 
