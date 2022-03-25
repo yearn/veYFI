@@ -23,12 +23,14 @@ contract VeYfiRewards is BaseGauge {
         address _owner
     ) {
         __initialize(_rewardToken, _owner);
+        require(address(_veToken) != address(0x0), "_veToken 0x0 address");
         veToken = _veToken;
     }
 
-    function setVe(address _ve) external onlyOwner {
-        veToken = _ve;
-        emit UpdatedVeToken(_ve);
+    function setVe(address _veToken) external onlyOwner {
+        require(address(_veToken) != address(0x0), "_veToken 0x0 address");
+        veToken = _veToken;
+        emit UpdatedVeToken(_veToken);
     }
 
     function _updateReward(address account) internal override {

@@ -105,9 +105,10 @@ contract Gauge is BaseGauge, IGauge {
         );
     }
 
-    function setVe(address _ve) external onlyOwner {
-        veToken = _ve;
-        emit UpdatedVeToken(_ve);
+    function setVe(address _veToken) external onlyOwner {
+        require(address(_veToken) != address(0x0), "_veToken 0x0 address");
+        veToken = _veToken;
+        emit UpdatedVeToken(_veToken);
     }
 
     /** @return total of the staked vault token
