@@ -89,6 +89,8 @@ contract Gauge is BaseGauge, IGauge {
             "_veYfiRewardPool 0x0 address"
         );
 
+        require(_rewardManager != address(0), "_rewardManager 0x0 address");
+
         __initialize(_rewardToken, _owner);
         stakingToken = IERC20(_stakingToken);
         veToken = _ve;
