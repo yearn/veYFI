@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IGauge.sol";
-import "./interfaces/IVeYfiRewardPool.sol";
 import "./BaseGauge.sol";
 
 import "./interfaces/IVotingEscrow.sol";
@@ -522,7 +521,8 @@ contract Gauge is BaseGauge, IGauge {
         queuedPenalty = 0;
 
         IERC20(rewardToken).approve(veYfiRewardPool, toTransfer);
-        IVeYfiRewardPool(veYfiRewardPool).queueNewRewards(toTransfer);
+        BaseGauge(veYfiRewardPool).queueNewRewards(toTransfer);
+        emit TransferedQueuedPenalty(toTransfer);
         return true;
     }
 
