@@ -35,10 +35,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
         address _owner
     ) external initializer {
         __initialize(_rewardToken, _owner);
-        require(
-            address(_gauge) != address(0x0),
-            "_gauge 0x0 address"
-        );
+        require(address(_gauge) != address(0x0), "_gauge 0x0 address");
         gauge = IGauge(_gauge);
         rewardToken = IERC20(_rewardToken);
         emit Initialized(_gauge, _rewardToken, _owner);
