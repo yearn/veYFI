@@ -506,7 +506,7 @@ contract Gauge is BaseGauge, IGauge {
         if (_claimExtras) {
             uint256 length = extraRewards.length;
             for (uint256 i = 0; i < length; i++) {
-                IExtraReward(extraRewards[i]).getRewardFor(msg.sender);
+                IExtraReward(extraRewards[i]).getRewardFor(_account);
             }
         }
     }
