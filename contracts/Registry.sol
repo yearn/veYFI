@@ -32,6 +32,14 @@ contract Registry is Ownable {
         address _gaugefactory,
         address _veYfiRewardPool
     ) {
+        require(_ve != address(0x0), "_ve 0x0 address");
+        require(_yfi != address(0x0), "_yfi 0x0 address");
+        require(_gaugefactory != address(0x0), "_gaugefactory 0x0 address");
+        require(
+            _veYfiRewardPool != address(0x0),
+            "_veYfiRewardPool 0x0 address"
+        );
+
         veToken = _ve;
         yfi = _yfi;
         gaugefactory = _gaugefactory;
