@@ -32,7 +32,10 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     Checking that totalSupply is appropriate.
     After the test is done, check all over again with balanceOfAt / totalSupplyAt
     """
-    alice, bob = accounts[:2]
+    # TODO: bug w/ handling slice in Ape v0.1.3
+    # ref: https://github.com/ApeWorX/ape/issues/605
+    # alice, bob = accounts[:2]
+    alice, bob = accounts[0], accounts[1]
     amount = 1000 * 10**18
     yfi.mint(bob, amount, sender=bob)
     yfi.mint(alice, amount, sender=alice)
@@ -269,7 +272,10 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
 
 
 def test_early_exit(chain, accounts, yfi, ve_yfi):
-    alice, bob = accounts[:2]
+    # TODO: bug w/ handling slice in Ape v0.1.3
+    # ref: https://github.com/ApeWorX/ape/issues/605
+    # alice, bob = accounts[:2]
+    alice, bob = accounts[0], accounts[1]
     amount = 1000 * 10**18
     yfi.mint(bob, amount, sender=bob)
     yfi.mint(alice, amount, sender=alice)
@@ -302,7 +308,10 @@ def test_early_exit(chain, accounts, yfi, ve_yfi):
 
 
 def test_migrate_set_balance_to_zero(chain, accounts, yfi, ve_yfi, gov, project):
-    alice, bob = accounts[:2]
+    # TODO: bug w/ handling slice in Ape v0.1.3
+    # ref: https://github.com/ApeWorX/ape/issues/605
+    # alice, bob = accounts[:2]
+    alice, bob = accounts[0], accounts[1]
     amount = 1000 * 10**18
     yfi.mint(bob, amount, sender=bob)
     yfi.mint(alice, amount, sender=alice)
