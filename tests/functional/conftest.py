@@ -113,10 +113,9 @@ def create_vault(project, gov):
 def create_gauge(registry, gauge_factory, gov, project):
     def create_gauge(vault):
         tx = registry.addVaultToRewards(vault, gov, gov, sender=gov)
-        # TODO: Should be `tx.GaugeCreated[0].gauge`
-        # https://github.com/ApeWorX/ape/issues/571
-        gauge_address = to_checksum_address("0x" + tx.logs[0]["data"][26:])
-        return project.Gauge.at(gauge_address)
+        gauge_address = next(tx.decode_logs(gauge_factory.GaugeCreated)).gauge
+        # TODO: Remove `to_checksum_address` once log decoding returns correct format
+        return project.Gauge.at(to_checksum_address(gauge_address))
 
     yield create_gauge
 
@@ -125,9 +124,10 @@ def create_gauge(registry, gauge_factory, gov, project):
 def create_extra_reward(gauge_factory, gov, project):
     def create_extra_reward(gauge, token):
         tx = gauge_factory.createExtraReward(gauge, token, gov, sender=gov)
-        # TODO: Should be `tx.ExtraRewardCreated[0].extraReward`
-        # https://github.com/ApeWorX/ape/issues/571
-        reward_address = to_checksum_address("0x" + tx.logs[0]["data"][26:])
-        return project.ExtraReward.at(reward_address)
+        reward_address = next(
+            tx.decode_logs(gauge_factory.ExtraRewardCreated)
+        ).extraReward
+        # TODO: Remove `to_checksum_address` once log decoding returns correct format
+        return project.ExtraReward.at(to_checksum_address(reward_address))
 
     yield create_extra_reward

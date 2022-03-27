@@ -181,12 +181,10 @@ def test_gauge_yfi_distribution_max_boost_only_two_years_lock(
     )
     assert yfi.balanceOf(ve_yfi_rewards) == 0
     tx = gauge.transferQueuedPenalty(sender=panda)
-    # TODO: Should be `tx.RewardsAdded[0].currentRewards`
-    # https://github.com/ApeWorX/ape/issues/571
     assert (
         yfi.balanceOf(ve_yfi_rewards)
         == ve_yfi_rewards.currentRewards()
-        == to_int(hexstr=tx.logs[0]["data"])
+        == next(tx.decode_logs(gauge.RewardsAdded)).currentRewards
     )
     assert gauge.queuedPenalty() == 0
     assert gauge.queuedRewards() == 0
@@ -395,7 +393,5 @@ def test_claim_and_lock_rewards(
     tx = gauge.getReward(True, False, sender=whale)
     assert (
         ve_yfi.locked(whale)[0]
-        # TODO: Should be `tx.RewardPaid[0].reward`
-        # https://github.com/ApeWorX/ape/issues/571
-        == whale_amount + to_int(hexstr=tx.logs[0]["data"][4 * 64 + 2 :])
+        == whale_amount + next(tx.decode_logs(gauge.RewardPaid)).reward
     )
