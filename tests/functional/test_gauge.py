@@ -42,7 +42,7 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     vault = create_vault()
     gauge = create_gauge(vault)
     yfo = create_token("YFO")
-    yfo.mint(gauge, 10 ** 18, sender=gov)
+    yfo.mint(gauge, 10**18, sender=gov)
     with ape.reverts("Ownable: caller is not the owner"):
         gauge.sweep(yfo, sender=whale)
     with ape.reverts("protected token"):
@@ -50,7 +50,7 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     with ape.reverts("protected token"):
         gauge.sweep(vault, sender=gov)
     gauge.sweep(yfo, sender=gov)
-    assert yfo.balanceOf(gov) == 10 ** 18
+    assert yfo.balanceOf(gov) == 10**18
 
 
 def test_add_extra_reward(
@@ -117,7 +117,7 @@ def test_clear_extra_rewards(
 def test_small_queued_rewards_duration_extension(create_vault, create_gauge, yfi, gov):
     vault = create_vault()
     gauge = create_gauge(vault)
-    yfi_to_distribute = 10 ** 20
+    yfi_to_distribute = 10**20
     yfi.mint(gov, yfi_to_distribute * 2, sender=gov)
     yfi.approve(gauge, yfi_to_distribute * 2, sender=gov)
 
@@ -126,12 +126,12 @@ def test_small_queued_rewards_duration_extension(create_vault, create_gauge, yfi
     # distribution started, do not extend the duration unless rewards are 120% of what has been distributed.
     chain.pending_timestamp += 24 * 3600
     # Should have distributed 1/7, adding 1% will not trigger an update.
-    gauge.queueNewRewards(10 ** 18, sender=gov)
-    assert gauge.queuedRewards() == 10 ** 18
+    gauge.queueNewRewards(10**18, sender=gov)
+    assert gauge.queuedRewards() == 10**18
     assert gauge.periodFinish() == finish
     chain.pending_timestamp += 10
 
     # If more than 120% of what has been distributed is queued -> make a new period
-    gauge.queueNewRewards(int(10 ** 20 / 7 * 1.2), sender=gov)
+    gauge.queueNewRewards(int(10**20 / 7 * 1.2), sender=gov)
     assert finish != gauge.periodFinish()
     assert gauge.periodFinish() != finish

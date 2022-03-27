@@ -33,7 +33,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     After the test is done, check all over again with balanceOfAt / totalSupplyAt
     """
     alice, bob = accounts[:2]
-    amount = 1000 * 10 ** 18
+    amount = 1000 * 10**18
     yfi.mint(bob, amount, sender=bob)
     yfi.mint(alice, amount, sender=alice)
 
@@ -270,7 +270,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
 
 def test_early_exit(chain, accounts, yfi, ve_yfi):
     alice, bob = accounts[:2]
-    amount = 1000 * 10 ** 18
+    amount = 1000 * 10**18
     yfi.mint(bob, amount, sender=bob)
     yfi.mint(alice, amount, sender=alice)
 
@@ -303,7 +303,7 @@ def test_early_exit(chain, accounts, yfi, ve_yfi):
 
 def test_migrate_set_balance_to_zero(chain, accounts, yfi, ve_yfi, gov, project):
     alice, bob = accounts[:2]
-    amount = 1000 * 10 ** 18
+    amount = 1000 * 10**18
     yfi.mint(bob, amount, sender=bob)
     yfi.mint(alice, amount, sender=alice)
 
@@ -329,7 +329,7 @@ def test_migrate_set_balance_to_zero(chain, accounts, yfi, ve_yfi, gov, project)
 
 
 def test_create_lock_for(chain, yfi, ve_yfi, gov, panda, doggie):
-    amount = 1000 * 10 ** 18
+    amount = 1000 * 10**18
     yfi.mint(gov, amount, sender=gov)
     yfi.mint(gov, amount, sender=panda)
 
@@ -391,7 +391,7 @@ def test_apply_without_commit(ve_yfi, accounts):
 
 
 def test_migrate_lock(chain, yfi, ve_yfi, gov, panda, project):
-    amount = 1000 * 10 ** 18
+    amount = 1000 * 10**18
     yfi.mint(panda, amount, sender=panda)
     yfi.approve(ve_yfi.address, amount, sender=panda)
 

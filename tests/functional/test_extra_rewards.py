@@ -182,7 +182,7 @@ def test_sweep(
     extra_reward = create_extra_reward(gauge, yfo)
 
     yfx = create_token("YFX")
-    yfx.mint(extra_reward, 10**18)
+    yfx.mint(extra_reward, 10**18, sender=gov)
     with ape.reverts("Ownable: caller is not the owner"):
         extra_reward.sweep(yfo, sender=whale)
     with ape.reverts("protected token"):
