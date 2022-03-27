@@ -87,13 +87,14 @@ def test_set_gov(ve_yfi_rewards, panda, gov):
     assert ve_yfi_rewards.owner() == panda
 
 
-@pytest.mark.xfail(reason="https://github.com/ApeWorX/ape/issues/572")
 def test_reward_checkpoint(ve_yfi_rewards, ve_yfi, panda, gov):
     with ape.reverts("!authorized"):
         ve_yfi_rewards.rewardCheckpoint(panda, sender=panda)
     with ape.reverts("!authorized"):
         ve_yfi_rewards.rewardCheckpoint(panda, sender=gov)
-    ve_yfi_rewards.rewardCheckpoint(panda, sender=ve_yfi)
+    # TODO: `.address` is hack to support calling via `sender=ContractInstance`
+    # ref: https://github.com/ApeWorX/ape/issues/606
+    ve_yfi_rewards.rewardCheckpoint(panda, sender=ve_yfi.address)
 
 
 def test_small_queued_rewards_duration_extension(ve_yfi_rewards, yfi, gov):
