@@ -1,5 +1,6 @@
 import pytest
-from brownie import ZERO_ADDRESS
+
+from eth_utils import to_checksum_address
 
 
 @pytest.fixture
@@ -14,8 +15,9 @@ def whale_amount():
 
 @pytest.fixture
 def whale(accounts, yfi, whale_amount):
-    yfi.mint(accounts[1], whale_amount)
-    yield accounts[1]
+    a = accounts[1]
+    yfi.mint(a, whale_amount, sender=a)
+    yield a
 
 
 @pytest.fixture
@@ -25,8 +27,9 @@ def shark_amount():
 
 @pytest.fixture
 def shark(accounts, yfi, shark_amount):
-    yfi.mint(accounts[2], shark_amount)
-    yield accounts[2]
+    a = accounts[2]
+    yfi.mint(a, shark_amount, sender=a)
+    yield a
 
 
 @pytest.fixture
@@ -36,8 +39,9 @@ def fish_amount():
 
 @pytest.fixture
 def fish(accounts, yfi, fish_amount):
-    yfi.mint(accounts[3], fish_amount)
-    yield accounts[3]
+    a = accounts[3]
+    yfi.mint(a, fish_amount, sender=a)
+    yield a
 
 
 @pytest.fixture
@@ -56,71 +60,74 @@ def bunny(accounts):
 
 
 @pytest.fixture
-def yfi(Token, gov):
-    yield gov.deploy(Token, "YFI")
+def yfi(project, gov):
+    yield gov.deploy(project.Token, "YFI")
 
 
 @pytest.fixture
-def create_token(Token, gov):
+def create_token(project, gov):
     def create_token(name):
-        return gov.deploy(Token, name)
+        return gov.deploy(project.Token, name)
 
     yield create_token
 
 
 @pytest.fixture
-def ve_yfi(VotingEscrow, yfi, gov):
-    yield gov.deploy(VotingEscrow, yfi, "veYFI", "veYFI", "1.0.0")
+def ve_yfi(project, yfi, gov):
+    yield gov.deploy(project.VotingEscrow, yfi, "veYFI", "veYFI", "1.0.0")
 
 
-@pytest.fixture
-def ve_yfi_rewards(VeYfiRewards, ve_yfi, yfi, gov):
-    ve_yfi_rewards = gov.deploy(VeYfiRewards, ve_yfi, yfi, gov)
-    ve_yfi.set_reward_pool(ve_yfi_rewards)
+@pytest.fixture(autouse=True)
+def ve_yfi_rewards(project, ve_yfi, yfi, gov):
+    ve_yfi_rewards = gov.deploy(project.VeYfiRewards, ve_yfi, yfi, gov)
+    ve_yfi.set_reward_pool(ve_yfi_rewards, sender=gov)
     yield ve_yfi_rewards
 
 
 @pytest.fixture
-def gauge_factory(GaugeFactory, Gauge, ExtraReward, gov):
-    gauge = gov.deploy(Gauge)
-    extra_reward = gov.deploy(ExtraReward)
-    yield gov.deploy(GaugeFactory, gauge, extra_reward)
+def gauge_factory(project, gov):
+    gauge = gov.deploy(project.Gauge)
+    extra_reward = gov.deploy(project.ExtraReward)
+    yield gov.deploy(project.GaugeFactory, gauge, extra_reward)
 
 
 @pytest.fixture
-def vote_delegation(VoteDelegation, gov, ve_yfi):
-    yield gov.deploy(VoteDelegation, ve_yfi)
+def vote_delegation(project, gov, ve_yfi):
+    yield gov.deploy(project.VoteDelegation, ve_yfi)
 
 
 @pytest.fixture
-def registry(Registry, gov, ve_yfi, yfi, gauge_factory, ve_yfi_rewards):
-    yield gov.deploy(Registry, ve_yfi, yfi, gauge_factory, ve_yfi_rewards)
+def registry(project, gov, ve_yfi, yfi, gauge_factory, ve_yfi_rewards):
+    yield gov.deploy(project.Registry, ve_yfi, yfi, gauge_factory, ve_yfi_rewards)
 
 
 @pytest.fixture
-def create_vault(Token, gov):
+def create_vault(project, gov):
     def create_vault():
-        return gov.deploy(Token, "Yearn vault")
+        return gov.deploy(project.Token, "Yearn vault")
 
     return create_vault
 
 
 @pytest.fixture
-def create_gauge(registry, gov):
+def create_gauge(registry, gauge_factory, gov, project):
     def create_gauge(vault):
-        return registry.addVaultToRewards(vault, gov, gov)
+        tx = registry.addVaultToRewards(vault, gov, gov, sender=gov)
+        gauge_address = next(tx.decode_logs(gauge_factory.GaugeCreated)).gauge
+        # TODO: Remove `to_checksum_address` once log decoding returns correct format
+        return project.Gauge.at(to_checksum_address(gauge_address))
 
     yield create_gauge
 
 
 @pytest.fixture
-def create_extra_reward(gauge_factory, gov):
+def create_extra_reward(gauge_factory, gov, project):
     def create_extra_reward(gauge, token):
-        return gauge_factory.createExtraReward(gauge, token, gov)
+        tx = gauge_factory.createExtraReward(gauge, token, gov, sender=gov)
+        reward_address = next(
+            tx.decode_logs(gauge_factory.ExtraRewardCreated)
+        ).extraReward
+        # TODO: Remove `to_checksum_address` once log decoding returns correct format
+        return project.ExtraReward.at(to_checksum_address(reward_address))
 
     yield create_extra_reward
-
-
-@pytest.fixture(scope="function", autouse=True)
-def shared_setup(fn_isolation):
-    pass
