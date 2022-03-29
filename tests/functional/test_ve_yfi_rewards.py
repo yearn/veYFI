@@ -87,14 +87,14 @@ def test_set_gov(ve_yfi_rewards, panda, gov):
     assert ve_yfi_rewards.owner() == panda
 
 
-def test_reward_checkpoint(ve_yfi_rewards, ve_yfi, panda, gov):
+def test_reward_checkpoint(accounts, ve_yfi_rewards, ve_yfi, panda, gov):
     with ape.reverts("!authorized"):
         ve_yfi_rewards.rewardCheckpoint(panda, sender=panda)
     with ape.reverts("!authorized"):
         ve_yfi_rewards.rewardCheckpoint(panda, sender=gov)
     # TODO: `.address` is hack to support calling via `sender=ContractInstance`
     # ref: https://github.com/ApeWorX/ape/issues/606
-    ve_yfi_rewards.rewardCheckpoint(panda, sender=ve_yfi.address)
+    ve_yfi_rewards.rewardCheckpoint(panda, sender=accounts[ve_yfi.address])
 
 
 def test_small_queued_rewards_duration_extension(ve_yfi_rewards, yfi, gov):

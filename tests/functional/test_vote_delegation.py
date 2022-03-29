@@ -75,7 +75,7 @@ def test_delegate_gas(chain, vote_delegation, yfi, ve_yfi, whale_amount, whale, 
     assert tx.gas_used < 120_000
 
 
-def random_account(i):
+def random_address(i):
     # deterministically "random" account from integer seed
     return to_checksum_address(keccak(i.to_bytes(32, "big"))[:20])
 
@@ -83,6 +83,7 @@ def random_account(i):
 # TODO: try 1000 when using faster provider
 @pytest.mark.parametrize("num_accounts", [10, 100])
 def test_many_delegates_gas_usage(
+    accounts,
     chain,
     yfi,
     ve_yfi,
@@ -94,7 +95,7 @@ def test_many_delegates_gas_usage(
 ):
     delegating_accounts = []
     for i in range(num_accounts):
-        account = random_account(i)
+        account = accounts[random_address(i)]
         delegating_accounts.append(account)
         yfi.mint(account, fish_amount, sender=gov)
         yfi.approve(ve_yfi, fish_amount, sender=account)
