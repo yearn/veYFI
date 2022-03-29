@@ -3,7 +3,9 @@ import pytest
 
 from eth_utils import keccak, to_checksum_address
 
-
+ONE_HOUR_IN_SECS = 60 * 60
+ONE_DAY_IN_SECS = 24 * ONE_HOUR_IN_SECS
+ONE_YEAR_IN_SECS = 365 * ONE_DAY_IN_SECS
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 
@@ -12,7 +14,7 @@ def test_delegate(
 ):
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.create_lock(
-        whale_amount, chain.pending_timestamp + 3600 * 24 * 365, sender=whale
+        whale_amount, chain.pending_timestamp + ONE_YEAR_IN_SECS, sender=whale
     )
     vote_delegation.delegate(shark, sender=whale)
     # TODO: `tuple(...)` hack until https://github.com/ApeWorX/ape/issues/573
@@ -32,7 +34,7 @@ def test_delegate(
     # TODO: `tuple(...)` hack until https://github.com/ApeWorX/ape/issues/573
     assert vote_delegation.getDelegated(shark) == tuple([])
 
-    until = chain.pending_timestamp + 3600
+    until = chain.pending_timestamp + ONE_HOUR_IN_SECS
     vote_delegation.delegate(shark, until, sender=whale)
     # TODO: refactor after https://github.com/ApeWorX/ape/issues/574
     delegation = vote_delegation.delegation(whale)  # .dict()
@@ -46,7 +48,7 @@ def test_delegate(
 
     with ape.reverts("can't change delegation"):
         vote_delegation.delegate(panda, sender=whale)
-    chain.pending_timestamp += 3600 + 10
+    chain.pending_timestamp += ONE_HOUR_IN_SECS + 10
 
     vote_delegation.delegate(panda, sender=whale)
     # TODO: refactor after https://github.com/ApeWorX/ape/issues/574
@@ -54,7 +56,7 @@ def test_delegate(
     assert delegation[0] == panda  # "to"
     assert delegation[1] == 0  # "until"
 
-    until = chain.pending_timestamp + 3600
+    until = chain.pending_timestamp + ONE_HOUR_IN_SECS
     vote_delegation.delegate(panda, until, sender=whale)
     with ape.reverts("must increase"):
         vote_delegation.increaseDelegationDuration(0, sender=whale)
@@ -69,7 +71,7 @@ def test_delegate(
 def test_delegate_gas(chain, vote_delegation, yfi, ve_yfi, whale_amount, whale, panda):
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.create_lock(
-        whale_amount, chain.pending_timestamp + 3600 * 24 * 365, sender=whale
+        whale_amount, chain.pending_timestamp + ONE_YEAR_IN_SECS, sender=whale
     )
     tx = vote_delegation.delegate(panda, sender=whale)
     assert tx.gas_used < 120_000
@@ -100,7 +102,7 @@ def test_many_delegates_gas_usage(
         yfi.mint(account, fish_amount, sender=gov)
         yfi.approve(ve_yfi, fish_amount, sender=account)
         ve_yfi.create_lock(
-            fish_amount, chain.pending_timestamp + 3600 * 24 * 365, sender=account
+            fish_amount, chain.pending_timestamp + ONE_YEAR_IN_SECS, sender=account
         )
 
     for account in delegating_accounts:
