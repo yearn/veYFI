@@ -488,6 +488,9 @@ contract Gauge is BaseGauge, IGauge {
         return true;
     }
 
+    /**
+    @dev If account is not equal to msg.sender, it should never be invoked with lock equal to true.
+    */
     function _getReward(
         address _account,
         bool _lock,
