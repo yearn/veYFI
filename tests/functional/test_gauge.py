@@ -151,6 +151,7 @@ def test_set_duration(create_vault, create_gauge, yfi, gov):
     time = chain.blocks.head.timestamp
     gauge.setDuration(14 * 3600 * 24, sender=gov)
 
+    assert pytest.approx(rate / 2, rel=10e-3) == gauge.rewardRate()
+    assert gauge.duration() == 14 * 3600 * 24
     assert gauge.periodFinish() != finish
     assert pytest.approx(gauge.periodFinish()) == time + 14 * 3600 * 24
-    assert pytest.approx(rate / 2) == gauge.rewardRate()
