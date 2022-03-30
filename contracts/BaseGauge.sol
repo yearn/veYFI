@@ -66,7 +66,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         );
         require(_owner != address(0), "_owner 0x0 address");
         rewardToken = IERC20(_rewardToken);
-        duration = 7 days;
+        duration = 14 days;
         _transferOwnership(_owner);
     }
 
