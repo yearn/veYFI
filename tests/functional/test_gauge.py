@@ -1,5 +1,6 @@
 import ape
 from ape import project, chain
+import pytest
 
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
@@ -135,3 +136,21 @@ def test_small_queued_rewards_duration_extension(create_vault, create_gauge, yfi
     gauge.queueNewRewards(int(10**20 / 7 * 1.2), sender=gov)
     assert finish != gauge.periodFinish()
     assert gauge.periodFinish() != finish
+
+
+def test_set_duration(create_vault, create_gauge, yfi, gov):
+    vault = create_vault()
+    gauge = create_gauge(vault)
+    yfi_to_distribute = 10**20
+    yfi.mint(gov, yfi_to_distribute * 2, sender=gov)
+    yfi.approve(gauge, yfi_to_distribute * 2, sender=gov)
+    gauge.queueNewRewards(yfi_to_distribute, sender=gov)
+
+    finish = gauge.periodFinish()
+    rate = gauge.rewardRate()
+    time = chain.blocks.head.timestamp
+    gauge.setDuration(14 * 3600 * 24, sender=gov)
+
+    assert gauge.periodFinish() != finish
+    assert pytest.approx(gauge.periodFinish()) == time + 14 * 3600 * 24
+    assert pytest.approx(rate / 2) == gauge.rewardRate()

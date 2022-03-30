@@ -79,6 +79,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
             uint256 remaining = periodFinish - block.timestamp;
             uint256 leftover = remaining * rewardRate;
             rewardRate = leftover / newDuration;
+            periodFinish = block.timestamp + newDuration;
         }
         duration = newDuration;
         emit DurationUpdated(newDuration, rewardRate);
