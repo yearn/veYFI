@@ -46,7 +46,11 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
     );
     event Sweep(address indexed token, uint256 amount);
 
-    event DurationUpdated(uint256 duration, uint256 rewardRate);
+    event DurationUpdated(
+        uint256 duration,
+        uint256 rewardRate,
+        uint256 periodFinish
+    );
 
     function _newEarning(address) internal view virtual returns (uint256);
 
@@ -79,9 +83,10 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
             uint256 remaining = periodFinish - block.timestamp;
             uint256 leftover = remaining * rewardRate;
             rewardRate = leftover / newDuration;
+            periodFinish = block.timestamp + newDuration;
         }
         duration = newDuration;
-        emit DurationUpdated(newDuration, rewardRate);
+        emit DurationUpdated(newDuration, rewardRate, periodFinish);
     }
 
     /**
