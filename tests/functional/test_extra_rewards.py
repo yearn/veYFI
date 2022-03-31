@@ -39,11 +39,11 @@ def test_extra_rewards_full_boost(
     gauge.deposit(sender=whale)
     chain.pending_timestamp += 3600
     extra_reward.getReward(sender=whale)
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 24
 
     chain.pending_timestamp += 3600
     gauge.getReward(sender=whale)
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 12
 
 
 def test_extra_rewards_no_boost(
@@ -88,14 +88,14 @@ def test_extra_rewards_no_boost(
     chain.pending_timestamp += 3600
     chain.mine()
     assert (
-        pytest.approx(extra_reward.earned(whale), rel=10e-4) == 10**18 / 7 / 24 * 0.4
+        pytest.approx(extra_reward.earned(whale), rel=10e-4) == 10**18 / 14 / 24 * 0.4
     )
     extra_reward.getReward(sender=whale)
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24 * 0.4
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 24 * 0.4
 
     chain.pending_timestamp += 3600
     gauge.getReward(sender=whale)
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12 * 0.4
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 12 * 0.4
 
 
 def test_withdraw_from_gauge_claim_extra_rewards(
@@ -118,11 +118,11 @@ def test_withdraw_from_gauge_claim_extra_rewards(
     gauge.deposit(sender=whale)
     chain.pending_timestamp += 3600
     extra_reward.getReward(sender=whale)
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 24
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 24
 
     chain.pending_timestamp += 3600
     gauge.withdraw(True, sender=whale)
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 7 / 12
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 12
 
 
 def test_small_queued_rewards_duration_extension(
@@ -142,7 +142,7 @@ def test_small_queued_rewards_duration_extension(
     finish = extra_reward.periodFinish()
     # distribution started, do not extend the duration unless rewards are 120% of what has been distributed.
     chain.pending_timestamp += 24 * 3600
-    # Should have distributed 1/7, adding 1% will not trigger an update.
+    # Should have distributed 1/14, adding 1% will not trigger an update.
 
     extra_reward.queueNewRewards(10**18, sender=gov)
 
@@ -151,7 +151,7 @@ def test_small_queued_rewards_duration_extension(
     chain.pending_timestamp += 10
 
     # If more than 120% of what has been distributed is queued -> make a new period
-    extra_reward.queueNewRewards(int(10**20 / 7 * 1.2), sender=gov)
+    extra_reward.queueNewRewards(int(10**20 / 14 * 1.2), sender=gov)
     assert finish != extra_reward.periodFinish()
     assert extra_reward.periodFinish() != finish
 

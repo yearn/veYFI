@@ -14,11 +14,11 @@ def test_ve_yfi_distribution(yfi, ve_yfi, whale, whale_amount, ve_yfi_rewards, g
     yfi.mint(gov, rewards, sender=gov)
     yfi.approve(ve_yfi_rewards, rewards, sender=gov)
     ve_yfi_rewards.queueNewRewards(rewards, sender=gov)
-    assert ve_yfi_rewards.rewardRate() == int(rewards / 7 / 24 / 3600)
+    assert ve_yfi_rewards.rewardRate() == int(rewards / 14 / 24 / 3600)
     chain.pending_timestamp += 3600
     ve_yfi_rewards.getReward(sender=whale)
-    assert pytest.approx(yfi.balanceOf(whale), rel=10e-3) == rewards / 7 / 24
-    chain.pending_timestamp += 3600 * 24 * 7
+    assert pytest.approx(yfi.balanceOf(whale), rel=10e-3) == rewards / 14 / 24
+    chain.pending_timestamp += 3600 * 24 * 14
     chain.mine()
     assert pytest.approx(ve_yfi_rewards.earned(whale), rel=10e-3) == rewards
     ve_yfi_rewards.getReward(False, sender=whale)
@@ -36,11 +36,11 @@ def test_ve_yfi_distribution_relock(
     yfi.mint(gov, rewards, sender=gov)
     yfi.approve(ve_yfi_rewards, rewards, sender=gov)
     ve_yfi_rewards.queueNewRewards(rewards, sender=gov)
-    assert ve_yfi_rewards.rewardRate() == int(rewards / 7 / 24 / 3600)
+    assert ve_yfi_rewards.rewardRate() == int(rewards / 14 / 24 / 3600)
     chain.pending_timestamp += 3600
     ve_yfi_rewards.getReward(True, sender=whale)
-    assert pytest.approx(ve_yfi.locked(whale)[0]) == rewards / 7 / 24 + whale_amount
-    chain.pending_timestamp += 3600 * 24 * 7
+    assert pytest.approx(ve_yfi.locked(whale)[0]) == rewards / 14 / 24 + whale_amount
+    chain.pending_timestamp += 3600 * 24 * 14
     ve_yfi_rewards.getReward(True, sender=whale)
     assert pytest.approx(ve_yfi.locked(whale)[0]) == rewards + whale_amount
 
@@ -56,10 +56,10 @@ def test_ve_yfi_get_rewards_for(
     yfi.mint(gov, rewards, sender=gov)
     yfi.approve(ve_yfi_rewards, rewards, sender=gov)
     ve_yfi_rewards.queueNewRewards(rewards, sender=gov)
-    assert ve_yfi_rewards.rewardRate() == int(rewards / 7 / 24 / 3600)
+    assert ve_yfi_rewards.rewardRate() == int(rewards / 14 / 24 / 3600)
     chain.pending_timestamp += 3600
     ve_yfi_rewards.getRewardFor(whale, sender=fish)
-    assert pytest.approx(yfi.balanceOf(whale), rel=10e-3) == rewards / 7 / 24
+    assert pytest.approx(yfi.balanceOf(whale), rel=10e-3) == rewards / 14 / 24
 
 
 def test_sweep(yfi, ve_yfi, ve_yfi_rewards, create_token, whale, whale_amount, gov):

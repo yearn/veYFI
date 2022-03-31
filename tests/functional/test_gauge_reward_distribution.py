@@ -30,17 +30,17 @@ def test_gauge_yfi_distribution_full_rewards(
     yfi.approve(gauge, yfi_to_distribute, sender=gov)
 
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
+    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
 
     chain.mine(timestamp=chain.pending_timestamp + 3600)
     assert pytest.approx(gauge.earned(whale), rel=5 * 10e-4) == yfi_to_distribute / (
-        7 * 24
+        14 * 24
     )
     gauge.getReward(sender=whale)
     assert gauge.rewardPerToken() > 0
 
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
-        7 * 24
+        14 * 24
     )
     assert gauge.queuedPenalty() == 0
     assert gauge.queuedRewards() == 0
@@ -75,18 +75,18 @@ def test_gauge_yfi_distribution_no_boost(
     yfi.approve(gauge, yfi_to_distribute, sender=gov)
 
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
+    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.getReward(sender=whale)
 
     assert (
         pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4)
-        == yfi_to_distribute / (7 * 24) * 0.4
+        == yfi_to_distribute / (14 * 24) * 0.4
     )
     assert gauge.queuedPenalty() == 0
     assert (
         pytest.approx(gauge.queuedRewards(), rel=10e-4)
-        == yfi_to_distribute / (7 * 24) * 0.6
+        == yfi_to_distribute / (14 * 24) * 0.6
     )
 
 
@@ -114,7 +114,7 @@ def test_gauge_yfi_distribution_no_lock_no_rewards(
     yfi.approve(gauge, yfi_to_distribute, sender=gov)
 
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
+    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.getReward(sender=panda)
     assert gauge.lockingRatio(panda) == 0
@@ -123,11 +123,11 @@ def test_gauge_yfi_distribution_no_lock_no_rewards(
 
     assert (
         pytest.approx(gauge.queuedPenalty(), rel=10e-4)
-        == yfi_to_distribute / (7 * 24) * 0.4
+        == yfi_to_distribute / (14 * 24) * 0.4
     )
     assert (
         pytest.approx(gauge.queuedRewards(), rel=10e-4)
-        == yfi_to_distribute / (7 * 24) * 0.6
+        == yfi_to_distribute / (14 * 24) * 0.6
     )
 
 
@@ -165,7 +165,7 @@ def test_gauge_yfi_distribution_max_boost_only_two_years_lock(
     yfi.approve(gauge, yfi_to_distribute, sender=gov)
 
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
+    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.getReward(sender=whale)
 
@@ -173,11 +173,11 @@ def test_gauge_yfi_distribution_max_boost_only_two_years_lock(
 
     assert (
         pytest.approx(yfi.balanceOf(whale), rel=10e-3)
-        == yfi_to_distribute / (7 * 24) / 2
+        == yfi_to_distribute / (14 * 24) / 2
     )
     assert (
         pytest.approx(gauge.queuedPenalty(), rel=10e-3)
-        == yfi_to_distribute / (7 * 24) / 2
+        == yfi_to_distribute / (14 * 24) / 2
     )
     assert yfi.balanceOf(ve_yfi_rewards) == 0
     tx = gauge.transferQueuedPenalty(sender=panda)
@@ -216,12 +216,12 @@ def test_gauge_get_reward_for(
     yfi.approve(gauge, yfi_to_distribute, sender=gov)
 
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
+    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.getRewardFor(whale, False, sender=shark)
 
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
-        7 * 24
+        14 * 24
     )
     assert gauge.queuedPenalty() == 0
     assert gauge.queuedRewards() == 0
@@ -276,12 +276,12 @@ def test_deposit_for(
     yfi.approve(gauge, yfi_to_distribute, sender=gov)
 
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
+    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.getReward(sender=whale)
 
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
-        7 * 24
+        14 * 24
     )
     assert gauge.queuedPenalty() == 0
     assert gauge.queuedRewards() == 0
@@ -311,12 +311,12 @@ def test_withdraw(yfi, ve_yfi, whale, whale_amount, create_vault, create_gauge, 
     yfi.approve(gauge, yfi_to_distribute, sender=gov)
 
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
+    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.withdraw(True, sender=whale)
 
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
-        7 * 24
+        14 * 24
     )
     assert gauge.queuedPenalty() == 0
     assert gauge.queuedRewards() == 0
@@ -353,7 +353,7 @@ def test_gauge_yfi_distribution_no_more_ve_yfi(
     yfi.approve(gauge, yfi_to_distribute, sender=gov)
 
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (7 * 24 * 3600)
+    assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     next_ve = gov.deploy(project.NextVe, yfi)
     ve_yfi.set_next_ve_contract(next_ve, sender=gov)
@@ -361,7 +361,7 @@ def test_gauge_yfi_distribution_no_more_ve_yfi(
     gauge.getReward(sender=whale)
 
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
-        7 * 24
+        14 * 24
     )
     assert gauge.queuedPenalty() == 0
     assert gauge.queuedRewards() == 0
