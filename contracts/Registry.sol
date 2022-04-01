@@ -13,9 +13,9 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 contract Registry is Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
     address public veToken; // the ve token that governs these contracts
-    address public yfi; // immutable // reward token
-    address public veYfiRewardPool; // immutable
-    address public gaugefactory; // immutable
+    address public immutable yfi; // reward token
+    address public immutable veYfiRewardPool;
+    address public immutable gaugefactory;
 
     EnumerableSet.AddressSet private _vaults;
     mapping(address => address) public gauges; // vault => gauge
