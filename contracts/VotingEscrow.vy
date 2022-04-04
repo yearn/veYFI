@@ -644,7 +644,27 @@ def find_block_epoch(_block: uint256, max_epoch: uint256) -> uint256:
 
 @external
 @view
-def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
+def balanceOf(addr: address) -> uint256:
+    """
+    @notice Get the current voting power for `msg.sender`
+    @dev Adheres to the ERC20 `balanceOf` interface for Aragon compatibility
+    @param addr User wallet address
+    @return User voting power
+    """
+    _epoch: uint256 = self.user_point_epoch[addr]
+    if _epoch == 0:
+        return 0
+    else:
+        _t: uint256 = block.timestamp
+        last_point: Point = self.user_point_history[addr][_epoch]
+        last_point.bias -= last_point.slope * convert(_t - last_point.ts, int128)
+        if last_point.bias < 0:
+            last_point.bias = 0
+        return convert(last_point.bias, uint256)
+
+@external
+@view
+def balanceOf(addr: address, _t: uint256) -> uint256:
     """
     @notice Get the current voting power for `msg.sender`
     @dev Adheres to the ERC20 `balanceOf` interface for Aragon compatibility
