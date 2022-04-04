@@ -74,7 +74,7 @@ def create_token(project, gov):
 
 @pytest.fixture
 def ve_yfi(project, yfi, gov):
-    yield gov.deploy(project.VotingEscrow, yfi, "veYFI", "veYFI", "1.0.0")
+    yield gov.deploy(project.VotingEscrow, yfi, "veYFI", "veYFI")
 
 
 @pytest.fixture(autouse=True)
