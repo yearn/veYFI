@@ -97,7 +97,6 @@ event Supply:
 
 event Initialized:
     token: address
-    version: String[32]
 
 event NewRewardPool:
     reward_pool: indexed(address)
@@ -126,10 +125,6 @@ user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 queuedPenalty: public(uint256)
 
-# Aragon's view methods for compatibility
-controller: public(address)
-transfersEnabled: public(bool)
-
 name: public(String[64])
 symbol: public(String[32])
 version: public(String[32])
@@ -146,21 +141,18 @@ migration: public(bool)
 reward_pool: public(address)
 
 @external
-def __init__(token_addr: address, _name: String[64], _symbol: String[32], _version: String[32]):
+def __init__(token_addr: address, _name: String[64], _symbol: String[32]):
     """
     @notice Contract constructor
     @param token_addr `ERC20CRV` token address
     @param _name Token name
     @param _symbol Token symbol
-    @param _version Contract version - required for Aragon compatibility
     """
     self.admin = msg.sender
     self.unlocker = msg.sender
     self.token = token_addr
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
-    self.controller = msg.sender
-    self.transfersEnabled = True
 
     _decimals: uint256 = ERC20(token_addr).decimals()
     assert _decimals <= 255
@@ -168,8 +160,7 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], _versi
 
     self.name = _name
     self.symbol = _symbol
-    self.version = _version
-    log Initialized(token_addr, _version)
+    log Initialized(token_addr)
 
 @external
 def set_reward_pool(addr: address):
@@ -824,15 +815,3 @@ def transferQueuedPenalty() ->bool:
     IVeYfiRewards(self.reward_pool).queueNewRewards(toTransfer)
 
     return True
-
-
-# Dummy methods for compatibility with Aragon
-
-@external
-def changeController(_newController: address):
-    """
-    @dev Dummy method required for Aragon compatibility
-    """
-    assert msg.sender == self.controller
-    self.controller = _newController
-
