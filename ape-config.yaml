@@ -8,6 +8,9 @@ dependencies:
   - name: openzeppelin
     github: OpenZeppelin/openzeppelin-contracts
     version: 4.5.0
+  - name: vault
+    github: yearn/yearn-vaults
+    version: 0.4.3
 
 solidity:
   import_remapping:
