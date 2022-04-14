@@ -378,6 +378,27 @@ def checkpoint():
     """
     self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
 
+@internal
+def _transferQueuedPenalty():
+    toTransfer: uint256 = self.queuedPenalty
+    self.queuedPenalty = 0
+
+    assert ERC20(self.token).approve(self.reward_pool, toTransfer)
+    IVeYfiRewards(self.reward_pool).queueNewRewards(toTransfer)
+    self.lastPenaltyTranfer = block.timestamp
+
+@external
+def transferQueuedPenalty() ->bool:
+    """
+    @notice
+    Transfer penalty to the veYFIRewardContract
+    @dev Penalty are queued in this contract.
+    @return true
+    """
+    self._transferQueuedPenalty()
+
+    return True
+
 
 @internal
 def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
@@ -791,24 +812,3 @@ def totalSupplyAt(_block: uint256) -> uint256:
     # Now dt contains info on how far are we beyond point
 
     return self.supply_at(point, point.ts + dt)   
-
-@internal
-def _transferQueuedPenalty():
-    toTransfer: uint256 = self.queuedPenalty
-    self.queuedPenalty = 0
-
-    assert ERC20(self.token).approve(self.reward_pool, toTransfer)
-    IVeYfiRewards(self.reward_pool).queueNewRewards(toTransfer)
-    self.lastPenaltyTranfer = block.timestamp
-
-@external
-def transferQueuedPenalty() ->bool:
-    """
-    @notice
-    Transfer penalty to the veYFIRewardContract
-    @dev Penalty are queued in this contract.
-    @return true
-    """
-    self._transferQueuedPenalty()
-
-    return True
