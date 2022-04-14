@@ -306,7 +306,7 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
     @return uint256 Amount of fees claimed in the call
     """
     assert not self.is_killed
-    if _lock = True:
+    if _lock:
         assert _addr == msg.sender 
 
     if block.timestamp >= self.time_cursor:
@@ -324,8 +324,9 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
     if amount != 0:
         token: address = self.token
         if _lock:
-            ERC20(token).approve(ve, amount)
-            VotingEscrow(ve).deposit_for(_addr, amount)
+            voting_escrow: address = self.voting_escrow
+            ERC20(token).approve(voting_escrow, amount)
+            VotingEscrow(voting_escrow).deposit_for(_addr, amount)
         else:
             assert ERC20(token).transfer(_addr, amount)
             self.token_last_balance -= amount
