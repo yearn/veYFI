@@ -329,7 +329,7 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
             VotingEscrow(voting_escrow).deposit_for(_addr, amount)
         else:
             assert ERC20(token).transfer(_addr, amount)
-            self.token_last_balance -= amount
+        self.token_last_balance -= amount
 
     return amount
 
