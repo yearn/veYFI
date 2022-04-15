@@ -180,14 +180,18 @@ def test_gauge_yfi_distribution_max_boost_only_two_years_lock(
         == yfi_to_distribute / (14 * 24) / 2
     )
     assert yfi.balanceOf(ve_yfi_rewards) == 0
+    chain.pending_timestamp += 3600 * 24
     tx = gauge.transferQueuedPenalty(sender=panda)
+    current_begning_of_week = int(chain.pending_timestamp / (86400 * 7)) * 86400 * 7
+
+    assert yfi.balanceOf(ve_yfi_rewards) == ve_yfi_rewards.tokens_per_week(
+        current_begning_of_week
+    )
     assert (
         yfi.balanceOf(ve_yfi_rewards)
-        == ve_yfi_rewards.currentRewards()
-        == next(tx.decode_logs(gauge.RewardsAdded)).currentRewards
+        == next(tx.decode_logs(ve_yfi_rewards.CheckpointToken)).tokens
     )
     assert gauge.queuedPenalty() == 0
-    assert gauge.queuedRewards() == 0
 
 
 def test_gauge_get_reward_for(

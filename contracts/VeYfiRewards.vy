@@ -45,7 +45,6 @@ struct Point:
 
 WEEK: constant(uint256) = 7 * 86400
 TOKEN_CHECKPOINT_DEADLINE: constant(uint256) = 86400
-ZERO: constant(int128) = 0
 
 start_time: public(uint256)
 time_cursor: public(uint256)
@@ -64,7 +63,6 @@ ve_supply: public(uint256[1000000000000000])  # VE total supply at week bounds
 
 admin: public(address)
 future_admin: public(address)
-can_checkpoint_token: public(bool)
 emergency_return: public(address)
 is_killed: public(bool)
 
@@ -137,7 +135,7 @@ def checkpoint_token():
          to call.
     """
     assert (msg.sender == self.admin) or\
-           (self.can_checkpoint_token and (block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE))
+           ((block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE))
     self._checkpoint_token()
 
 
@@ -188,7 +186,8 @@ def ve_for_at(_user: address, _timestamp: uint256) -> uint256:
     epoch: uint256 = self._find_timestamp_user_epoch(ve, _user, _timestamp, max_user_epoch)
     pt: Point = VotingEscrow(ve).user_point_history(_user, epoch)
 
-    return convert(max(pt.bias - pt.slope * convert(_timestamp - pt.ts, int128), ZERO), uint256)
+    zero: int128 = 0
+    return convert(max(pt.bias - pt.slope * convert(_timestamp - pt.ts, int128), zero), uint256)
 
 
 @internal
@@ -197,6 +196,7 @@ def _checkpoint_total_supply():
     t: uint256 = self.time_cursor
     rounded_timestamp: uint256 = block.timestamp / WEEK * WEEK
     VotingEscrow(ve).checkpoint()
+    zero: int128 = 0
 
     for i in range(20):
         if t > rounded_timestamp:
@@ -209,7 +209,7 @@ def _checkpoint_total_supply():
                 # If the point is at 0 epoch, it can actually be earlier than the first deposit
                 # Then make dt 0
                 dt = convert(t - pt.ts, int128)
-            self.ve_supply[t] = convert(max(pt.bias - pt.slope * dt, ZERO), uint256)
+            self.ve_supply[t] = convert(max(pt.bias - pt.slope * dt, zero), uint256)
         t += WEEK
 
     self.time_cursor = t
@@ -260,7 +260,7 @@ def _claim(addr: address, ve: address, _last_token_time: uint256) -> uint256:
     if week_cursor < _start_time:
         week_cursor = _start_time
     old_user_point: Point = empty(Point)
-
+    zero: int128 = 0
     # Iterate over weeks
     for i in range(50):
         if week_cursor >= _last_token_time:
@@ -278,7 +278,7 @@ def _claim(addr: address, ve: address, _last_token_time: uint256) -> uint256:
             # Calc
             # + i * 2 is for rounding errors
             dt: int128 = convert(week_cursor - old_user_point.ts, int128)
-            balance_of: uint256 = convert(max(old_user_point.bias - dt * old_user_point.slope, ZERO), uint256)
+            balance_of: uint256 = convert(max(old_user_point.bias - dt * old_user_point.slope, zero), uint256)
             if balance_of == 0 and user_epoch > max_user_epoch:
                 break
             if balance_of > 0:
@@ -316,7 +316,7 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
 
     last_token_time: uint256 = self.last_token_time
 
-    if self.can_checkpoint_token and (block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE):
+    if (block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE):
         self._checkpoint_token()
         last_token_time = block.timestamp
 
@@ -355,7 +355,7 @@ def claim_many(_receivers: address[20]) -> bool:
 
     last_token_time: uint256 = self.last_token_time
 
-    if self.can_checkpoint_token and (block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE):
+    if (block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE):
         self._checkpoint_token()
         last_token_time = block.timestamp
 
@@ -390,7 +390,7 @@ def queueNewRewards(_amount: uint256) -> bool:
     assert not self.is_killed
 
     ERC20(self.token).transferFrom(msg.sender, self, _amount)
-    if self.can_checkpoint_token and (block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE):
+    if (block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE):
         self._checkpoint_token()
 
     return True
@@ -420,17 +420,6 @@ def apply_admin():
 
 
 @external
-def toggle_allow_checkpoint_token():
-    """
-    @notice Toggle permission for checkpointing by any account
-    """
-    assert msg.sender == self.admin
-    flag: bool = not self.can_checkpoint_token
-    self.can_checkpoint_token = flag
-    log ToggleAllowCheckpointToken(flag)
-
-
-@external
 def kill_me():
     """
     @notice Kill the contract
@@ -453,8 +442,8 @@ def recover_balance(_coin: address) -> bool:
     @param _coin Token address
     @return bool success
     """
-    assert msg.sender == self.admin
-    assert _coin != self.token
+    assert msg.sender == self.admin #dev: !authorized
+    assert _coin != self.token #dev: protected token
 
     amount: uint256 = ERC20(_coin).balanceOf(self)
     response: Bytes[32] = raw_call(
