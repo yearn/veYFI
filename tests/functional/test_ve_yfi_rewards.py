@@ -8,7 +8,7 @@ ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 def test_ve_yfi_claim(yfi, ve_yfi, whale, whale_amount, create_ve_yfi_rewards, gov):
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.create_lock(
-        whale_amount, chain.pending_timestamp + 3600 * 24 * 365, sender=whale
+        whale_amount, chain.pending_timestamp + 86400 * 365, sender=whale
     )
     rewards = 10**18
     yfi.mint(gov, rewards, sender=gov)
@@ -16,8 +16,8 @@ def test_ve_yfi_claim(yfi, ve_yfi, whale, whale_amount, create_ve_yfi_rewards, g
     ve_yfi_rewards = create_ve_yfi_rewards()
     yfi.approve(ve_yfi_rewards, rewards, sender=gov)
 
-    chain.pending_timestamp += 3600 * 24
-    current_begning_of_week = int(chain.pending_timestamp / (86400 * 7)) * 86400 * 7
+    chain.pending_timestamp += 86400
+    current_begning_of_week = int(chain.pending_timestamp / (86400 * 14)) * 86400 * 14
     ve_yfi_rewards.checkpoint_total_supply(sender=gov)
     ve_yfi_rewards.queueNewRewards(rewards, sender=gov)
 
@@ -26,7 +26,7 @@ def test_ve_yfi_claim(yfi, ve_yfi, whale, whale_amount, create_ve_yfi_rewards, g
     ve_yfi_rewards.claim(sender=whale)
     assert yfi.balanceOf(whale) == 0
 
-    chain.pending_timestamp += 3600 * 24 * 7
+    chain.pending_timestamp += 86400 * 14
     chain.mine()
     ve_yfi_rewards.claim(sender=whale)
     assert yfi.balanceOf(whale) == rewards
@@ -46,7 +46,7 @@ def test_ve_yfi_claim_for(
     yfi.approve(ve_yfi_rewards, rewards, sender=gov)
 
     chain.pending_timestamp += 3600 * 24
-    current_begning_of_week = int(chain.pending_timestamp / (86400 * 7)) * 86400 * 7
+    current_begning_of_week = int(chain.pending_timestamp / (86400 * 14)) * 86400 * 14
     ve_yfi_rewards.checkpoint_total_supply(sender=gov)
     ve_yfi_rewards.queueNewRewards(rewards, sender=gov)
 
@@ -55,7 +55,7 @@ def test_ve_yfi_claim_for(
     ve_yfi_rewards.claim(sender=whale)
     assert yfi.balanceOf(whale) == 0
 
-    chain.pending_timestamp += 3600 * 24 * 7
+    chain.pending_timestamp += 3600 * 24 * 14
     chain.mine()
     ve_yfi_rewards.claim(whale, sender=fish)
     assert yfi.balanceOf(whale) == rewards
@@ -82,7 +82,7 @@ def test_recover_balance(
 def test_set_admin(ve_yfi_rewards, panda, gov):
     with ape.reverts():
         ve_yfi_rewards.commit_admin(panda, sender=panda)
-    ve_yfi_rewards.transferOwnership(panda, sender=gov)
+    ve_yfi_rewards.commit_admin(panda, sender=gov)
 
     with ape.reverts():
         ve_yfi_rewards.apply_admin(sender=panda)

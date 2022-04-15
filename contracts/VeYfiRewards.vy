@@ -43,7 +43,7 @@ struct Point:
     blk: uint256  # block
 
 
-WEEK: constant(uint256) = 7 * 86400
+TWO_WEEKS: constant(uint256) = 14 * 86400
 TOKEN_CHECKPOINT_DEADLINE: constant(uint256) = 86400
 
 start_time: public(uint256)
@@ -84,7 +84,7 @@ def __init__(
     @param _emergency_return Address to transfer `_token` balance to
                              if this contract is killed
     """
-    t: uint256 = _start_time / WEEK * WEEK
+    t: uint256 = _start_time / TWO_WEEKS * TWO_WEEKS
     self.start_time = t
     self.last_token_time = t
     self.time_cursor = t
@@ -103,11 +103,11 @@ def _checkpoint_token():
     t: uint256 = self.last_token_time
     since_last: uint256 = block.timestamp - t
     self.last_token_time = block.timestamp
-    this_week: uint256 = t / WEEK * WEEK
+    this_week: uint256 = t / TWO_WEEKS * TWO_WEEKS
     next_week: uint256 = 0
 
     for i in range(20):
-        next_week = this_week + WEEK
+        next_week = this_week + TWO_WEEKS
         if block.timestamp < next_week:
             if since_last == 0 and block.timestamp == t:
                 self.tokens_per_week[this_week] += to_distribute
@@ -194,7 +194,7 @@ def ve_for_at(_user: address, _timestamp: uint256) -> uint256:
 def _checkpoint_total_supply():
     ve: address = self.voting_escrow
     t: uint256 = self.time_cursor
-    rounded_timestamp: uint256 = block.timestamp / WEEK * WEEK
+    rounded_timestamp: uint256 = block.timestamp / TWO_WEEKS * TWO_WEEKS
     VotingEscrow(ve).checkpoint()
     zero: int128 = 0
 
@@ -210,7 +210,7 @@ def _checkpoint_total_supply():
                 # Then make dt 0
                 dt = convert(t - pt.ts, int128)
             self.ve_supply[t] = convert(max(pt.bias - pt.slope * dt, zero), uint256)
-        t += WEEK
+        t += TWO_WEEKS
 
     self.time_cursor = t
 
@@ -252,7 +252,7 @@ def _claim(addr: address, ve: address, _last_token_time: uint256) -> uint256:
     user_point: Point = VotingEscrow(ve).user_point_history(addr, user_epoch)
 
     if week_cursor == 0:
-        week_cursor = (user_point.ts + WEEK - 1) / WEEK * WEEK
+        week_cursor = (user_point.ts + TWO_WEEKS - 1) / TWO_WEEKS * TWO_WEEKS
 
     if week_cursor >= _last_token_time:
         return 0
@@ -284,7 +284,7 @@ def _claim(addr: address, ve: address, _last_token_time: uint256) -> uint256:
             if balance_of > 0:
                 to_distribute += balance_of * self.tokens_per_week[week_cursor] / self.ve_supply[week_cursor]
 
-            week_cursor += WEEK
+            week_cursor += TWO_WEEKS
 
     user_epoch = min(max_user_epoch, user_epoch - 1)
     self.user_epoch_of[addr] = user_epoch
@@ -320,7 +320,7 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
         self._checkpoint_token()
         last_token_time = block.timestamp
 
-    last_token_time = last_token_time / WEEK * WEEK
+    last_token_time = last_token_time / TWO_WEEKS * TWO_WEEKS
 
     amount: uint256 = self._claim(_addr, self.voting_escrow, last_token_time)
     if amount != 0:
@@ -359,7 +359,7 @@ def claim_many(_receivers: address[20]) -> bool:
         self._checkpoint_token()
         last_token_time = block.timestamp
 
-    last_token_time = last_token_time / WEEK * WEEK
+    last_token_time = last_token_time / TWO_WEEKS * TWO_WEEKS
     voting_escrow: address = self.voting_escrow
     token: address = self.token
     total: uint256 = 0
