@@ -9,3 +9,4 @@ package-lock.json
 yarn-error.log
 artifacts
 contracts/.cache
+.DS_Store

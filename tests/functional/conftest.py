@@ -85,11 +85,13 @@ def ve_yfi_rewards(create_ve_yfi_rewards):
     yield create_ve_yfi_rewards()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def create_ve_yfi_rewards(project, ve_yfi, yfi, gov, chain):
     def create_ve_yfi_rewards():
         nb_bi_week = chain.blocks.head.timestamp // (2 * WEEK)
-        chain.pending_timestamp += (nb_bi_week+ 1) * 2 * WEEK - chain.blocks.head.timestamp
+        chain.pending_timestamp += (
+            nb_bi_week + 1
+        ) * 2 * WEEK - chain.blocks.head.timestamp
         chain.mine()
 
         ve_yfi_rewards = gov.deploy(
