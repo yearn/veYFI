@@ -148,7 +148,8 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         emit RewardsQueued(msg.sender, _amount);
         _amount = _amount + queuedRewards;
 
-        if (block.timestamp >= periodFinish) {
+         
+if (block.timestamp < periodFinish) {
             _notifyRewardAmount(_amount);
             queuedRewards = 0;
             return true;
@@ -172,7 +173,8 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         updateReward(address(0))
     {
         historicalRewards = historicalRewards + reward;
-        if (block.timestamp >= periodFinish) {
+         
+if (block.timestamp < periodFinish) {
             rewardRate = reward / duration;
         } else {
             uint256 remaining = periodFinish - block.timestamp;
