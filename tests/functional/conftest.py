@@ -92,11 +92,6 @@ def gauge_factory(project, gov):
 
 
 @pytest.fixture
-def vote_delegation(project, gov, ve_yfi):
-    yield gov.deploy(project.VoteDelegation, ve_yfi)
-
-
-@pytest.fixture
 def registry(project, gov, ve_yfi, yfi, gauge_factory, ve_yfi_rewards):
     yield gov.deploy(project.Registry, ve_yfi, yfi, gauge_factory, ve_yfi_rewards)
 
