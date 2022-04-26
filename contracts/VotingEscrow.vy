@@ -52,13 +52,6 @@ interface IVeYfiRewards:
 
 interface Migrator:
     def migrateLock(_account: address, _amount: uint256):nonpayable
-# Interface for checking whether address belongs to a whitelisted
-# type of a smart wallet.
-# When new types are added - the whole contract is changed
-# The check() method is modifying to be able to use caching
-# for individual wallet addresses
-interface SmartWalletChecker:
-    def check(addr: address) -> bool: nonpayable
 
 DEPOSIT_FOR_TYPE: constant(int128) = 0
 CREATE_LOCK_TYPE: constant(int128) = 1
