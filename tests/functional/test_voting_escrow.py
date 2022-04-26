@@ -268,7 +268,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     assert w_total == w_alice == w_bob == 0
 
 
-def test_early_exit(chain, accounts, yfi, ve_yfi):
+def test_early_exit(chain, accounts, yfi, ve_yfi, create_ve_yfi_rewards):
     alice, bob = accounts[:2]
     amount = 1000 * 10**18
     yfi.mint(bob, amount, sender=bob)
@@ -283,6 +283,7 @@ def test_early_exit(chain, accounts, yfi, ve_yfi):
     chain.mine()
 
     chain.pending_timestamp += H
+    ve_yfi_rewards = create_ve_yfi_rewards()
     ve_yfi.create_lock(amount, chain.blocks.head.timestamp + 2 * WEEK, sender=alice)
     ve_yfi.create_lock(amount, chain.blocks.head.timestamp + WEEK, sender=bob)
     ve_yfi.force_withdraw(sender=bob)
@@ -322,6 +323,7 @@ def test_migrate_set_balance_to_zero(chain, accounts, yfi, ve_yfi, gov, project)
 
     next_ve = gov.deploy(project.NextVe, yfi)
     ve_yfi.set_next_ve_contract(next_ve, sender=gov)
+    ve_yfi.commit_next_ve_contract(sender=gov)
 
     assert ve_yfi.balanceOf(alice) == 0
     assert ve_yfi.balanceOf(bob) == 0
@@ -398,6 +400,8 @@ def test_migrate_lock(chain, yfi, ve_yfi, gov, panda, project):
     ve_yfi.create_lock(amount, chain.blocks.head.timestamp + 2 * WEEK, sender=panda)
     next_ve = gov.deploy(project.NextVe, yfi)
     ve_yfi.set_next_ve_contract(next_ve, sender=gov)
+    ve_yfi.commit_next_ve_contract(sender=gov)
+
     ve_yfi.migrate(sender=panda)
     assert ve_yfi.balanceOf(panda) == 0
 

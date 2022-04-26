@@ -2,6 +2,9 @@ import pytest
 
 from eth_utils import to_checksum_address
 
+DAY = 86400
+WEEK = 7 * DAY
+
 
 @pytest.fixture(scope="session")
 def gov(accounts):
@@ -78,10 +81,26 @@ def ve_yfi(project, yfi, gov):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def ve_yfi_rewards(project, ve_yfi, yfi, gov):
-    ve_yfi_rewards = gov.deploy(project.VeYfiRewards, ve_yfi, yfi, gov)
-    ve_yfi.set_reward_pool(ve_yfi_rewards, sender=gov)
-    yield ve_yfi_rewards
+def ve_yfi_rewards(create_ve_yfi_rewards):
+    yield create_ve_yfi_rewards()
+
+
+@pytest.fixture(scope="session")
+def create_ve_yfi_rewards(project, ve_yfi, yfi, gov, chain):
+    def create_ve_yfi_rewards():
+        nb_bi_week = chain.blocks.head.timestamp // (2 * WEEK)
+        chain.pending_timestamp += (
+            nb_bi_week + 1
+        ) * 2 * WEEK - chain.blocks.head.timestamp
+        chain.mine()
+
+        ve_yfi_rewards = gov.deploy(
+            project.VeYfiRewards, ve_yfi, chain.pending_timestamp, yfi, gov, gov
+        )
+        ve_yfi.set_reward_pool(ve_yfi_rewards, sender=gov)
+        return ve_yfi_rewards
+
+    yield create_ve_yfi_rewards
 
 
 @pytest.fixture(scope="session")
@@ -101,7 +120,7 @@ def create_vault(project, gov):
     def create_vault():
         return gov.deploy(project.Token, "Yearn vault")
 
-    return create_vault
+    yield create_vault
 
 
 @pytest.fixture(scope="session")

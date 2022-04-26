@@ -47,7 +47,6 @@ interface ERC20:
     def approve(spender: address, amount: uint256) -> bool: nonpayable
 
 interface IVeYfiRewards:
-    def rewardCheckpoint(_account: address) -> bool: nonpayable
     def queueNewRewards(_amount: uint256) -> bool: nonpayable
 
 interface Migrator:
@@ -102,6 +101,10 @@ event Migrate:
 event NextVeContractSet:
     ve: indexed(address)
 
+event QueuedNextVeContractSet:
+    ve: indexed(address)
+
+DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
 MULTIPLIER: constant(uint256) = 10 ** 18
@@ -117,6 +120,7 @@ user_point_history: public(HashMap[address, Point[1000000000]])  # user -> Point
 user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 queuedPenalty: public(uint256)
+lastPenaltyTranfer: public(uint256)
 
 name: public(String[64])
 symbol: public(String[32])
@@ -129,6 +133,7 @@ unlocker: public(address)
 future_unlocker: public(address)
 
 next_ve_contract: public(address)
+queued_next_ve_contract: public(address)
 migration: public(bool)
 
 reward_pool: public(address)
@@ -165,10 +170,17 @@ def set_reward_pool(addr: address):
 @external
 def set_next_ve_contract(addr: address):
     assert msg.sender == self.admin  # dev: admin only
-    assert addr != ZERO_ADDRESS
-    self.next_ve_contract = addr
+    self.queued_next_ve_contract = addr
+    log QueuedNextVeContractSet(addr)
+
+@external
+def commit_next_ve_contract():
+    assert msg.sender == self.admin  # dev: admin only
+    next: address = self.queued_next_ve_contract 
+    assert next != ZERO_ADDRESS
+    self.next_ve_contract = next
     self.migration = True
-    log NextVeContractSet(addr)
+    log NextVeContractSet(next)
 
 @external
 def commit_transfer_ownership(addr: address):
@@ -377,6 +389,27 @@ def checkpoint():
     """
     self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
 
+@internal
+def _transferQueuedPenalty():
+    toTransfer: uint256 = self.queuedPenalty
+    self.queuedPenalty = 0
+
+    assert ERC20(self.token).approve(self.reward_pool, toTransfer)
+    IVeYfiRewards(self.reward_pool).queueNewRewards(toTransfer)
+    self.lastPenaltyTranfer = block.timestamp
+
+@external
+def transferQueuedPenalty() ->bool:
+    """
+    @notice
+    Transfer penalty to the veYFIRewardContract
+    @dev Penalty are queued in this contract.
+    @return true
+    """
+    self._transferQueuedPenalty()
+
+    return True
+
 
 @internal
 def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
@@ -391,7 +424,6 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
     assert(self.migration == False) # dev: must migrate
     _locked: LockedBalance = locked_balance
     supply_before: uint256 = self.supply
-    IVeYfiRewards(self.reward_pool).rewardCheckpoint(_addr) # Reward pool snapshot
 
     self.supply = supply_before + _value
     old_locked: LockedBalance = _locked
@@ -517,7 +549,6 @@ def withdraw():
     value: uint256 = convert(_locked.amount, uint256)
 
     assert block.timestamp >= _locked.end, "The lock didn't expire"
-    IVeYfiRewards(self.reward_pool).rewardCheckpoint(msg.sender) # Reward pool snapshot
 
     old_locked: LockedBalance = _locked
     _locked.end = 0
@@ -554,7 +585,6 @@ def force_withdraw():
     penalty_ratio: uint256 = min(MULTIPLIER * 3 / 4,  MULTIPLIER * time_left / MAXTIME)
 
     value: uint256 = convert(_locked.amount, uint256)
-    IVeYfiRewards(self.reward_pool).rewardCheckpoint(msg.sender) # Reward pool snapshot
 
     old_locked: LockedBalance = _locked
     _locked.end = 0
@@ -572,6 +602,8 @@ def force_withdraw():
     assert ERC20(self.token).transfer(msg.sender, value - penalty)
     if penalty != 0:
         self.queuedPenalty += penalty
+        if (block.timestamp - self.lastPenaltyTranfer > DAY):
+            self._transferQueuedPenalty()
 
     log Withdraw(msg.sender, value, block.timestamp)
     log Supply(supply_before, supply_before - value)
@@ -790,21 +822,4 @@ def totalSupplyAt(_block: uint256) -> uint256:
             dt = (_block - point.blk) * (block.timestamp - point.ts) / (block.number - point.blk)
     # Now dt contains info on how far are we beyond point
 
-    return self.supply_at(point, point.ts + dt)
-
-
-@external
-def transferQueuedPenalty() ->bool:
-    """
-    @notice
-    Transfer penalty to the veYFIRewardContract
-    @dev Penalty are queued in this contract.
-    @return true
-    """
-    toTransfer: uint256 = self.queuedPenalty
-    self.queuedPenalty = 0
-
-    assert ERC20(self.token).approve(self.reward_pool, toTransfer)
-    IVeYfiRewards(self.reward_pool).queueNewRewards(toTransfer)
-
-    return True
+    return self.supply_at(point, point.ts + dt)   
