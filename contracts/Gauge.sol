@@ -145,6 +145,9 @@ contract Gauge is BaseGauge, IGauge {
     function addExtraReward(address _extraReward) external returns (bool) {
         require(msg.sender == rewardManager, "!authorized");
         require(_extraReward != address(0), "!reward setting");
+        for (uint256 i = 0; i < extraRewards.length; ++i) {
+            require(extraRewards[i] != _extraReward, "exists");
+        }
         emit AddedExtraReward(_extraReward);
         extraRewards.push(_extraReward);
         return true;
@@ -158,7 +161,7 @@ contract Gauge is BaseGauge, IGauge {
         require(msg.sender == rewardManager, "!authorized");
         uint256 index = type(uint256).max;
         uint256 length = extraRewards.length;
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             if (extraRewards[i] == _extraReward) {
                 index = i;
                 break;
@@ -281,7 +284,7 @@ contract Gauge is BaseGauge, IGauge {
     }
 
     /** @notice boosted balance of based on veYFI balance
-     *  @dev min(balance * 0.4 + totalSupply * veYFIBalance / veYFITotalSypply * 0.6, balance)
+     *  @dev min(balance * 0.4 + totalSupply * veYFIBalance / veYFITotalSupply * 0.6, balance)
      *  @return boosted balance
      */
     function boostedBalanceOf(address account) public view returns (uint256) {
@@ -350,11 +353,11 @@ contract Gauge is BaseGauge, IGauge {
         internal
         updateReward(_for)
     {
-        require(_amount > 0, "RewardPool : Cannot deposit 0");
+        require(_amount != 0, "RewardPool : Cannot deposit 0");
 
         //also deposit to linked rewards
         uint256 length = extraRewards.length;
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             IExtraReward(extraRewards[i]).rewardCheckpoint(_for);
         }
 
@@ -379,11 +382,11 @@ contract Gauge is BaseGauge, IGauge {
         bool _claim,
         bool _lock
     ) public updateReward(msg.sender) returns (bool) {
-        require(_amount > 0, "RewardPool : Cannot withdraw 0");
+        require(_amount != 0, "RewardPool : Cannot withdraw 0");
 
         //also withdraw from linked rewards
         uint256 length = extraRewards.length;
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             IExtraReward(extraRewards[i]).rewardCheckpoint(msg.sender);
         }
 
@@ -497,7 +500,7 @@ contract Gauge is BaseGauge, IGauge {
         bool _claimExtras
     ) internal {
         uint256 reward = rewards[_account];
-        if (reward > 0) {
+        if (reward != 0) {
             rewards[_account] = 0;
             if (_lock) {
                 rewardToken.approve(address(veToken), reward);
@@ -511,7 +514,7 @@ contract Gauge is BaseGauge, IGauge {
         //also get rewards from linked rewards
         if (_claimExtras) {
             uint256 length = extraRewards.length;
-            for (uint256 i = 0; i < length; i++) {
+            for (uint256 i = 0; i < length; ++i) {
                 IExtraReward(extraRewards[i]).getRewardFor(_account);
             }
         }

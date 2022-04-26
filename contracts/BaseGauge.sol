@@ -172,6 +172,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         updateReward(address(0))
     {
         historicalRewards = historicalRewards + reward;
+
         if (block.timestamp >= periodFinish) {
             rewardRate = reward / duration;
         } else {
