@@ -145,7 +145,7 @@ contract Gauge is BaseGauge, IGauge {
     function addExtraReward(address _extraReward) external returns (bool) {
         require(msg.sender == rewardManager, "!authorized");
         require(_extraReward != address(0), "!reward setting");
-        for(uint256 i = 0; i < extraRewards.length; ++i) {
+        for (uint256 i = 0; i < extraRewards.length; ++i) {
             require(extraRewards[i] != _extraReward, "exists");
         }
         emit AddedExtraReward(_extraReward);
