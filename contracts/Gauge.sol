@@ -287,7 +287,7 @@ contract Gauge is BaseGauge, IGauge {
      *  @dev min(balance * 0.4 + totalSupply * veYFIBalance / veYFITotalSupply * 0.6, balance)
      *  @return boosted balance
      */
-    function boostedBalanceOf(address account) public view returns (uint256) {
+    function boostedBalanceOf(address account) external view returns (uint256) {
         return _boostedBalanceOf(account);
     }
 
@@ -317,7 +317,7 @@ contract Gauge is BaseGauge, IGauge {
      * @param _amount of vault token
      * @return true
      */
-    function deposit(uint256 _amount) public returns (bool) {
+    function deposit(uint256 _amount) external returns (bool) {
         _deposit(msg.sender, _amount);
         return true;
     }
