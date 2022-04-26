@@ -101,6 +101,9 @@ event Migrate:
 event NextVeContractSet:
     ve: indexed(address)
 
+event QueuedNextVeContractSet:
+    ve: indexed(address)
+
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
@@ -130,6 +133,7 @@ unlocker: public(address)
 future_unlocker: public(address)
 
 next_ve_contract: public(address)
+queued_next_ve_contract: public(address)
 migration: public(bool)
 
 reward_pool: public(address)
@@ -166,10 +170,17 @@ def set_reward_pool(addr: address):
 @external
 def set_next_ve_contract(addr: address):
     assert msg.sender == self.admin  # dev: admin only
-    assert addr != ZERO_ADDRESS
-    self.next_ve_contract = addr
+    self.queued_next_ve_contract = addr
+    log QueuedNextVeContractSet(addr)
+
+@external
+def commit_next_ve_contract():
+    assert msg.sender == self.admin  # dev: admin only
+    next: address = self.queued_next_ve_contract 
+    assert next != ZERO_ADDRESS
+    self.next_ve_contract = next
     self.migration = True
-    log NextVeContractSet(addr)
+    log NextVeContractSet(next)
 
 @external
 def commit_transfer_ownership(addr: address):

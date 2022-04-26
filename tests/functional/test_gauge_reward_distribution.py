@@ -361,6 +361,7 @@ def test_gauge_yfi_distribution_no_more_ve_yfi(
     chain.pending_timestamp += 3600
     next_ve = gov.deploy(project.NextVe, yfi)
     ve_yfi.set_next_ve_contract(next_ve, sender=gov)
+    ve_yfi.commit_next_ve_contract(sender=gov)
 
     gauge.getReward(sender=whale)
 

@@ -323,6 +323,7 @@ def test_migrate_set_balance_to_zero(chain, accounts, yfi, ve_yfi, gov, project)
 
     next_ve = gov.deploy(project.NextVe, yfi)
     ve_yfi.set_next_ve_contract(next_ve, sender=gov)
+    ve_yfi.commit_next_ve_contract(sender=gov)
 
     assert ve_yfi.balanceOf(alice) == 0
     assert ve_yfi.balanceOf(bob) == 0
@@ -399,6 +400,8 @@ def test_migrate_lock(chain, yfi, ve_yfi, gov, panda, project):
     ve_yfi.create_lock(amount, chain.blocks.head.timestamp + 2 * WEEK, sender=panda)
     next_ve = gov.deploy(project.NextVe, yfi)
     ve_yfi.set_next_ve_contract(next_ve, sender=gov)
+    ve_yfi.commit_next_ve_contract(sender=gov)
+
     ve_yfi.migrate(sender=panda)
     assert ve_yfi.balanceOf(panda) == 0
 
