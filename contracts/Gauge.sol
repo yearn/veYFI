@@ -216,12 +216,12 @@ contract Gauge is BaseGauge, IGauge {
         return _lockingRatio(account);
     }
 
-    function _lockingRatio(address acccount) internal view returns (uint256) {
+    function _lockingRatio(address account) internal view returns (uint256) {
         if (IVotingEscrow(veToken).migration()) {
             return PRECISON_FACTOR;
         }
 
-        uint256 lockedUntil = IVotingEscrow(veToken).locked__end(acccount);
+        uint256 lockedUntil = IVotingEscrow(veToken).locked__end(account);
         if (lockedUntil == 0 || lockedUntil <= block.timestamp) {
             return 0;
         }
