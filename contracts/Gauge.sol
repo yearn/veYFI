@@ -23,9 +23,17 @@ contract Gauge is BaseGauge, IGauge {
         uint256 realBalance;
         uint256 boostedBalance;
         uint256 lastDeposit;
+        uint256 integrateCheckpointOf;
     }
 
-    uint256 constant BOOSTING_FACTOR = 10;
+    struct Appoved {
+        bool deposit;
+        bool claim;
+        bool lock;
+    }
+
+    uint256 constant BOOSTING_FACTOR = 100;
+    uint256 constant BOOST_DENOMINATOR = 1000;
 
     IERC20 public stakingToken;
     //// @notice veYFI
@@ -36,7 +44,6 @@ contract Gauge is BaseGauge, IGauge {
     uint256 public constant MAX_LOCK = 4 * 365 * 86400;
     uint256 public constant PRECISON_FACTOR = 10**6;
     //// @notice Penalty do not apply for locks expiring after 3y11m
-    uint256 public constant GRACE_PERIOD = 30 days;
 
     //// @notice rewardManager is in charge of adding/removing additional rewards
     address public rewardManager;
@@ -48,6 +55,7 @@ contract Gauge is BaseGauge, IGauge {
     uint256 public queuedVeYfiRewards;
     uint256 private _totalSupply;
     mapping(address => Balance) private _balances;
+    mapping(address => mapping(address => Appoved)) public approved_to;
 
     //// @notice list of extraRewards pool.
     address[] public extraRewards;
@@ -297,7 +305,9 @@ contract Gauge is BaseGauge, IGauge {
                 ((realBalance * BOOSTING_FACTOR) +
                     (((_totalSupply *
                         IVotingEscrow(veToken).balanceOf(account)) /
-                        veTotalSupply) * (100 - BOOSTING_FACTOR))) / 100,
+                        veTotalSupply) *
+                        (BOOST_DENOMINATOR - BOOSTING_FACTOR))) /
+                    BOOST_DENOMINATOR,
                 realBalance
             );
     }
@@ -345,6 +355,9 @@ contract Gauge is BaseGauge, IGauge {
         updateReward(_for)
     {
         require(_amount != 0, "RewardPool : Cannot deposit 0");
+        if (_for != msg.sender) {
+            require(approved_to[msg.sender][_for].deposit, "not allowed");
+        }
 
         //also deposit to linked rewards
         uint256 length = extraRewards.length;
@@ -360,10 +373,30 @@ contract Gauge is BaseGauge, IGauge {
         uint256 newBalance = balance.realBalance + _amount;
         balance.realBalance = newBalance;
         balance.boostedBalance = _boostedBalanceOf(_for, newBalance);
+        balance.integrateCheckpointOf = block.number;
 
         //take away from sender
         stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
         emit Staked(_for, _amount);
+    }
+
+    /** @notice allow an address to deposit on your behalf
+     *  @param _addr address to change approval for
+     *  @param _canDeposit can deposit
+     *  @param _canClaim can deposit
+     *  @return true
+     */
+    function set_approve_deposit(
+        address _addr,
+        bool _canDeposit,
+        bool _canClaim,
+        bool _canLock
+    ) external returns (bool) {
+        approved_to[_addr][msg.sender].deposit = _canDeposit;
+        approved_to[_addr][msg.sender].claim = _canClaim;
+        approved_to[_addr][msg.sender].lock = _canLock;
+
+        return true;
     }
 
     /** @notice withdraw vault token from the gauge
@@ -392,6 +425,7 @@ contract Gauge is BaseGauge, IGauge {
         uint256 newBalance = balance.realBalance - _amount;
         balance.realBalance = newBalance;
         balance.boostedBalance = _boostedBalanceOf(msg.sender, newBalance);
+        balance.integrateCheckpointOf = block.number;
 
         if (_claim) {
             _getReward(msg.sender, _lock, true);
@@ -485,24 +519,35 @@ contract Gauge is BaseGauge, IGauge {
      * @param _claimExtras claim extra rewards
      * @return true
      */
-    function getRewardFor(address _account, bool _claimExtras)
-        external
-        updateReward(_account)
-        returns (bool)
-    {
-        _balances[_account].boostedBalance = _boostedBalanceOf(_account);
-        _getReward(_account, false, _claimExtras);
+    function getRewardFor(
+        address _account,
+        bool _lock,
+        bool _claimExtras
+    ) external updateReward(_account) returns (bool) {
+        if (_account != msg.sender) {
+            require(
+                approved_to[msg.sender][_account].claim,
+                "not allowed to claim"
+            );
+            require(
+                _lock == false || approved_to[msg.sender][_account].lock,
+                "not allowed to lock"
+            );
+        }
+
+        _getReward(_account, _lock, _claimExtras);
+
         return true;
     }
 
-    /**
-    @dev If account is not equal to msg.sender, it should never be invoked with lock equal to true.
-    */
     function _getReward(
         address _account,
         bool _lock,
         bool _claimExtras
     ) internal {
+        _balances[_account].boostedBalance = _boostedBalanceOf(_account);
+        _balances[_account].integrateCheckpointOf = block.number;
+
         uint256 reward = rewards[_account];
         if (reward != 0) {
             rewards[_account] = 0;
@@ -567,5 +612,49 @@ contract Gauge is BaseGauge, IGauge {
     {
         return
             _token != address(rewardToken) && _token != address(stakingToken);
+    }
+
+    /**
+    @notice Kick `addr` for abusing their boost
+    @param _account Address to kick
+    */
+    function kick(address _account) external updateReward(_account) {
+        Balance storage balance = _balances[_account];
+        uint256 t_last = balance.integrateCheckpointOf;
+
+        uint256 t_ve = IVotingEscrow(veToken).user_point_history__ts(
+            _account,
+            IVotingEscrow(veToken).user_point_epoch(_account)
+        );
+
+        require(
+            balance.boostedBalance >
+                (balance.realBalance * BOOSTING_FACTOR) / BOOST_DENOMINATOR
+        );
+
+        if (
+            (IVotingEscrow(veToken).balanceOf(_account) == 0 ||
+                t_ve > t_last) == false
+        ) {
+            uint256 new_boosted_balance = _boostedBalanceOf(
+                _account,
+                balance.realBalance
+            );
+            if (new_boosted_balance < balance.boostedBalance) {
+                require(
+                    (BOOST_DENOMINATOR *
+                        (balance.boostedBalance - new_boosted_balance)) /
+                        balance.boostedBalance >
+                        BOOSTING_FACTOR,
+                    "boost not changed enough"
+                );
+            }
+        }
+
+        balance.boostedBalance = _boostedBalanceOf(
+            _account,
+            balance.realBalance
+        );
+        balance.integrateCheckpointOf = block.number;
     }
 }

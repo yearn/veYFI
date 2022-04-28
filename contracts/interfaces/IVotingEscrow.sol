@@ -17,4 +17,11 @@ interface IVotingEscrow is IERC20 {
     function deposit_for(address, uint256) external;
 
     function migration() external view returns (bool);
+
+    function user_point_epoch(address) external view returns (uint256);
+
+    function user_point_history__ts(address, uint256)
+        external
+        view
+        returns (uint256);
 }
