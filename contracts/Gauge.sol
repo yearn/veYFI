@@ -19,6 +19,13 @@ import "./interfaces/IVotingEscrow.sol";
 contract Gauge is BaseGauge, IGauge {
     using SafeERC20 for IERC20;
 
+    struct Balance {
+        uint256 realBalance;
+        uint256 boostedBalance;
+    }
+
+    uint256 constant BOOSTING_FACTOR = 10;
+
     IERC20 public stakingToken;
     //// @notice veYFI
     address public veToken;
@@ -37,9 +44,9 @@ contract Gauge is BaseGauge, IGauge {
     @notice penalty queued to be transfer later to veYfiRewardPool using `transferQueuedPenalty`
     @dev rewards are queued when an account `_updateReward`.
     */
-    uint256 public queuedPenalty;
+    uint256 public queuedVeYfiRewards;
     uint256 private _totalSupply;
-    mapping(address => uint256) private _balances;
+    mapping(address => Balance) private _balances;
 
     //// @notice list of extraRewards pool.
     address[] public extraRewards;
@@ -128,7 +135,18 @@ contract Gauge is BaseGauge, IGauge {
         override
         returns (uint256)
     {
-        return _balances[account];
+        return _balances[account].realBalance;
+    }
+
+    /** @param account to look balance for
+     *  @return amount of staked token for an account
+     */
+    function snapshotBalanceOf(address account)
+        external
+        view
+        returns (uint256)
+    {
+        return _balances[account].boostedBalance;
     }
 
     /** @return the number of extra rewards pool
@@ -187,18 +205,12 @@ contract Gauge is BaseGauge, IGauge {
         rewardPerTokenStored = _rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
         if (account != address(0)) {
-            if (_balances[account] != 0) {
+            if (_balances[account].boostedBalance != 0) {
                 uint256 newEarning = _newEarning(account);
                 uint256 maxEarning = _maxEarning(account);
 
-                uint256 penalty = ((PRECISON_FACTOR - _lockingRatio(account)) *
-                    newEarning) / PRECISON_FACTOR;
-
-                rewards[account] += (newEarning - penalty);
-                queuedPenalty += penalty;
-
-                // If rewards aren't boosted at max, loss rewards are queued to be redistributed to the gauge.
-                queuedRewards += (maxEarning - newEarning);
+                rewards[account] += newEarning;
+                queuedVeYfiRewards += (maxEarning - newEarning);
             }
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
             emit UpdatedRewards(
@@ -209,32 +221,6 @@ contract Gauge is BaseGauge, IGauge {
                 userRewardPerTokenPaid[account]
             );
         }
-    }
-
-    /** @notice give the lockingRatio
-     * @dev locking ratio is expressed in PRECISON_FACTOR, it's used to calculate the penalty due to the lock duration.
-     * @return lockingRatio
-     */
-    function lockingRatio(address account) external view returns (uint256) {
-        return _lockingRatio(account);
-    }
-
-    function _lockingRatio(address account) internal view returns (uint256) {
-        if (IVotingEscrow(veToken).migration()) {
-            return PRECISON_FACTOR;
-        }
-
-        uint256 lockedUntil = IVotingEscrow(veToken).locked__end(account);
-        if (lockedUntil == 0 || lockedUntil <= block.timestamp) {
-            return 0;
-        }
-
-        uint256 timeLeft = lockedUntil - block.timestamp;
-        if (MAX_LOCK - timeLeft < GRACE_PERIOD) {
-            return PRECISON_FACTOR;
-        }
-
-        return (PRECISON_FACTOR * timeLeft) / MAX_LOCK;
     }
 
     function _rewardPerToken() internal view override returns (uint256) {
@@ -260,10 +246,7 @@ contract Gauge is BaseGauge, IGauge {
     {
         uint256 newEarning = _newEarning(account);
 
-        return
-            (_lockingRatio(account) * newEarning) /
-            PRECISON_FACTOR +
-            rewards[account];
+        return newEarning + rewards[account];
     }
 
     function _newEarning(address account)
@@ -273,13 +256,13 @@ contract Gauge is BaseGauge, IGauge {
         returns (uint256)
     {
         return
-            (_boostedBalanceOf(account) *
+            (_balances[account].boostedBalance *
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
     function _maxEarning(address account) internal view returns (uint256) {
         return
-            (_balances[account] *
+            (_balances[account].realBalance *
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
@@ -296,18 +279,25 @@ contract Gauge is BaseGauge, IGauge {
         view
         returns (uint256)
     {
+        return _boostedBalanceOf(account, _balances[account].realBalance);
+    }
+
+    function _boostedBalanceOf(address account, uint256 realBalance)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 veTotalSupply = IVotingEscrow(veToken).totalSupply();
         if (veTotalSupply == 0) {
-            return _balances[account];
+            return realBalance;
         }
-
         return
             Math.min(
-                ((_balances[account] * 40) +
+                ((realBalance * BOOSTING_FACTOR) +
                     (((_totalSupply *
                         IVotingEscrow(veToken).balanceOf(account)) /
-                        veTotalSupply) * 60)) / 100,
-                _balances[account]
+                        veTotalSupply) * (100 - BOOSTING_FACTOR))) / 100,
+                realBalance
             );
     }
 
@@ -363,7 +353,9 @@ contract Gauge is BaseGauge, IGauge {
 
         //give to _for
         _totalSupply = _totalSupply + _amount;
-        _balances[_for] = _balances[_for] + _amount;
+        uint256 newBalance = _balances[_for].realBalance + _amount;
+        _balances[_for].realBalance = newBalance;
+        _balances[_for].boostedBalance = _boostedBalanceOf(_for, newBalance);
 
         //take away from sender
         stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -391,7 +383,12 @@ contract Gauge is BaseGauge, IGauge {
         }
 
         _totalSupply = _totalSupply - _amount;
-        _balances[msg.sender] = _balances[msg.sender] - _amount;
+        uint256 newBalance = _balances[msg.sender].realBalance - _amount;
+        _balances[msg.sender].realBalance = newBalance;
+        _balances[msg.sender].boostedBalance = _boostedBalanceOf(
+            msg.sender,
+            newBalance
+        );
 
         if (_claim) {
             _getReward(msg.sender, _lock, true);
@@ -410,7 +407,7 @@ contract Gauge is BaseGauge, IGauge {
      *   @return true
      */
     function withdraw(bool _claim, bool _lock) external returns (bool) {
-        withdraw(_balances[msg.sender], _claim, _lock);
+        withdraw(_balances[msg.sender].realBalance, _claim, _lock);
         return true;
     }
 
@@ -420,7 +417,7 @@ contract Gauge is BaseGauge, IGauge {
      *  @return true
      */
     function withdraw(bool _claim) external returns (bool) {
-        withdraw(_balances[msg.sender], _claim, false);
+        withdraw(_balances[msg.sender].realBalance, _claim, false);
         return true;
     }
 
@@ -429,7 +426,7 @@ contract Gauge is BaseGauge, IGauge {
         @return true
     */
     function withdraw() external returns (bool) {
-        withdraw(_balances[msg.sender], false, false);
+        withdraw(_balances[msg.sender].realBalance, false, false);
         return true;
     }
 
@@ -445,6 +442,7 @@ contract Gauge is BaseGauge, IGauge {
         updateReward(msg.sender)
         returns (bool)
     {
+        _balances[msg.sender].boostedBalance = _boostedBalanceOf(msg.sender);
         _getReward(msg.sender, _lock, _claimExtras);
         return true;
     }
@@ -460,6 +458,7 @@ contract Gauge is BaseGauge, IGauge {
         updateReward(msg.sender)
         returns (bool)
     {
+        _balances[msg.sender].boostedBalance = _boostedBalanceOf(msg.sender);
         _getReward(msg.sender, _lock, true);
         return true;
     }
@@ -470,6 +469,7 @@ contract Gauge is BaseGauge, IGauge {
      *  @return true
      */
     function getReward() external updateReward(msg.sender) returns (bool) {
+        _balances[msg.sender].boostedBalance = _boostedBalanceOf(msg.sender);
         _getReward(msg.sender, false, true);
         return true;
     }
@@ -487,6 +487,7 @@ contract Gauge is BaseGauge, IGauge {
         updateReward(_account)
         returns (bool)
     {
+        _balances[_account].boostedBalance = _boostedBalanceOf(_account);
         _getReward(_account, false, _claimExtras);
         return true;
     }
@@ -526,9 +527,9 @@ contract Gauge is BaseGauge, IGauge {
      * @dev Penalty are queued in this contract.
      * @return true
      */
-    function transferQueuedPenalty() external returns (bool) {
-        uint256 toTransfer = queuedPenalty;
-        queuedPenalty = 0;
+    function transferVeYfiRewards() external returns (bool) {
+        uint256 toTransfer = queuedVeYfiRewards;
+        queuedVeYfiRewards = 0;
 
         IERC20(rewardToken).approve(veYfiRewardPool, toTransfer);
         BaseGauge(veYfiRewardPool).queueNewRewards(toTransfer);

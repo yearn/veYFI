@@ -87,15 +87,13 @@ def test_extra_rewards_no_boost(
     gauge.deposit(sender=whale)
     chain.pending_timestamp += 3600
     chain.mine()
-    assert (
-        pytest.approx(extra_reward.earned(whale), rel=10e-4) == 10**18 / 14 / 24 * 0.4
-    )
+    assert pytest.approx(extra_reward.earned(whale), rel=10e-4) == 10**18 / 14 / 24
     extra_reward.getReward(sender=whale)
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 24 * 0.4
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 24
 
     chain.pending_timestamp += 3600
     gauge.getReward(sender=whale)
-    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 12 * 0.4
+    assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 12
 
 
 def test_withdraw_from_gauge_claim_extra_rewards(
