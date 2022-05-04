@@ -53,9 +53,9 @@ contract GaugeFactory is IGaugeFactory {
     }
 
     /** @notice Create ExtraReward clone
-        @param gauge the gauge associated with.
-        @param reward The token to distribute as a rewards
-        @param owner owner 
+        @param _gauge the gauge associated with.
+        @param _reward The token to distribute as a rewards
+        @param _owner owner 
         @return ExtraReward address
     */
     function createExtraReward(

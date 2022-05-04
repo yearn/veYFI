@@ -52,8 +52,8 @@ contract ExtraReward is IExtraReward, BaseGauge {
                 _account,
                 rewardPerTokenStored,
                 lastUpdateTime,
-                rewards[account],
-                userRewardPerTokenPaid[account]
+                rewards[_account],
+                userRewardPerTokenPaid[_account]
             );
         }
     }

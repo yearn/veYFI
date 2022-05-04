@@ -226,8 +226,8 @@ contract Gauge is BaseGauge, IGauge {
                 _account,
                 rewardPerTokenStored,
                 lastUpdateTime,
-                rewards[account],
-                userRewardPerTokenPaid[account]
+                rewards[_account],
+                userRewardPerTokenPaid[_account]
             );
         }
     }
@@ -386,7 +386,7 @@ contract Gauge is BaseGauge, IGauge {
      *  @param _canClaim can deposit
      *  @return true
      */
-    function setApproveDeposit(
+    function setApprovals(
         address _addr,
         bool _canDeposit,
         bool _canClaim,
@@ -643,7 +643,7 @@ contract Gauge is BaseGauge, IGauge {
             if (newBoostedBalance < balance.boostedBalance) {
                 require(
                     (BOOST_DENOMINATOR *
-                        (balance.boostedBalance - new_boosted_balance)) /
+                        (balance.boostedBalance - newBoostedBalance)) /
                         balance.boostedBalance >
                         BOOSTING_FACTOR,
                     "boost not changed enough"
