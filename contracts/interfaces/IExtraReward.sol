@@ -5,14 +5,14 @@ import "./IBaseGauge.sol";
 
 interface IExtraReward is IBaseGauge {
     function initialize(
-        address gauge_,
-        address reward_,
-        address owner_
+        address _gauge,
+        address _reward,
+        address _owner
     ) external;
 
     function rewardCheckpoint(address _account) external returns (bool);
 
-    function getRewardFor(address) external returns (bool);
+    function getRewardFor(address _account) external returns (bool);
 
     function getReward() external returns (bool);
 }

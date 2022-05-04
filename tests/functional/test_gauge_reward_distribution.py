@@ -173,7 +173,15 @@ def test_gauge_get_reward_for(
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
     assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
-    gauge.getRewardFor(whale, False, sender=shark)
+    with ape.reverts("not allowed to claim"):
+        gauge.getRewardFor(whale, False, True, sender=shark)
+
+    gauge.setApprovals(shark, False, True, False, sender=whale)
+
+    with ape.reverts("not allowed to lock"):
+        gauge.getRewardFor(whale, True, True, sender=shark)
+
+    gauge.getRewardFor(whale, False, True, sender=shark)
 
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
         14 * 24
@@ -213,6 +221,10 @@ def test_deposit_for(
 
     vault.mint(shark, lp_amount, sender=gov)
     vault.approve(gauge, lp_amount, sender=shark)
+    with ape.reverts("not allowed"):
+        gauge.depositFor(whale, lp_amount, sender=shark)
+
+    gauge.setApprovals(shark, True, False, False, sender= whale)
     gauge.depositFor(whale, lp_amount, sender=shark)
     assert gauge.totalSupply() == 10**18
     assert gauge.balanceOf(whale) == 10**18

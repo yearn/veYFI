@@ -21,7 +21,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
         address indexed _gauge,
         address indexed rewardToken,
         address indexed owner
-    );
+    );    
 
     /**
     @notice Initialize the contract after a clone.
@@ -41,19 +41,19 @@ contract ExtraReward is IExtraReward, BaseGauge {
         emit Initialized(_gauge, _rewardToken, _owner);
     }
 
-    function _updateReward(address account) internal override {
+    function _updateReward(address _account) internal override {
         rewardPerTokenStored = _rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
-        if (account != address(0)) {
-            rewards[account] += _newEarning(account);
+        if (_account != address(0)) {
+            rewards[_account] += _newEarning(_account);
 
-            userRewardPerTokenPaid[account] = rewardPerTokenStored;
+            userRewardPerTokenPaid[_account] = rewardPerTokenStored;
             emit UpdatedRewards(
-                account,
+                _account,
                 rewardPerTokenStored,
                 lastUpdateTime,
-                rewards[account],
-                userRewardPerTokenPaid[account]
+                rewards[_account],
+                userRewardPerTokenPaid[_account]
             );
         }
     }
@@ -66,18 +66,18 @@ contract ExtraReward is IExtraReward, BaseGauge {
             rewardPerTokenStored +
             (((lastTimeRewardApplicable() - lastUpdateTime) *
                 rewardRate *
-                1e18) / gauge.totalSupply());
+                PRECISION_FACTOR) / gauge.totalSupply());
     }
 
-    function _newEarning(address account)
+    function _newEarning(address _account)
         internal
         view
         override
         returns (uint256)
     {
         return
-            (gauge.balanceOf(account) *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
+            (gauge.balanceOf(_account) *
+                (_rewardPerToken() - userRewardPerTokenPaid[_account])) / PRECISION_FACTOR;
     }
 
     /** @notice update reward for an account
