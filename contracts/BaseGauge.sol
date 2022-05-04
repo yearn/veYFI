@@ -22,7 +22,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
     uint256 public queuedRewards;
     uint256 public currentRewards;
     uint256 public historicalRewards;
-    uint256 constant public PRECISION_FACTOR = 1e18;
+    uint256 public constant PRECISION_FACTOR = 1e18;
 
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;

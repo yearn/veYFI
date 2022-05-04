@@ -21,7 +21,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
         address indexed _gauge,
         address indexed rewardToken,
         address indexed owner
-    );    
+    );
 
     /**
     @notice Initialize the contract after a clone.
@@ -77,7 +77,8 @@ contract ExtraReward is IExtraReward, BaseGauge {
     {
         return
             (gauge.balanceOf(_account) *
-                (_rewardPerToken() - userRewardPerTokenPaid[_account])) / PRECISION_FACTOR;
+                (_rewardPerToken() - userRewardPerTokenPaid[_account])) /
+            PRECISION_FACTOR;
     }
 
     /** @notice update reward for an account

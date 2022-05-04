@@ -224,7 +224,7 @@ def test_deposit_for(
     with ape.reverts("not allowed"):
         gauge.depositFor(whale, lp_amount, sender=shark)
 
-    gauge.setApprovals(shark, True, False, False, sender= whale)
+    gauge.setApprovals(shark, True, False, False, sender=whale)
     gauge.depositFor(whale, lp_amount, sender=shark)
     assert gauge.totalSupply() == 10**18
     assert gauge.balanceOf(whale) == 10**18
@@ -364,3 +364,9 @@ def test_claim_and_lock_rewards(
         ve_yfi.locked(whale)[0]
         == whale_amount + next(tx.decode_logs(gauge.RewardPaid)).reward
     )
+
+
+def test_kick(create_vault, create_gauge, whale_amount, yfi, ve_yfi, whale, gov):
+    lp_amount = 10**18
+    vault = create_vault()
+    gauge = create_gauge(vault)

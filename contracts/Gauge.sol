@@ -32,8 +32,8 @@ contract Gauge is BaseGauge, IGauge {
         bool lock;
     }
 
-    uint256 constant private BOOSTING_FACTOR = 100;
-    uint256 constant private BOOST_DENOMINATOR = 1000;
+    uint256 private constant BOOSTING_FACTOR = 100;
+    uint256 private constant BOOST_DENOMINATOR = 1000;
 
     IERC20 public stakingToken;
     //// @notice veYFI
@@ -266,20 +266,26 @@ contract Gauge is BaseGauge, IGauge {
     {
         return
             (_balances[_account].boostedBalance *
-                (_rewardPerToken() - userRewardPerTokenPaid[_account])) / PRECISION_FACTOR;
+                (_rewardPerToken() - userRewardPerTokenPaid[_account])) /
+            PRECISION_FACTOR;
     }
 
     function _maxEarning(address _account) internal view returns (uint256) {
         return
             (_balances[_account].realBalance *
-                (_rewardPerToken() - userRewardPerTokenPaid[_account])) / PRECISION_FACTOR;
+                (_rewardPerToken() - userRewardPerTokenPaid[_account])) /
+            PRECISION_FACTOR;
     }
 
     /** @notice boosted balance of based on veYFI balance
      *  @dev min(balance * 0.4 + totalSupply * veYFIBalance / veYFITotalSupply * 0.6, balance)
      *  @return boosted balance
      */
-    function boostedBalanceOf(address _account) external view returns (uint256) {
+    function boostedBalanceOf(address _account)
+        external
+        view
+        returns (uint256)
+    {
         return _boostedBalanceOf(_account);
     }
 
@@ -413,7 +419,10 @@ contract Gauge is BaseGauge, IGauge {
     ) public updateReward(msg.sender) returns (bool) {
         require(_amount != 0, "RewardPool : Cannot withdraw 0");
         Balance storage balance = _balances[msg.sender];
-        require(balance.lastDeposit < block.number, "no withdraw on the deposit block");
+        require(
+            balance.lastDeposit < block.number,
+            "no withdraw on the deposit block"
+        );
 
         //also withdraw from linked rewards
         uint256 length = extraRewards.length;
@@ -629,12 +638,13 @@ contract Gauge is BaseGauge, IGauge {
 
         require(
             balance.boostedBalance >
-                (balance.realBalance * BOOSTING_FACTOR) / BOOST_DENOMINATOR, "min boosted balance"
+                (balance.realBalance * BOOSTING_FACTOR) / BOOST_DENOMINATOR,
+            "min boosted balance"
         );
 
         if (
-            (IVotingEscrow(veToken).balanceOf(_account) == 0 ||
-                tVe > tLast) == false
+            (IVotingEscrow(veToken).balanceOf(_account) == 0 || tVe > tLast) ==
+            false
         ) {
             uint256 newBoostedBalance = _boostedBalanceOf(
                 _account,
