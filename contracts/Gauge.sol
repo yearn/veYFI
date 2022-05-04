@@ -22,6 +22,7 @@ contract Gauge is BaseGauge, IGauge {
     struct Balance {
         uint256 realBalance;
         uint256 boostedBalance;
+        uint256 lastDeposit;
     }
 
     uint256 constant BOOSTING_FACTOR = 10;
@@ -352,10 +353,13 @@ contract Gauge is BaseGauge, IGauge {
         }
 
         //give to _for
+        Balance storage balance = _balances[_for];
+        balance.lastDeposit = block.number;
+
         _totalSupply = _totalSupply + _amount;
-        uint256 newBalance = _balances[_for].realBalance + _amount;
-        _balances[_for].realBalance = newBalance;
-        _balances[_for].boostedBalance = _boostedBalanceOf(_for, newBalance);
+        uint256 newBalance = balance.realBalance + _amount;
+        balance.realBalance = newBalance;
+        balance.boostedBalance = _boostedBalanceOf(_for, newBalance);
 
         //take away from sender
         stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -375,6 +379,8 @@ contract Gauge is BaseGauge, IGauge {
         bool _lock
     ) public updateReward(msg.sender) returns (bool) {
         require(_amount != 0, "RewardPool : Cannot withdraw 0");
+        Balance storage balance = _balances[msg.sender];
+        require(balance.lastDeposit < block.number);
 
         //also withdraw from linked rewards
         uint256 length = extraRewards.length;
@@ -383,12 +389,9 @@ contract Gauge is BaseGauge, IGauge {
         }
 
         _totalSupply = _totalSupply - _amount;
-        uint256 newBalance = _balances[msg.sender].realBalance - _amount;
-        _balances[msg.sender].realBalance = newBalance;
-        _balances[msg.sender].boostedBalance = _boostedBalanceOf(
-            msg.sender,
-            newBalance
-        );
+        uint256 newBalance = balance.realBalance - _amount;
+        balance.realBalance = newBalance;
+        balance.boostedBalance = _boostedBalanceOf(msg.sender, newBalance);
 
         if (_claim) {
             _getReward(msg.sender, _lock, true);
