@@ -22,7 +22,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
     uint256 public queuedRewards;
     uint256 public currentRewards;
     uint256 public historicalRewards;
-    uint256 constant PRECISION_FACTOR = 1e18;
+    uint256 constant private PRECISION_FACTOR = 1e18;
 
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -75,20 +75,20 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         _transferOwnership(_owner);
     }
 
-    function setDuration(uint256 newDuration)
+    function setDuration(uint256 _newDuration)
         external
         onlyOwner
         updateReward(address(0))
     {
-        require(newDuration != 0, "duration should be greater than zero");
+        require(_newDuration != 0, "duration should be greater than zero");
         if (block.timestamp < periodFinish) {
             uint256 remaining = periodFinish - block.timestamp;
             uint256 leftover = remaining * rewardRate;
-            rewardRate = leftover / newDuration;
-            periodFinish = block.timestamp + newDuration;
+            rewardRate = leftover / _newDuration;
+            periodFinish = block.timestamp + _newDuration;
         }
-        duration = newDuration;
-        emit DurationUpdated(newDuration, rewardRate, periodFinish);
+        duration = _newDuration;
+        emit DurationUpdated(_newDuration, rewardRate, periodFinish);
     }
 
     /**
@@ -128,8 +128,8 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
      *  @dev earning are based on lock duration and boost
      *  @return amount of tokens earned
      */
-    function earned(address account) external view virtual returns (uint256) {
-        return _newEarning(account);
+    function earned(address _account) external view virtual returns (uint256) {
+        return _newEarning(_account);
     }
 
     /**
@@ -169,21 +169,21 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         return true;
     }
 
-    function _notifyRewardAmount(uint256 reward)
+    function _notifyRewardAmount(uint256 _reward)
         internal
         updateReward(address(0))
     {
-        historicalRewards = historicalRewards + reward;
+        historicalRewards = historicalRewards + _reward;
 
         if (block.timestamp >= periodFinish) {
-            rewardRate = reward / duration;
+            rewardRate = _reward / duration;
         } else {
             uint256 remaining = periodFinish - block.timestamp;
             uint256 leftover = remaining * rewardRate;
-            reward = reward + leftover;
-            rewardRate = reward / duration;
+            _reward = _reward + leftover;
+            rewardRate = _reward / duration;
         }
-        currentRewards = reward;
+        currentRewards = _rewardx;
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp + duration;
         emit RewardsAdded(

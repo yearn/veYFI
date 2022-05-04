@@ -32,8 +32,8 @@ contract Gauge is BaseGauge, IGauge {
         bool lock;
     }
 
-    uint256 constant BOOSTING_FACTOR = 100;
-    uint256 constant BOOST_DENOMINATOR = 1000;
+    uint256 constant private BOOSTING_FACTOR = 100;
+    uint256 constant private BOOST_DENOMINATOR = 1000;
 
     IERC20 public stakingToken;
     //// @notice veYFI
@@ -55,7 +55,7 @@ contract Gauge is BaseGauge, IGauge {
     uint256 public queuedVeYfiRewards;
     uint256 private _totalSupply;
     mapping(address => Balance) private _balances;
-    mapping(address => mapping(address => Appoved)) public approved_to;
+    mapping(address => mapping(address => Appoved)) public approvedTo;
 
     //// @notice list of extraRewards pool.
     address[] public extraRewards;
@@ -135,27 +135,27 @@ contract Gauge is BaseGauge, IGauge {
         return _totalSupply;
     }
 
-    /** @param account to look balance for
+    /** @param _account to look balance for
      *  @return amount of staked token for an account
      */
-    function balanceOf(address account)
+    function balanceOf(address _account)
         external
         view
         override
         returns (uint256)
     {
-        return _balances[account].realBalance;
+        return _balances[_account].realBalance;
     }
 
-    /** @param account to look balance for
+    /** @param _account to look balance for
      *  @return amount of staked token for an account
      */
-    function snapshotBalanceOf(address account)
+    function snapshotBalanceOf(address _account)
         external
         view
         returns (uint256)
     {
-        return _balances[account].boostedBalance;
+        return _balances[_account].boostedBalance;
     }
 
     /** @return the number of extra rewards pool
@@ -210,20 +210,20 @@ contract Gauge is BaseGauge, IGauge {
         delete extraRewards;
     }
 
-    function _updateReward(address account) internal override {
+    function _updateReward(address _account) internal override {
         rewardPerTokenStored = _rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
-        if (account != address(0)) {
-            if (_balances[account].boostedBalance != 0) {
-                uint256 newEarning = _newEarning(account);
-                uint256 maxEarning = _maxEarning(account);
+        if (_account != address(0)) {
+            if (_balances[_account].boostedBalance != 0) {
+                uint256 newEarning = _newEarning(_account);
+                uint256 maxEarning = _maxEarning(_account);
 
-                rewards[account] += newEarning;
+                rewards[_account] += newEarning;
                 queuedVeYfiRewards += (maxEarning - newEarning);
             }
-            userRewardPerTokenPaid[account] = rewardPerTokenStored;
+            userRewardPerTokenPaid[_account] = rewardPerTokenStored;
             emit UpdatedRewards(
-                account,
+                _account,
                 rewardPerTokenStored,
                 lastUpdateTime,
                 rewards[account],
@@ -247,68 +247,68 @@ contract Gauge is BaseGauge, IGauge {
      *  @dev earning are based on lock duration and boost
      *  @return amount of tokens earned
      */
-    function earned(address account)
+    function earned(address _account)
         external
         view
         override(BaseGauge, IBaseGauge)
         returns (uint256)
     {
-        uint256 newEarning = _newEarning(account);
+        uint256 newEarning = _newEarning(_account);
 
-        return newEarning + rewards[account];
+        return newEarning + rewards[_account];
     }
 
-    function _newEarning(address account)
+    function _newEarning(address _account)
         internal
         view
         override
         returns (uint256)
     {
         return
-            (_balances[account].boostedBalance *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / PRECISION_FACTOR;
+            (_balances[_account].boostedBalance *
+                (_rewardPerToken() - userRewardPerTokenPaid[_account])) / PRECISION_FACTOR;
     }
 
-    function _maxEarning(address account) internal view returns (uint256) {
+    function _maxEarning(address _account) internal view returns (uint256) {
         return
-            (_balances[account].realBalance *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / PRECISION_FACTOR;
+            (_balances[_account].realBalance *
+                (_rewardPerToken() - userRewardPerTokenPaid[_account])) / PRECISION_FACTOR;
     }
 
     /** @notice boosted balance of based on veYFI balance
      *  @dev min(balance * 0.4 + totalSupply * veYFIBalance / veYFITotalSupply * 0.6, balance)
      *  @return boosted balance
      */
-    function boostedBalanceOf(address account) external view returns (uint256) {
-        return _boostedBalanceOf(account);
+    function boostedBalanceOf(address _account) external view returns (uint256) {
+        return _boostedBalanceOf(_account);
     }
 
-    function _boostedBalanceOf(address account)
+    function _boostedBalanceOf(address _account)
         internal
         view
         returns (uint256)
     {
-        return _boostedBalanceOf(account, _balances[account].realBalance);
+        return _boostedBalanceOf(_account, _balances[_account].realBalance);
     }
 
-    function _boostedBalanceOf(address account, uint256 realBalance)
+    function _boostedBalanceOf(address _account, uint256 _realBalance)
         internal
         view
         returns (uint256)
     {
         uint256 veTotalSupply = IVotingEscrow(veToken).totalSupply();
         if (veTotalSupply == 0) {
-            return realBalance;
+            return _realBalance;
         }
         return
             Math.min(
-                ((realBalance * BOOSTING_FACTOR) +
+                ((_realBalance * BOOSTING_FACTOR) +
                     (((_totalSupply *
-                        IVotingEscrow(veToken).balanceOf(account)) /
+                        IVotingEscrow(veToken).balanceOf(_account)) /
                         veTotalSupply) *
                         (BOOST_DENOMINATOR - BOOSTING_FACTOR))) /
                     BOOST_DENOMINATOR,
-                realBalance
+                _realBalance
             );
     }
 
@@ -356,7 +356,7 @@ contract Gauge is BaseGauge, IGauge {
     {
         require(_amount != 0, "RewardPool : Cannot deposit 0");
         if (_for != msg.sender) {
-            require(approved_to[msg.sender][_for].deposit, "not allowed");
+            require(approvedTo[msg.sender][_for].deposit, "not allowed");
         }
 
         //also deposit to linked rewards
@@ -386,15 +386,15 @@ contract Gauge is BaseGauge, IGauge {
      *  @param _canClaim can deposit
      *  @return true
      */
-    function set_approve_deposit(
+    function setApproveDeposit(
         address _addr,
         bool _canDeposit,
         bool _canClaim,
         bool _canLock
     ) external returns (bool) {
-        approved_to[_addr][msg.sender].deposit = _canDeposit;
-        approved_to[_addr][msg.sender].claim = _canClaim;
-        approved_to[_addr][msg.sender].lock = _canLock;
+        approvedTo[_addr][msg.sender].deposit = _canDeposit;
+        approvedTo[_addr][msg.sender].claim = _canClaim;
+        approvedTo[_addr][msg.sender].lock = _canLock;
 
         return true;
     }
@@ -413,7 +413,7 @@ contract Gauge is BaseGauge, IGauge {
     ) public updateReward(msg.sender) returns (bool) {
         require(_amount != 0, "RewardPool : Cannot withdraw 0");
         Balance storage balance = _balances[msg.sender];
-        require(balance.lastDeposit < block.number);
+        require(balance.lastDeposit < block.number, "no withdraw on the deposit block");
 
         //also withdraw from linked rewards
         uint256 length = extraRewards.length;
@@ -526,11 +526,11 @@ contract Gauge is BaseGauge, IGauge {
     ) external updateReward(_account) returns (bool) {
         if (_account != msg.sender) {
             require(
-                approved_to[msg.sender][_account].claim,
+                approvedTo[msg.sender][_account].claim,
                 "not allowed to claim"
             );
             require(
-                _lock == false || approved_to[msg.sender][_account].lock,
+                _lock == false || approvedTo[msg.sender][_account].lock,
                 "not allowed to lock"
             );
         }
@@ -620,27 +620,27 @@ contract Gauge is BaseGauge, IGauge {
     */
     function kick(address _account) external updateReward(_account) {
         Balance storage balance = _balances[_account];
-        uint256 t_last = balance.integrateCheckpointOf;
+        uint256 tLast = balance.integrateCheckpointOf;
 
-        uint256 t_ve = IVotingEscrow(veToken).user_point_history__ts(
+        uint256 tVe = IVotingEscrow(veToken).user_point_history__ts(
             _account,
             IVotingEscrow(veToken).user_point_epoch(_account)
         );
 
         require(
             balance.boostedBalance >
-                (balance.realBalance * BOOSTING_FACTOR) / BOOST_DENOMINATOR
+                (balance.realBalance * BOOSTING_FACTOR) / BOOST_DENOMINATOR, "min boosted balance"
         );
 
         if (
             (IVotingEscrow(veToken).balanceOf(_account) == 0 ||
-                t_ve > t_last) == false
+                tVe > tLast) == false
         ) {
-            uint256 new_boosted_balance = _boostedBalanceOf(
+            uint256 newBoostedBalance = _boostedBalanceOf(
                 _account,
                 balance.realBalance
             );
-            if (new_boosted_balance < balance.boostedBalance) {
+            if (newBoostedBalance < balance.boostedBalance) {
                 require(
                     (BOOST_DENOMINATOR *
                         (balance.boostedBalance - new_boosted_balance)) /
