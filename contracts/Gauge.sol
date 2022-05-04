@@ -240,10 +240,10 @@ contract Gauge is BaseGauge, IGauge {
             rewardPerTokenStored +
             (((lastTimeRewardApplicable() - lastUpdateTime) *
                 rewardRate *
-                1e18) / totalSupply());
+                PRECISION_FACTOR) / totalSupply());
     }
 
-    /** @notice earning for an account
+    /** @notice earnings for an account
      *  @dev earning are based on lock duration and boost
      *  @return amount of tokens earned
      */
@@ -266,13 +266,13 @@ contract Gauge is BaseGauge, IGauge {
     {
         return
             (_balances[account].boostedBalance *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
+                (_rewardPerToken() - userRewardPerTokenPaid[account])) / PRECISION_FACTOR;
     }
 
     function _maxEarning(address account) internal view returns (uint256) {
         return
             (_balances[account].realBalance *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
+                (_rewardPerToken() - userRewardPerTokenPaid[account])) / PRECISION_FACTOR;
     }
 
     /** @notice boosted balance of based on veYFI balance
@@ -325,7 +325,7 @@ contract Gauge is BaseGauge, IGauge {
 
     /** @notice deposit vault tokens into the gauge
      *   @dev a user without a veYFI should not lock.
-     *   @dev will deposit the min betwwen user balance and user approval
+     *   @dev will deposit the min between user balance and user approval
      *   @dev This call update claimable rewards
      *   @return true
      */
@@ -402,7 +402,7 @@ contract Gauge is BaseGauge, IGauge {
     /** @notice withdraw vault token from the gauge
      * @dev This call update claimable rewards
      *  @param _amount amount to withdraw
-     *   @param _claim claimm veYFI and aditional reward
+     *   @param _claim claim veYFI and additional reward
      *   @param _lock should the claimed rewards be locked in veYFI for the user
      *   @return true
      */
@@ -421,7 +421,7 @@ contract Gauge is BaseGauge, IGauge {
             IExtraReward(extraRewards[i]).rewardCheckpoint(msg.sender);
         }
 
-        _totalSupply = _totalSupply - _amount;
+        _totalSupply -= _totalSupply;
         uint256 newBalance = balance.realBalance - _amount;
         balance.realBalance = newBalance;
         balance.boostedBalance = _boostedBalanceOf(msg.sender, newBalance);

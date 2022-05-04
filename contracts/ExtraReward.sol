@@ -21,7 +21,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
         address indexed _gauge,
         address indexed rewardToken,
         address indexed owner
-    );
+    );    
 
     /**
     @notice Initialize the contract after a clone.
@@ -66,7 +66,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
             rewardPerTokenStored +
             (((lastTimeRewardApplicable() - lastUpdateTime) *
                 rewardRate *
-                1e18) / gauge.totalSupply());
+                PRECISION_FACTOR) / gauge.totalSupply());
     }
 
     function _newEarning(address account)
@@ -77,7 +77,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
     {
         return
             (gauge.balanceOf(account) *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
+                (_rewardPerToken() - userRewardPerTokenPaid[account])) / PRECISION_FACTOR;
     }
 
     /** @notice update reward for an account

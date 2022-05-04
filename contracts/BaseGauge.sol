@@ -9,7 +9,7 @@ import "./interfaces/IBaseGauge.sol";
 
 abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
     IERC20 public override rewardToken;
-    //// @notice rewards are distributed during 7 days when queued.
+    //// @notice rewards are distributed over `duration` seconds when queued.
     uint256 public duration;
     uint256 public periodFinish;
     uint256 public rewardRate;
@@ -22,6 +22,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
     uint256 public queuedRewards;
     uint256 public currentRewards;
     uint256 public historicalRewards;
+    uint256 constant PRECISION_FACTOR = 1e18;
 
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -79,6 +80,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         onlyOwner
         updateReward(address(0))
     {
+        require(newDuration != 0, "duration should be greater than zero");
         if (block.timestamp < periodFinish) {
             uint256 remaining = periodFinish - block.timestamp;
             uint256 leftover = remaining * rewardRate;
@@ -122,7 +124,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         return true;
     }
 
-    /** @notice earning for an account
+    /** @notice earnings for an account
      *  @dev earning are based on lock duration and boost
      *  @return amount of tokens earned
      */
@@ -133,7 +135,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
     /**
      * @notice
      * Add new rewards to be distributed over a week
-     * @dev Triger rewardRate recalculation using _amount and queuedRewards
+     * @dev Trigger rewardRate recalculation using _amount and queuedRewards
      * @param _amount token to add to rewards
      * @return true
      */
@@ -156,7 +158,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         uint256 elapsedSinceBeginingOfPeriod = block.timestamp -
             (periodFinish - duration);
         uint256 distributedSoFar = elapsedSinceBeginingOfPeriod * rewardRate;
-        // we only restart a new week if _amount is 120% of distributedSoFar.
+        // we only restart a new period if _amount is 120% of distributedSoFar.
 
         if ((distributedSoFar * 12) / 10 < _amount) {
             _notifyRewardAmount(_amount);
