@@ -375,7 +375,7 @@ contract Gauge is BaseGauge, IGauge {
         Balance storage balance = _balances[_for];
         balance.lastDeposit = block.number;
 
-        _totalSupply = _totalSupply + _amount;
+        _totalSupply += _amount;
         uint256 newBalance = balance.realBalance + _amount;
         balance.realBalance = newBalance;
         balance.boostedBalance = _boostedBalanceOf(_for, newBalance);
@@ -430,7 +430,7 @@ contract Gauge is BaseGauge, IGauge {
             IExtraReward(extraRewards[i]).rewardCheckpoint(msg.sender);
         }
 
-        _totalSupply -= _totalSupply;
+        _totalSupply -= _amount;
         uint256 newBalance = balance.realBalance - _amount;
         balance.realBalance = newBalance;
         balance.boostedBalance = _boostedBalanceOf(msg.sender, newBalance);
