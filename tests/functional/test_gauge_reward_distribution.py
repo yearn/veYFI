@@ -366,7 +366,37 @@ def test_claim_and_lock_rewards(
     )
 
 
-def test_kick(create_vault, create_gauge, whale_amount, yfi, ve_yfi, whale, gov):
+def test_kick(create_vault, create_gauge, whale_amount, panda, yfi, ve_yfi, whale, gov):
     lp_amount = 10**18
     vault = create_vault()
     gauge = create_gauge(vault)
+
+    yfi.approve(ve_yfi, whale_amount, sender=whale)
+    ve_yfi.create_lock(
+        whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
+    )
+
+    yfi.mint(panda, whale_amount, sender=panda)
+    yfi.approve(ve_yfi, whale_amount, sender=panda)
+    ve_yfi.create_lock(
+        whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=panda
+    )
+
+    vault.mint(whale, lp_amount, sender=whale)
+    vault.mint(panda, lp_amount, sender=panda)
+
+    vault.approve(gauge, lp_amount, sender=whale)
+    vault.approve(gauge, lp_amount, sender=panda)
+
+    gauge.deposit(sender=panda)
+    gauge.deposit(sender=whale)
+    assert gauge.snapshotBalanceOf(whale) == gauge.boostedBalanceOf(whale)
+    gauge.withdraw(int(lp_amount / 100), False, False, sender=panda)
+    assert gauge.snapshotBalanceOf(whale) != gauge.boostedBalanceOf(whale)
+    gauge.kick(whale, sender=panda)
+
+    assert (
+        gauge.snapshotBalanceOf(whale)
+        == gauge.boostedBalanceOf(whale)
+        != gauge.balanceOf(whale)
+    )

@@ -158,6 +158,17 @@ contract Gauge is BaseGauge, IGauge {
         return _balances[_account].boostedBalance;
     }
 
+    /** @param _account integrateCheckpointOf
+     *  @return block number
+     */
+    function integrateCheckpointOf(address _account)
+        external
+        view
+        returns (uint256)
+    {
+        return _balances[_account].integrateCheckpointOf;
+    }
+
     /** @return the number of extra rewards pool
      */
     function extraRewardsLength() external view returns (uint256) {
@@ -629,37 +640,12 @@ contract Gauge is BaseGauge, IGauge {
     */
     function kick(address _account) external updateReward(_account) {
         Balance storage balance = _balances[_account];
-        uint256 tLast = balance.integrateCheckpointOf;
-
-        uint256 tVe = IVotingEscrow(veToken).user_point_history__ts(
-            _account,
-            IVotingEscrow(veToken).user_point_epoch(_account)
-        );
 
         require(
             balance.boostedBalance >
                 (balance.realBalance * BOOSTING_FACTOR) / BOOST_DENOMINATOR,
             "min boosted balance"
         );
-
-        if (
-            (IVotingEscrow(veToken).balanceOf(_account) == 0 || tVe > tLast) ==
-            false
-        ) {
-            uint256 newBoostedBalance = _boostedBalanceOf(
-                _account,
-                balance.realBalance
-            );
-            if (newBoostedBalance < balance.boostedBalance) {
-                require(
-                    (BOOST_DENOMINATOR *
-                        (balance.boostedBalance - newBoostedBalance)) /
-                        balance.boostedBalance >
-                        BOOSTING_FACTOR,
-                    "boost not changed enough"
-                );
-            }
-        }
 
         balance.boostedBalance = _boostedBalanceOf(
             _account,
