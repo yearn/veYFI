@@ -45,13 +45,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
         rewardPerTokenStored = _rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
         if (account != address(0)) {
-            uint256 newEarning = _newEarning(account);
-            uint256 maxEarning = _maxEarning(account);
-
-            rewards[account] += newEarning;
-
-            // If rewards aren't boosted at max, loss rewards are queued to be redistributed to the gauge.
-            queuedRewards += (maxEarning - newEarning);
+            rewards[account] += _newEarning(account);
 
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
             emit UpdatedRewards(
@@ -81,12 +75,6 @@ contract ExtraReward is IExtraReward, BaseGauge {
         override
         returns (uint256)
     {
-        return
-            (gauge.boostedBalanceOf(account) *
-                (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
-    }
-
-    function _maxEarning(address account) internal view returns (uint256) {
         return
             (gauge.balanceOf(account) *
                 (_rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
