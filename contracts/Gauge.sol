@@ -573,7 +573,7 @@ contract Gauge is BaseGauge, IGauge {
             rewards[_account] = 0;
             if (_lock) {
                 rewardToken.approve(address(veToken), reward);
-                IVotingEscrow(veToken).deposit_for(msg.sender, reward);
+                IVotingEscrow(veToken).deposit_for(_account, reward);
             } else {
                 rewardToken.safeTransfer(_account, reward);
             }
