@@ -2755,6 +2755,10 @@ solhint-plugin-prettier@^0.0.5:
   dependencies:
     prettier-linter-helpers "^1.0.0"
 
+solhint-plugin-yearn@pandadefi/solhint-plugin-yearn:
+  version "0.1.0"
+  resolved "https://codeload.github.com/pandadefi/solhint-plugin-yearn/tar.gz/ed32146b56903898a48eadf752c8d5b34acc6b77"
+
 solhint@^3.3.7:
   version "3.3.7"
   resolved "https://registry.yarnpkg.com/solhint/-/solhint-3.3.7.tgz#b5da4fedf7a0fee954cb613b6c55a5a2b0063aa7"

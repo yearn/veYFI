@@ -173,7 +173,15 @@ def test_gauge_get_reward_for(
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
     assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
-    gauge.getRewardFor(whale, False, sender=shark)
+    with ape.reverts("not allowed to claim"):
+        gauge.getRewardFor(whale, False, True, sender=shark)
+
+    gauge.setApprovals(shark, False, True, False, sender=whale)
+
+    with ape.reverts("not allowed to lock"):
+        gauge.getRewardFor(whale, True, True, sender=shark)
+
+    gauge.getRewardFor(whale, False, True, sender=shark)
 
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
         14 * 24
@@ -213,6 +221,10 @@ def test_deposit_for(
 
     vault.mint(shark, lp_amount, sender=gov)
     vault.approve(gauge, lp_amount, sender=shark)
+    with ape.reverts("not allowed"):
+        gauge.depositFor(whale, lp_amount, sender=shark)
+
+    gauge.setApprovals(shark, True, False, False, sender=whale)
     gauge.depositFor(whale, lp_amount, sender=shark)
     assert gauge.totalSupply() == 10**18
     assert gauge.balanceOf(whale) == 10**18
@@ -351,4 +363,40 @@ def test_claim_and_lock_rewards(
     assert (
         ve_yfi.locked(whale)[0]
         == whale_amount + next(tx.decode_logs(gauge.RewardPaid)).reward
+    )
+
+
+def test_kick(create_vault, create_gauge, whale_amount, panda, yfi, ve_yfi, whale, gov):
+    lp_amount = 10**18
+    vault = create_vault()
+    gauge = create_gauge(vault)
+
+    yfi.approve(ve_yfi, whale_amount, sender=whale)
+    ve_yfi.create_lock(
+        whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
+    )
+
+    yfi.mint(panda, whale_amount, sender=panda)
+    yfi.approve(ve_yfi, whale_amount, sender=panda)
+    ve_yfi.create_lock(
+        whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=panda
+    )
+
+    vault.mint(whale, lp_amount, sender=whale)
+    vault.mint(panda, lp_amount, sender=panda)
+
+    vault.approve(gauge, lp_amount, sender=whale)
+    vault.approve(gauge, lp_amount, sender=panda)
+
+    gauge.deposit(sender=panda)
+    gauge.deposit(sender=whale)
+    assert gauge.snapshotBalanceOf(whale) == gauge.boostedBalanceOf(whale)
+    gauge.withdraw(int(lp_amount / 100), False, False, sender=panda)
+    assert gauge.snapshotBalanceOf(whale) != gauge.boostedBalanceOf(whale)
+    gauge.kick(whale, sender=panda)
+
+    assert (
+        gauge.snapshotBalanceOf(whale)
+        == gauge.boostedBalanceOf(whale)
+        != gauge.balanceOf(whale)
     )

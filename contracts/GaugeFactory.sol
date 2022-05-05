@@ -23,55 +23,55 @@ contract GaugeFactory is IGaugeFactory {
 
     /** @notice Create a new reward Gauge clone
         @param _vault the vault address.
-        @param yfi the YFI token address.
-        @param owner owner
-        @param manager manager
-        @param ve veYFI
-        @param veYfiRewardPool veYfi RewardPool
+        @param _yfi the YFI token address.
+        @param _owner owner
+        @param _manager manager
+        @param _ve veYFI
+        @param _veYfiRewardPool veYfi RewardPool
         @return gauge address
     */
     function createGauge(
         address _vault,
-        address yfi,
-        address owner,
-        address manager,
-        address ve,
-        address veYfiRewardPool
+        address _yfi,
+        address _owner,
+        address _manager,
+        address _ve,
+        address _veYfiRewardPool
     ) external override returns (address) {
         address newGauge = _clone(deployedGauge);
         emit GaugeCreated(newGauge);
         IGauge(newGauge).initialize(
             _vault,
-            yfi,
-            owner,
-            manager,
-            ve,
-            veYfiRewardPool
+            _yfi,
+            _owner,
+            _manager,
+            _ve,
+            _veYfiRewardPool
         );
 
         return newGauge;
     }
 
     /** @notice Create ExtraReward clone
-        @param gauge the gauge associated with.
-        @param reward The token to distribute as a rewards
-        @param owner owner 
+        @param _gauge the gauge associated with.
+        @param _reward The token to distribute as a rewards
+        @param _owner owner 
         @return ExtraReward address
     */
     function createExtraReward(
-        address gauge,
-        address reward,
-        address owner
+        address _gauge,
+        address _reward,
+        address _owner
     ) external returns (address) {
         address newExtraReward = _clone(deployedExtra);
         emit ExtraRewardCreated(newExtraReward);
-        IExtraReward(newExtraReward).initialize(gauge, reward, owner);
+        IExtraReward(newExtraReward).initialize(_gauge, _reward, _owner);
 
         return newExtraReward;
     }
 
-    function _clone(address c) internal returns (address result) {
-        bytes20 targetBytes = bytes20(c);
+    function _clone(address _source) internal returns (address result) {
+        bytes20 targetBytes = bytes20(_source);
         assembly {
             let clone := mload(0x40)
             mstore(

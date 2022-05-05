@@ -92,8 +92,8 @@ contract Registry is Ownable {
     @param _vault vault address
     */
     function removeVaultFromRewards(address _vault) external onlyOwner {
-        require(gauges[_vault] != address(0x0), "!exist");
         address gauge = gauges[_vault];
+        require(gauge != address(0x0), "!exist");
 
         _vaults.remove(_vault);
 
