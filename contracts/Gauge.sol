@@ -32,7 +32,7 @@ contract Gauge is BaseGauge, IGauge {
         bool lock;
     }
 
-    uint256 private constant BOOSTING_FACTOR = 100;
+    uint256 public boostingFactor = 100;
     uint256 private constant BOOST_DENOMINATOR = 1000;
 
     IERC20 public stakingToken;
@@ -68,6 +68,7 @@ contract Gauge is BaseGauge, IGauge {
     event UpdatedRewardManager(address indexed rewardManager);
     event UpdatedVeToken(address indexed ve);
     event TransferedQueuedPenalty(uint256 transfered);
+    event UpdatedBoostingFactor(uint256 boostingFactor);
 
     event Initialized(
         address indexed stakingToken,
@@ -121,12 +122,21 @@ contract Gauge is BaseGauge, IGauge {
             _ve,
             _veYfiRewardPool
         );
+        boostingFactor = 100;
     }
 
     function setVe(address _veToken) external onlyOwner {
         require(address(_veToken) != address(0x0), "_veToken 0x0 address");
         veToken = _veToken;
         emit UpdatedVeToken(_veToken);
+    }
+
+    function setBoostingFactor(uint256 _boostingFactor) external onlyOwner {
+        require(_boostingFactor <= BOOST_DENOMINATOR / 2, "value too high");
+        require(_boostingFactor >= BOOST_DENOMINATOR / 50, "value too low");
+
+        boostingFactor = _boostingFactor;
+        emit UpdatedBoostingFactor(_boostingFactor);
     }
 
     /** @return total of the staked vault token
@@ -319,11 +329,11 @@ contract Gauge is BaseGauge, IGauge {
         }
         return
             Math.min(
-                ((_realBalance * BOOSTING_FACTOR) +
+                ((_realBalance * boostingFactor) +
                     (((_totalSupply *
                         IVotingEscrow(veToken).balanceOf(_account)) /
                         veTotalSupply) *
-                        (BOOST_DENOMINATOR - BOOSTING_FACTOR))) /
+                        (BOOST_DENOMINATOR - boostingFactor))) /
                     BOOST_DENOMINATOR,
                 _realBalance
             );
@@ -643,7 +653,7 @@ contract Gauge is BaseGauge, IGauge {
 
         require(
             balance.boostedBalance >
-                (balance.realBalance * BOOSTING_FACTOR) / BOOST_DENOMINATOR,
+                (balance.realBalance * boostingFactor) / BOOST_DENOMINATOR,
             "min boosted balance"
         );
 

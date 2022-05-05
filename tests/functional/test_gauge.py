@@ -155,3 +155,41 @@ def test_set_duration(create_vault, create_gauge, yfi, gov):
     assert gauge.duration() == 28 * 3600 * 24
     assert gauge.periodFinish() != finish
     assert pytest.approx(gauge.periodFinish()) == time + 28 * 3600 * 24
+
+
+def test_set_boosting_factor(
+    create_vault, create_gauge, whale_amount, panda, yfi, ve_yfi, whale, gov
+):
+    lp_amount = 10**18
+    vault = create_vault()
+    gauge = create_gauge(vault)
+
+    yfi.approve(ve_yfi, whale_amount, sender=whale)
+    ve_yfi.create_lock(
+        whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
+    )
+
+    yfi.mint(panda, whale_amount, sender=panda)
+    yfi.approve(ve_yfi, whale_amount, sender=panda)
+    ve_yfi.create_lock(
+        whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=panda
+    )
+
+    vault.mint(whale, lp_amount, sender=whale)
+
+    vault.approve(gauge, lp_amount, sender=whale)
+
+    gauge.deposit(sender=whale)
+
+    with ape.reverts("Ownable: caller is not the owner"):
+        gauge.setBoostingFactor(200, sender=panda)
+
+    with ape.reverts("value too low"):
+        gauge.setBoostingFactor(5, sender=gov)
+
+    with ape.reverts("value too high"):
+        gauge.setBoostingFactor(1000, sender=gov)
+
+    gauge.setBoostingFactor(200, sender=gov)
+
+    assert gauge.boostedBalanceOf(whale) > gauge.snapshotBalanceOf(whale)
