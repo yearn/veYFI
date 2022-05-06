@@ -525,7 +525,6 @@ contract Gauge is BaseGauge, IGauge {
         updateReward(msg.sender)
         returns (bool)
     {
-        _balances[msg.sender].boostedBalance = _boostedBalanceOf(msg.sender);
         _getReward(msg.sender, _lock, true);
         return true;
     }
@@ -536,7 +535,6 @@ contract Gauge is BaseGauge, IGauge {
      *  @return true
      */
     function getReward() external updateReward(msg.sender) returns (bool) {
-        _balances[msg.sender].boostedBalance = _boostedBalanceOf(msg.sender);
         _getReward(msg.sender, false, true);
         return true;
     }
