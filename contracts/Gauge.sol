@@ -12,7 +12,7 @@ import "./interfaces/IVotingEscrow.sol";
 
 /** @title  Gauge stake vault token get YFI rewards
     @notice Deposit your vault token (one gauge per vault).
-    YFI are paid based on the amount of vault tokens, the veYFI balance and the duration of the lock.
+    YFI are paid based on the number of vault tokens, the veYFI balance, and the duration of the lock.
     @dev this contract is used behind multiple delegate proxies.
  */
 
@@ -43,13 +43,13 @@ contract Gauge is BaseGauge, IGauge {
     //// @notice a copy of the veYFI max lock duration
     uint256 public constant MAX_LOCK = 4 * 365 * 86400;
     uint256 public constant PRECISON_FACTOR = 10**6;
-    //// @notice Penalty do not apply for locks expiring after 3y11m
+    //// @notice Penalty does not apply for locks expiring after 3y11m
 
     //// @notice rewardManager is in charge of adding/removing additional rewards
     address public rewardManager;
 
     /**
-    @notice penalty queued to be transfer later to veYfiRewardPool using `transferQueuedPenalty`
+    @notice penalty queued to be transferred later to veYfiRewardPool using `transferQueuedPenalty`
     @dev rewards are queued when an account `_updateReward`.
     */
     uint256 public queuedVeYfiRewards;
@@ -125,12 +125,21 @@ contract Gauge is BaseGauge, IGauge {
         boostingFactor = 100;
     }
 
+    /**
+    @notice Set the veYFI token address.
+    @param _veToken the new address of the veYFI token
+    */
     function setVe(address _veToken) external onlyOwner {
         require(address(_veToken) != address(0x0), "_veToken 0x0 address");
         veToken = _veToken;
         emit UpdatedVeToken(_veToken);
     }
 
+    /**
+    @notice Set the boosting factor.
+    @dev the boosting factor is used to calculate your boosting balance using the curve boosting formula adjusted with the boostingFactor
+    @param _boostingFactor the value should be between 20 and 500
+    */
     function setBoostingFactor(uint256 _boostingFactor) external onlyOwner {
         require(_boostingFactor <= BOOST_DENOMINATOR / 2, "value too high");
         require(_boostingFactor >= BOOST_DENOMINATOR / 50, "value too low");
@@ -265,7 +274,7 @@ contract Gauge is BaseGauge, IGauge {
     }
 
     /** @notice earnings for an account
-     *  @dev earning are based on lock duration and boost
+     *  @dev earnings are based on lock duration and boost
      *  @return amount of tokens earned
      */
     function earned(address _account)
@@ -299,7 +308,6 @@ contract Gauge is BaseGauge, IGauge {
     }
 
     /** @notice boosted balance of based on veYFI balance
-     *  @dev min(balance * 0.4 + totalSupply * veYFIBalance / veYFITotalSupply * 0.6, balance)
      *  @return boosted balance
      */
     function boostedBalanceOf(address _account)
@@ -341,7 +349,7 @@ contract Gauge is BaseGauge, IGauge {
 
     /** @notice deposit vault tokens into the gauge
      * @dev a user without a veYFI should not lock.
-     * @dev This call update claimable rewards
+     * @dev This call updates claimable rewards
      * @param _amount of vault token
      * @return true
      */
@@ -353,7 +361,7 @@ contract Gauge is BaseGauge, IGauge {
     /** @notice deposit vault tokens into the gauge
      *   @dev a user without a veYFI should not lock.
      *   @dev will deposit the min between user balance and user approval
-     *   @dev This call update claimable rewards
+     *   @dev This call updates claimable rewards
      *   @return true
      */
     function deposit() external returns (bool) {
@@ -368,7 +376,7 @@ contract Gauge is BaseGauge, IGauge {
     /** @notice deposit vault tokens into the gauge for a user
      *   @dev vault token is taken from msg.sender
      *   @dev This call update  `_for` claimable rewards
-     *   @param _for account to deposit to
+     *   @param _for the account to deposit to
      *    @param _amount to deposit
      *    @return true
      */
@@ -427,7 +435,7 @@ contract Gauge is BaseGauge, IGauge {
     }
 
     /** @notice withdraw vault token from the gauge
-     * @dev This call update claimable rewards
+     * @dev This call updates claimable rewards
      *  @param _amount amount to withdraw
      *   @param _claim claim veYFI and additional reward
      *   @param _lock should the claimed rewards be locked in veYFI for the user
@@ -467,8 +475,8 @@ contract Gauge is BaseGauge, IGauge {
         return true;
     }
 
-    /** @notice withdraw all vault token from gauge
-     *   @dev This call update claimable rewards
+    /** @notice withdraw all vault tokens from gauge
+     *   @dev This call updates claimable rewards
      *   @param _claim claim veYFI and additional reward
      *   @param _lock should the claimed rewards be locked in veYFI for the user
      *   @return true
@@ -542,7 +550,7 @@ contract Gauge is BaseGauge, IGauge {
     /**
      * @notice
      *  Get rewards for an account
-     * @dev rewards are transfer to _account
+     * @dev rewards are transferred to _account
      * @param _account to claim rewards for
      * @param _claimExtras claim extra rewards
      * @return true

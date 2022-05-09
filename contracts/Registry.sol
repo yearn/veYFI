@@ -46,20 +46,24 @@ contract Registry is Ownable {
         veYfiRewardPool = _veYfiRewardPool;
     }
 
-    function setVe(address _ve) external onlyOwner {
-        veToken = _ve;
-        emit UpdatedVeToken(_ve);
+    /**
+    @notice Set the veYFI token address.
+    @param _veToken the new address of the veYFI token
+    */
+    function setVe(address _veToken) external onlyOwner {
+        veToken = _veToken;
+        emit UpdatedVeToken(_veToken);
     }
 
     /** 
-    @return The list of vaults with gauge that are possible to vote for.
+    @return address[] list of vaults with gauge that are possible to vote for.
     */
     function getVaults() external view returns (address[] memory) {
         return _vaults.values();
     }
 
     /** 
-    @notice Add a vault to the list of vaults that recieves rewards.
+    @notice Add a vault to the list of vaults that receives rewards.
     @param _vault vault address
     @param _owner owner.
     @param _rewardManager address in charge of managing additional rewards
@@ -88,7 +92,7 @@ contract Registry is Ownable {
     }
 
     /** 
-    @notice Remove a vault from the list of vaults recieving rewards.
+    @notice Remove a vault from the list of vaults receiving rewards.
     @param _vault vault address
     */
     function removeVaultFromRewards(address _vault) external onlyOwner {
