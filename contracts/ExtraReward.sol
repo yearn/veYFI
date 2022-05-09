@@ -82,7 +82,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
     }
 
     /** @notice update reward for an account
-     *  @dev called by the underlying gauge
+     *  @dev called by the gauge holding vaults tokens
      *  @param _account to update
      *  @return true
      */
@@ -99,7 +99,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
     /**
      * @notice
      *  Get rewards
-     * @param _account claim extra rewards
+     * @param _account claim rewards on the behalf of an account.
      * @return true
      */
     function getRewardFor(address _account)
@@ -117,6 +117,11 @@ contract ExtraReward is IExtraReward, BaseGauge {
         return true;
     }
 
+    /**
+     * @notice
+     *  Get rewards
+     * @return true
+     */
     function getReward() external override returns (bool) {
         getRewardFor(msg.sender);
         return true;
