@@ -75,6 +75,10 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         _transferOwnership(_owner);
     }
 
+    /**
+    @notice set the duration of the reward distribution.
+    @param _newDuration duration in seconds. 
+     */
     function setDuration(uint256 _newDuration)
         external
         onlyOwner
@@ -99,7 +103,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
     }
 
     /** @notice reward per token deposited
-     *  @dev gives the total amount of rewards distributed since inception of the pool per vault token
+     *  @dev gives the total amount of rewards distributed since the inception of the pool.
      *  @return rewardPerToken
      */
     function rewardPerToken() external view returns (uint256) {
@@ -115,6 +119,10 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
         return _token != address(rewardToken);
     }
 
+    /** @notice sweep tokens that are airdropped/transferred into the gauge.
+     *  @dev sweep can only be done on non-protected tokens.
+     *  @return _token to sweep
+     */
     function sweep(address _token) external onlyOwner returns (bool) {
         require(_notProtectedTokens(_token), "protected token");
         uint256 amount = IERC20(_token).balanceOf(address(this));
@@ -125,7 +133,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
     }
 
     /** @notice earnings for an account
-     *  @dev earning are based on lock duration and boost
+     *  @dev earnings are based on lock duration and boost
      *  @return amount of tokens earned
      */
     function earned(address _account) external view virtual returns (uint256) {
@@ -135,7 +143,7 @@ abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
     /**
      * @notice
      * Add new rewards to be distributed over a week
-     * @dev Trigger rewardRate recalculation using _amount and queuedRewards
+     * @dev Trigger reward rate recalculation using `_amount` and queue rewards
      * @param _amount token to add to rewards
      * @return true
      */
