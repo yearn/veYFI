@@ -22,6 +22,7 @@ def main(network, account):
     # Only when we have reached a new 2 week period we can deploy what's left, make sure some veYFI has been locked.
     begining_of_week = int(chain.pending_timestamp / 14 * 86400) * 14 * 86400
     assert ve_yfi.totalSupply(begining_of_week) > 0
+
     ve_yfi_rewards = account.deploy(
         project.VeYfiRewards, ve_yfi, chain.pending_timestamp, yfi, account, account
     )
