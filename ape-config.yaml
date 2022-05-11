@@ -2,6 +2,7 @@ plugins:
   - name: solidity
   - name: vyper
   - name: hardhat
+  - name: ape-infura
 
 # require OpenZepplin Contracts
 dependencies:
@@ -19,3 +20,4 @@ solidity:
 ethereum:
   local:
     default_provider: hardhat
+    
