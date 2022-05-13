@@ -1,34 +1,61 @@
-# veYFI
+## veYFI
 
-- Locking similar to the ve-style program of Curve.
-- YFI can be locked up to 4 years into veYFI, which is non-transferable.
-- The maximum lock duration is still tbd, but will be in the range of min 1 year, max 4 years.
-- Locking duration gives the same linear weights, so if max duration is 4 years, this is 100%, and 2 years = 50% etc.
-- Weights decay as the remaining lock duration decreases, and can be extended up to the max lock duration.
-- Replaces xYFI, where a user must have a veYFI lock in order to continue to earn rewards. No lock leads to no rewards. Maximum lock, continuously renewed, maximizes rewards.
-- It’s possible to exit the lock early, in exchange for paying a penalty that gets allocated to the other veYFI holders.
-- Penalty size may be fixed (i.e. 50%), or may be depending on the remaining lock duration.
+veYFI is locking similar to the ve-style program of Curve. 
 
+### Max lock
 
-- Vault gauges allow vault depositors to stake their vault tokens and earn YFI rewards according to their veYFI weight.
-- YFI are allocated to gauges based on weekly governance votes. Each gauge can get a different amount of bought back YFI to emit.
-- Based on their veYFI lock, users can boost their rewards of up to 2.5x proportional to the amount of vault tokens deposited, when they claim YFI rewards from gauges. The greater the amount of veYFI, the more vault deposits can be boosted for the user.
-- Inspired by Andre Cronje’s initial design of Fixed Forex[10], in order for gauge rewards to be claimed, the user must have a veYFI lock. Depending on their lock duration, they are entitled to a different share of gauge rewards: if max lock = 4 years, and user is locked for 4 years, they are entitled to 100% of their rewards, if user is locked for 2 years = 50% of rewards, if user has no lock = 0% of their rewards. The difference is paid as penalty to veYFI holders, as an additional source of yield.
--
-![03-gauges](https://user-images.githubusercontent.com/87183122/152998641-39c8454d-4cfe-4440-b497-12f3b4d83754.svg)
+YFI can be locked up to 4 years into veYFI, which is non-transferable. They are at least locked for a week.
+
+### veYFI balance
+
+The duration of the lock gives the amount of veYFI relative to the amount locked, locking for four years gives you a veYFI balance equal to the amount of YFI locked. Locking for 2 years gives you a veYFI balance of 50% of the YFI locked.
+The balance decay overtime and can be pushed back to max value by increasing the lock back to the max lock duration.
 
 
-# Setup
+### veYFI early exit
+It’s possible to exit the lock early, in exchange for paying a penalty that gets distributed to the account that have veYFI locked. The penalty for exiting early is the following: 
+```
+    max(75%, (4years - duration left) / 4 years *100 %)
+```
+So at most you are paying a 75% penalty that starts decreasing when your lock duration goes beyond 3 years.
+
+## Gauges
+
+Gauges allow vault depositors to stake their vault tokens and earn YFI rewards according to the amount of YFI to be distributed and their veYFI weight.
+
+### Gauges boosting
+
+Gauge rewards are boosted with a max boost of 10x. The max boost is a variable that can be adjusted by the team.
+
+The boost mechanism will calculate your earning weight by taking the smaller amount of two values. The first value is simple, it's the amount of liquidity you are providing which in this example is 10,000 tokens. This amount is your maximum earning weight.
+
+```
+min(AmountDeposited, (AmountDeposited /10) + (TotalDepositedInTheGauge * VeYFIBalance / VeYFITotalSupply * 0.9))
+```
+When a user interact with the gauge, the boosted amount is snapshoted untill the next interaction.
+The rewards that are not distribbuted because the balance isn't fully boosted are distributed back to veYFI holders.
+
+### Gauge YFI distribution
+
+Every two weeks veYFI holders can vote on YFI distribution to gauges.
+
+
+## veYFIRewardPool
+
+Users who lock veFY can claim YFI from the veYFI exited early and the non distributed gauge rewards due to the lack of boost.
+You will be able to start claiming from the veFYI reward pool two or three weeks from the Thursday after which you lock before you can claim.
+
+## Setup
 
 See [ape quickstart guide](https://docs.apeworx.io/ape/stable/userguides/quickstart.html)
 
-# Compile
+## Compile
 
 ```py
 ape compile
 ```
 
-# Test
+## Test
 
 ```
 ape test
