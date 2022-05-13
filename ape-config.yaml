@@ -2,7 +2,7 @@ plugins:
   - name: solidity
   - name: vyper
   - name: hardhat
-  - name: ape-infura
+  - name: infura
 
 # require OpenZepplin Contracts
 dependencies:
