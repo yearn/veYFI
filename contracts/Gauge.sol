@@ -517,7 +517,6 @@ contract Gauge is BaseGauge, IGauge {
         updateReward(msg.sender)
         returns (bool)
     {
-        _balances[msg.sender].boostedBalance = _boostedBalanceOf(msg.sender);
         _getReward(msg.sender, _lock, _claimExtras);
         return true;
     }
