@@ -10,3 +10,4 @@ yarn-error.log
 artifacts
 contracts/.cache
 .DS_Store
+build/
