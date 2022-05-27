@@ -15,7 +15,7 @@ The balance decay overtime and can be pushed back to max value by increasing the
 ### veYFI early exit
 It’s possible to exit the lock early, in exchange for paying a penalty that gets distributed to the account that have veYFI locked. The penalty for exiting early is the following: 
 ```
-    max(75%, (4years - duration left) / 4 years *100 %)
+    min(75%, lock_duration_left / 4 years * 100%)
 ```
 So at most you are paying a 75% penalty that starts decreasing when your lock duration goes beyond 3 years.
 
