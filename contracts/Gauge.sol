@@ -315,6 +315,15 @@ contract Gauge is BaseGauge, IGauge {
         return _boostedBalanceOf(_account, _balances[_account].realBalance);
     }
 
+    /** @notice
+     *   Calculates the boosted balance of an account based on its gauge stake 
+     *   proportion & veYFI lock proportion. Expects _totalSupply to be updated.
+     *  @dev
+     *   Boosted balance will never be higher than an account's realBalance. 
+     *  @param _account The account whose veYFI lock should be checked.
+     *  @param _realBalance
+     *   The amount of token _account has locked in the gauge.
+     */
     function _boostedBalanceOf(address _account, uint256 _realBalance)
         internal
         view
