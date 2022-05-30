@@ -23,7 +23,6 @@ contract Gauge is BaseGauge, IGauge {
         uint256 realBalance;
         uint256 boostedBalance;
         uint256 lastDeposit;
-        uint256 integrateCheckpointOf;
     }
 
     struct Appoved {
@@ -69,6 +68,7 @@ contract Gauge is BaseGauge, IGauge {
     event UpdatedVeToken(address indexed ve);
     event TransferedQueuedPenalty(uint256 transfered);
     event UpdatedBoostingFactor(uint256 boostingFactor);
+    event BoostedBalanceUpdated(address account, uint256 amount);
 
     event Initialized(
         address indexed stakingToken,
@@ -175,17 +175,6 @@ contract Gauge is BaseGauge, IGauge {
         returns (uint256)
     {
         return _balances[_account].boostedBalance;
-    }
-
-    /** @param _account integrateCheckpointOf
-     *  @return block number
-     */
-    function integrateCheckpointOf(address _account)
-        external
-        view
-        returns (uint256)
-    {
-        return _balances[_account].integrateCheckpointOf;
     }
 
     /** @return the number of extra rewards pool
@@ -407,8 +396,9 @@ contract Gauge is BaseGauge, IGauge {
         _totalSupply += _amount;
         uint256 newBalance = balance.realBalance + _amount;
         balance.realBalance = newBalance;
-        balance.boostedBalance = _boostedBalanceOf(_for, newBalance);
-        balance.integrateCheckpointOf = block.number;
+        uint256 boostedBalance = _boostedBalanceOf(_for, newBalance);
+        balance.boostedBalance = boostedBalance;
+        emit BoostedBalanceUpdated(_for, boostedBalance);
 
         //take away from sender
         stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -462,8 +452,9 @@ contract Gauge is BaseGauge, IGauge {
         _totalSupply -= _amount;
         uint256 newBalance = balance.realBalance - _amount;
         balance.realBalance = newBalance;
-        balance.boostedBalance = _boostedBalanceOf(msg.sender, newBalance);
-        balance.integrateCheckpointOf = block.number;
+        uint256 boostedBalance = _boostedBalanceOf(msg.sender, newBalance);
+        balance.boostedBalance = boostedBalance;
+        emit BoostedBalanceUpdated(msg.sender, boostedBalance);
 
         if (_claim) {
             _getReward(msg.sender, _lock, true);
@@ -580,8 +571,9 @@ contract Gauge is BaseGauge, IGauge {
         bool _lock,
         bool _claimExtras
     ) internal {
-        _balances[_account].boostedBalance = _boostedBalanceOf(_account);
-        _balances[_account].integrateCheckpointOf = block.number;
+        uint256 boostedBalance = _boostedBalanceOf(_account);
+        _balances[_account].boostedBalance = boostedBalance;
+        emit BoostedBalanceUpdated(_account, boostedBalance);
 
         uint256 reward = rewards[_account];
         if (reward != 0) {
@@ -661,11 +653,11 @@ contract Gauge is BaseGauge, IGauge {
                 (balance.realBalance * boostingFactor) / BOOST_DENOMINATOR,
             "min boosted balance"
         );
-
-        balance.boostedBalance = _boostedBalanceOf(
+        uint256 boostedBalance = _boostedBalanceOf(
             _account,
             balance.realBalance
         );
-        balance.integrateCheckpointOf = block.number;
+        balance.boostedBalance = boostedBalance;
+        emit BoostedBalanceUpdated(_account, boostedBalance);
     }
 }
