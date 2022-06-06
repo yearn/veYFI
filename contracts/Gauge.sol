@@ -229,6 +229,16 @@ contract Gauge is BaseGauge, IGauge {
         delete extraRewards;
     }
 
+    /** @notice
+     *   Performs a snapshot of the account's accrued rewards since the previous update.
+     *  @dev
+     *   The snapshot made by this function depends on:
+     *    1. The account's boosted balance
+     *    2. The amount of reward emissions that have been added to the gauge since the
+     *       account's rewards were last updated.
+     *   Any function that mutates an account's balance, boostedBalance, userRewardPerTokenPaid,
+     *   or rewards MUST call updateReward before performing the mutation.
+     */
     function _updateReward(address _account) internal override {
         rewardPerTokenStored = _rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
@@ -262,9 +272,10 @@ contract Gauge is BaseGauge, IGauge {
                 PRECISION_FACTOR) / totalSupply());
     }
 
-    /** @notice earnings for an account
-     *  @dev earnings are based on lock duration and boost
-     *  @return amount of tokens earned
+    /** @notice The total undistributed earnings for an account.
+     *  @dev Earnings are based on lock duration and boost
+     *  @return
+     *   Amount of tokens the account has earned that have yet to be distributed.
      */
     function earned(address _account)
         external
@@ -277,6 +288,10 @@ contract Gauge is BaseGauge, IGauge {
         return newEarning + rewards[_account];
     }
 
+    /** @notice Calculates an account's earnings based on their boostedBalance.
+     *   This function only reflects the accounts earnings since the last time
+     *   the account's rewards were calculated via _updateReward.
+     */
     function _newEarning(address _account)
         internal
         view
@@ -289,6 +304,11 @@ contract Gauge is BaseGauge, IGauge {
             PRECISION_FACTOR;
     }
 
+    /** @notice Calculates an account's potential maximum earnings based on
+     *   a maximum boost.
+     *   This function only reflects the accounts earnings since the last time
+     *   the account's rewards were calculated via _updateReward.
+     */
     function _maxEarning(address _account) internal view returns (uint256) {
         return
             (_balances[_account].realBalance *
@@ -296,8 +316,13 @@ contract Gauge is BaseGauge, IGauge {
             PRECISION_FACTOR;
     }
 
-    /** @notice boosted balance of based on veYFI balance
-     *  @return boosted balance
+    /** @notice
+     *   Calculates the boosted balance of based on veYFI balance.
+     *  @dev
+     *   This function expects this._totalSupply to be up to date.
+     *  @return
+     *   The account's boosted balance. Always lower than or equal to the
+     *   account's real balance.
      */
     function boostedBalanceOf(address _account)
         external
@@ -307,6 +332,16 @@ contract Gauge is BaseGauge, IGauge {
         return _boostedBalanceOf(_account);
     }
 
+    /** @notice
+     *   Calculates the boosted balance of based on veYFI balance.
+     *  @dev
+     *    This function expects the account's _balances[_account].realBalance
+     *    to be up to date.
+     *  @dev This function expects this._totalSupply to be up to date.
+     *  @return
+     *   The account's boosted balance. Always lower than or equal to the
+     *   account's real balance.
+     */
     function _boostedBalanceOf(address _account)
         internal
         view
@@ -315,6 +350,16 @@ contract Gauge is BaseGauge, IGauge {
         return _boostedBalanceOf(_account, _balances[_account].realBalance);
     }
 
+    /** @notice
+     *   Calculates the boosted balance of an account based on its gauge stake
+     *   proportion & veYFI lock proportion.
+     *  @dev This function expects this._totalSupply to be up to date.
+     *  @param _account The account whose veYFI lock should be checked.
+     *  @param _realBalance The amount of token _account has locked in the gauge.
+     *  @return
+     *   The account's boosted balance. Always lower than or equal to the
+     *   account's real balance.
+     */
     function _boostedBalanceOf(address _account, uint256 _realBalance)
         internal
         view
@@ -337,10 +382,10 @@ contract Gauge is BaseGauge, IGauge {
     }
 
     /** @notice deposit vault tokens into the gauge
-     * @dev a user without a veYFI should not lock.
-     * @dev This call updates claimable rewards
-     * @param _amount of vault token
-     * @return true
+     *  @dev a user without a veYFI should not lock.
+     *  @dev This call updates claimable rewards
+     *  @param _amount of vault token
+     *  @return true
      */
     function deposit(uint256 _amount) external returns (bool) {
         _deposit(msg.sender, _amount);
@@ -348,10 +393,10 @@ contract Gauge is BaseGauge, IGauge {
     }
 
     /** @notice deposit vault tokens into the gauge
-     *   @dev a user without a veYFI should not lock.
-     *   @dev will deposit the min between user balance and user approval
-     *   @dev This call updates claimable rewards
-     *   @return true
+     *  @dev a user without a veYFI should not lock.
+     *  @dev will deposit the min between user balance and user approval
+     *  @dev This call updates claimable rewards
+     *  @return true
      */
     function deposit() external returns (bool) {
         uint256 balance = Math.min(
@@ -366,8 +411,8 @@ contract Gauge is BaseGauge, IGauge {
      *   @dev vault token is taken from msg.sender
      *   @dev This call update  `_for` claimable rewards
      *   @param _for the account to deposit to
-     *    @param _amount to deposit
-     *    @return true
+     *   @param _amount to deposit
+     *   @return true
      */
     function depositFor(address _for, uint256 _amount) external returns (bool) {
         _deposit(_for, _amount);
@@ -425,11 +470,11 @@ contract Gauge is BaseGauge, IGauge {
     }
 
     /** @notice withdraw vault token from the gauge
-     * @dev This call updates claimable rewards
+     *  @dev This call updates claimable rewards
      *  @param _amount amount to withdraw
-     *   @param _claim claim veYFI and additional reward
-     *   @param _lock should the claimed rewards be locked in veYFI for the user
-     *   @return true
+     *  @param _claim claim veYFI and additional reward
+     *  @param _lock should the claimed rewards be locked in veYFI for the user
+     *  @return true
      */
     function withdraw(
         uint256 _amount,
@@ -566,6 +611,11 @@ contract Gauge is BaseGauge, IGauge {
         return true;
     }
 
+    /** @notice Distributes the rewards for the specified account.
+     *  @dev
+     *   This function MUST NOT be called without the caller invoking
+     *   updateReward(_account) first.
+     */
     function _getReward(
         address _account,
         bool _lock,
