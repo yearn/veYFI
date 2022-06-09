@@ -70,7 +70,7 @@ contract Gauge is BaseGauge, IGauge {
     event UpdatedBoostingFactor(uint256 boostingFactor);
     event BoostedBalanceUpdated(address account, uint256 amount);
 
-    event Initialized(
+    event Initialize(
         address indexed stakingToken,
         address indexed rewardToken,
         address indexed owner,
@@ -114,7 +114,7 @@ contract Gauge is BaseGauge, IGauge {
         rewardManager = _rewardManager;
         veYfiRewardPool = _veYfiRewardPool;
 
-        emit Initialized(
+        emit Initialize(
             _stakingToken,
             _rewardToken,
             _owner,

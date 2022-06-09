@@ -17,7 +17,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
     using SafeERC20 for IERC20;
     IGauge public gauge;
 
-    event Initialized(
+    event Initialize(
         address indexed _gauge,
         address indexed rewardToken,
         address indexed owner
@@ -38,7 +38,7 @@ contract ExtraReward is IExtraReward, BaseGauge {
         require(address(_gauge) != address(0x0), "_gauge 0x0 address");
         gauge = IGauge(_gauge);
         rewardToken = IERC20(_rewardToken);
-        emit Initialized(_gauge, _rewardToken, _owner);
+        emit Initialize(_gauge, _rewardToken, _owner);
     }
 
     function _updateReward(address _account) internal override {

@@ -17,4 +17,10 @@ interface IGauge is IBaseGauge {
     function balanceOf(address _account) external view returns (uint256);
 
     function boostedBalanceOf(address _account) external view returns (uint256);
+
+    function getRewardFor(
+        address _account,
+        bool _lock,
+        bool _claimExtras
+    ) external returns (bool);
 }
