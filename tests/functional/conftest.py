@@ -145,3 +145,8 @@ def create_extra_reward(gauge_factory, gov, project):
         return project.ExtraReward.at(to_checksum_address(reward_address))
 
     yield create_extra_reward
+
+
+@pytest.fixture(scope="session")
+def zap(gov, yfi, ve_yfi, ve_yfi_rewards, project):
+    yield gov.deploy(project.Zap, yfi, ve_yfi, ve_yfi_rewards)
