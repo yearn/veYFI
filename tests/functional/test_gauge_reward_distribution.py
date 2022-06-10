@@ -370,7 +370,7 @@ def test_kick(create_vault, create_gauge, whale_amount, panda, yfi, ve_yfi, whal
     assert gauge.boostedBalanceOf(whale) == gauge.nextBoostedBalanceOf(whale)
     gauge.withdraw(int(lp_amount / 100), panda, panda, False, False, sender=panda)
     assert gauge.boostedBalanceOf(whale) != gauge.nextBoostedBalanceOf(whale)
-    gauge.kick(whale, sender=panda)
+    gauge.kick([whale], sender=panda)
 
     assert (
         gauge.nextBoostedBalanceOf(whale)

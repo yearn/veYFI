@@ -843,9 +843,15 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
 
     /**
     @notice Kick `addr` for abusing their boost
-    @param _account Address to kick
+    @param _accounts Addresses to kick
     */
-    function kick(address _account) external updateReward(_account) {
+    function kick(address[] calldata _accounts) {
+        for (uint256 i = 0; _accounts.length; ++i) {
+            _kick(_accounts[i]);
+        }
+    }
+
+    function _kick(address _account) internal updateReward(_account) {
         uint256 balance = balanceOf(_account);
         require(
             _boostedBalances[_account] >
