@@ -27,7 +27,7 @@ def test_gauge_get_reward_for(
 
     chain.pending_timestamp += 3600
 
-    gauge.setApprovals(zap, False, True, False, sender=whale)
+    gauge.setApprovals(zap, True, False, sender=whale)
     assert yfi.balanceOf(whale) == 0
     zap.claim([gauge.address], False, False, sender=whale)
     assert yfi.balanceOf(whale) != 0

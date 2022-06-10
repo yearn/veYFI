@@ -192,4 +192,4 @@ def test_set_boosting_factor(
 
     gauge.setBoostingFactor(200, sender=gov)
 
-    assert gauge.boostedBalanceOf(whale) > gauge.snapshotBalanceOf(whale)
+    assert gauge.nextBoostedBalanceOf(whale) > gauge.boostedBalanceOf(whale)

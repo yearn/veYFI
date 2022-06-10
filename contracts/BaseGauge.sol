@@ -3,11 +3,10 @@ pragma solidity 0.8.14;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import "./interfaces/IBaseGauge.sol";
 
-abstract contract BaseGauge is IBaseGauge, Ownable, Initializable {
+abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
     IERC20 public override rewardToken;
     //// @notice rewards are distributed over `duration` seconds when queued.
     uint256 public duration;

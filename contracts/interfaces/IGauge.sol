@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.14;
 import "./IBaseGauge.sol";
+import "@openzeppelin-upgradeable/contracts/token/ERC20/IERC20Upgradeable.sol";
 
-interface IGauge is IBaseGauge {
+interface IGauge is IBaseGauge, IERC20Upgradeable {
     function initialize(
         address _stakingToken,
         address _rewardToken,
@@ -11,10 +12,6 @@ interface IGauge is IBaseGauge {
         address _ve,
         address _veYfiRewardPool
     ) external;
-
-    function totalSupply() external view returns (uint256);
-
-    function balanceOf(address _account) external view returns (uint256);
 
     function boostedBalanceOf(address _account) external view returns (uint256);
 
