@@ -697,6 +697,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     function getReward(bool _lock, bool _claimExtras)
         external
         updateReward(msg.sender)
+
         returns (bool)
     {
         _getReward(msg.sender, _lock, _claimExtras);
