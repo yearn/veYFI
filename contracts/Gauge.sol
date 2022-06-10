@@ -303,9 +303,19 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     ) internal override {
         if (_from != address(0)) {
             _updateReward(_from);
+            //also deposit to linked rewards
+            uint256 length = extraRewards.length;
+            for (uint256 i = 0; i < length; ++i) {
+                IExtraReward(extraRewards[i]).rewardCheckpoint(_from);
+            }
         }
         if (_to != address(0)) {
             _updateReward(_to);
+            //also deposit to linked rewards
+            uint256 length = extraRewards.length;
+            for (uint256 i = 0; i < length; ++i) {
+                IExtraReward(extraRewards[i]).rewardCheckpoint(_to);
+            }
         }
     }
 
@@ -492,12 +502,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         //take away from sender
         asset.safeTransferFrom(msg.sender, address(this), _assets);
 
-        //also deposit to linked rewards
-        uint256 length = extraRewards.length;
-        for (uint256 i = 0; i < length; ++i) {
-            IExtraReward(extraRewards[i]).rewardCheckpoint(_receiver);
-        }
-
         // mint shares
         _mint(_receiver, _assets);
 
@@ -630,12 +634,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
             _spendAllowance(_owner, msg.sender, _assets);
         }
 
-        //also withdraw from linked rewards
-        uint256 length = extraRewards.length;
-        for (uint256 i = 0; i < length; ++i) {
-            IExtraReward(extraRewards[i]).rewardCheckpoint(_owner);
-        }
-
         _burn(_owner, _assets);
         uint256 boostedBalance = _boostedBalanceOf(_owner);
         _boostedBalances[_owner] = boostedBalance;
@@ -695,6 +693,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     function getReward(bool _lock, bool _claimExtras)
         external
         updateReward(msg.sender)
+
         returns (bool)
     {
         _getReward(msg.sender, _lock, _claimExtras);
