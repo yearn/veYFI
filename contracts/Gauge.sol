@@ -58,12 +58,21 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     //// @notice list of extraRewards pool.
     address[] public extraRewards;
 
-    event Staked(address indexed user, uint256 amount);
-    event Withdrawn(
-        address indexed _owner,
-        address indexed _receiver,
-        uint256 amount
+    event Deposit(
+        address indexed caller,
+        address indexed owner,
+        uint256 assets,
+        uint256 shares
     );
+
+    event Withdraw(
+        address indexed caller,
+        address indexed receiver,
+        address indexed owner,
+        uint256 assets,
+        uint256 shares
+    );
+
     event AddedExtraReward(address indexed reward);
     event DeletedExtraRewards(address[] rewards);
     event RemovedExtraReward(address indexed reward);
@@ -509,7 +518,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         _boostedBalances[_receiver] = boostedBalance;
 
         emit BoostedBalanceUpdated(_receiver, boostedBalance);
-        emit Staked(_receiver, _assets);
+        emit Deposit(msg.sender, _receiver, _assets, _assets);
     }
 
     /**
@@ -655,7 +664,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         }
 
         asset.safeTransfer(_receiver, _assets);
-        emit Withdrawn(_owner, _receiver, _assets);
+        emit Withdraw(msg.sender, _receiver, _owner, _assets, _assets);
 
         return _assets;
     }
@@ -693,7 +702,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     function getReward(bool _lock, bool _claimExtras)
         external
         updateReward(msg.sender)
-
         returns (bool)
     {
         _getReward(msg.sender, _lock, _claimExtras);
