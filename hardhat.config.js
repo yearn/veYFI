@@ -1,7 +1,7 @@
 
 // See https://hardhat.org/config/ for config options.
 module.exports = {
-  solidity: "0.8.13",
+  solidity: "0.8.14",
   networks: {
     hardhat: {
       hardfork: "london",
