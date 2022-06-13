@@ -22,11 +22,11 @@ contract Zap {
 
     constructor(
         address _yfi,
-        address veYfi,
+        address _veYfi,
         address _veYFIRewards
     ) {
         YFI = _yfi;
-        VE_YFI = veYfi;
+        VE_YFI = _veYfi;
         VE_YFI_REWARDS = _veYFIRewards;
         IERC20(YFI).approve(VE_YFI, type(uint256).max);
     }
