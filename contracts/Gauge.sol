@@ -58,21 +58,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     //// @notice list of extraRewards pool.
     address[] public extraRewards;
 
-    event Deposit(
-        address indexed caller,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
-    );
-
-    event Withdraw(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
-    );
-
     event AddedExtraReward(address indexed reward);
     event DeletedExtraRewards(address[] rewards);
     event RemovedExtraReward(address indexed reward);
@@ -578,7 +563,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         uint256 _assets,
         address _receiver,
         address _owner
-    ) internal returns (uint256) {
+    ) external returns (uint256) {
         return _withdraw(_assets, _receiver, _owner, false, false);
     }
 
@@ -688,7 +673,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         uint256 _assets,
         address _receiver,
         address _owner
-    ) internal returns (uint256) {
+    ) external override returns (uint256) {
         return _withdraw(_assets, _receiver, _owner, true, false);
     }
 
@@ -845,8 +830,8 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     @notice Kick `addr` for abusing their boost
     @param _accounts Addresses to kick
     */
-    function kick(address[] calldata _accounts) {
-        for (uint256 i = 0; _accounts.length; ++i) {
+    function kick(address[] calldata _accounts) public {
+        for (uint256 i = 0; i < _accounts.length; ++i) {
             _kick(_accounts[i]);
         }
     }
