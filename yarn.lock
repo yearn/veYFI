@@ -2735,10 +2735,10 @@ solc@0.7.3:
     semver "^5.5.0"
     tmp "0.0.33"
 
-solc@^0.8.14:
-  version "0.8.14"
-  resolved "https://registry.yarnpkg.com/solc/-/solc-0.8.14.tgz#bafc7fcc11a627e2281e489076b80497123bb704"
-  integrity sha512-C0yTN+rjEOGO6uVOXI8+EKa75SFMuZpQ2tryex4QxWIg0HRWZvCHKfVPuLZ5wx06Sb6GBp6uQA5yqQyXZnXOJw==
+solc@^0.8.14-fixed:
+  version "0.8.14-fixed"
+  resolved "https://registry.yarnpkg.com/solc/-/solc-0.8.14-fixed.tgz#a730a1e8259ac06313f6b7287df046ebe1dddc13"
+  integrity sha512-jFYa2fKbk95olckuDbhs9kbtaUhLRllM7aC++mLinJBUcdHbaHVM8LxHaJpOIDdnHBV9TpIP4XBybVugqMDyhA==
   dependencies:
     command-exists "^1.2.8"
     commander "^8.1.0"
