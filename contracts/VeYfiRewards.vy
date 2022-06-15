@@ -79,7 +79,7 @@ def __init__(
     @notice Contract constructor
     @param _voting_escrow VotingEscrow contract address
     @param _start_time Epoch time for fee distribution to start
-    @param _token Fee token address (3CRV)
+    @param _token Token that is distributed
     @param _admin Admin address
     @param _emergency_return Address to transfer `_token` balance to
                              if this contract is killed
@@ -382,7 +382,7 @@ def claim_many(_receivers: address[20]) -> bool:
 @external
 def queueNewRewards(_amount: uint256) -> bool:
     """
-    @notice Receive 3CRV into the contract and trigger a token checkpoint
+    @notice Receive token to distribute into the contract and trigger a token checkpoint
     @param _amount Amount to transfer
     @return bool success
     """
@@ -423,7 +423,7 @@ def apply_admin():
 def kill_me():
     """
     @notice Kill the contract
-    @dev Killing transfers the entire 3CRV balance to the emergency return address
+    @dev Killing transfers the entire tokens to be distributed balance to the emergency return address
          and blocks the ability to claim or burn. The contract cannot be unkilled.
     """
     assert msg.sender == self.admin
