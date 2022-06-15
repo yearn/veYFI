@@ -441,6 +441,7 @@ def transfer(yfi, ve_yfi, whale, panda, whale_amount, create_vault, create_gauge
     gauge.transferFrom(whale, panda, lp_amount, sender=panda)
     gauge.getReward(sender=whale)
 
+    assert gauge.boostedBalance(whale) == 0
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
         14 * 24
     )
