@@ -26,7 +26,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         uint256 boostedBalance;
     }
 
-    struct Appoved {
+    struct Approved {
         bool claim;
         bool lock;
     }
@@ -53,7 +53,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     */
     uint256 public queuedVeYfiRewards;
     mapping(address => uint256) private _boostedBalances;
-    mapping(address => mapping(address => Appoved)) public approvedTo;
+    mapping(address => mapping(address => Approved)) public approvedTo;
 
     //// @notice list of extraRewards pool.
     address[] public extraRewards;
