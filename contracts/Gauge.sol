@@ -313,6 +313,19 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         }
     }
 
+    function _afterTokenTransfer(
+        address _from,
+        address _to,
+        uint256
+    ) internal override {
+        if (_from != address(0)) {
+            _boostedBalances[_from] = _boostedBalanceOf(_from);
+        }
+        if (_to != address(0)) {
+            _boostedBalances[_to] = _boostedBalanceOf(_to);
+        }
+    }
+
     function _rewardPerToken() internal view override returns (uint256) {
         if (totalAssets() == 0) {
             return rewardPerTokenStored;
@@ -499,10 +512,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         // mint shares
         _mint(_receiver, _assets);
 
-        uint256 boostedBalance = _boostedBalanceOf(_receiver);
-        _boostedBalances[_receiver] = boostedBalance;
-
-        emit BoostedBalanceUpdated(_receiver, boostedBalance);
+        emit BoostedBalanceUpdated(_receiver, _boostedBalances[_receiver]);
         emit Deposit(msg.sender, _receiver, _assets, _assets);
     }
 
@@ -517,7 +527,8 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         return _assets;
     }
 
-    /** @notice allow an address to deposit on your behalf
+    /** @notice allow an address to lock and claim on your behalf
+     * claim ermai
      *  @param _addr address to change approval for
      *  @param _canClaim can deposit
      *  @return true
@@ -629,9 +640,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         }
 
         _burn(_owner, _assets);
-        uint256 boostedBalance = _boostedBalanceOf(_owner);
-        _boostedBalances[_owner] = boostedBalance;
-        emit BoostedBalanceUpdated(_owner, boostedBalance);
+        emit BoostedBalanceUpdated(_owner, _boostedBalances[_owner]);
 
         if (_claim) {
             if (_owner != msg.sender) {
