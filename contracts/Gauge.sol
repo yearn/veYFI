@@ -63,7 +63,6 @@ contract Gauge is BaseGauge, IGauge {
     event Withdrawn(address indexed user, uint256 amount);
     event AddedExtraReward(address indexed reward);
     event DeletedExtraRewards(address[] rewards);
-    event RemovedExtraReward(address indexed reward);
     event UpdatedRewardManager(address indexed rewardManager);
     event UpdatedVeToken(address indexed ve);
     event TransferedQueuedPenalty(uint256 transfered);
@@ -214,7 +213,9 @@ contract Gauge is BaseGauge, IGauge {
             }
         }
         require(index != type(uint256).max, "extra reward not found");
-        emit RemovedExtraReward(_extraReward);
+        address[] memory toDelete = new address[](1);
+        toDelete[0] = _extraReward;
+        emit DeletedExtraRewards(toDelete);
         extraRewards[index] = extraRewards[extraRewards.length - 1];
         extraRewards.pop();
         return true;
