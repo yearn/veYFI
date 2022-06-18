@@ -58,14 +58,8 @@ INCREASE_UNLOCK_TIME: constant(int128) = 3
 event CommitOwnership:
     admin: address
 
-event CommitUnlocker:
-    unlocker: address
-
 event ApplyOwnership:
     admin: address
-
-event ApplyUnlocker:
-    unlocker: address
 
 event Deposit:
     deposit_from: indexed(address)
@@ -120,8 +114,6 @@ decimals: public(uint256)
 
 admin: public(address)  # Can and will be a smart contract
 future_admin: public(address)
-unlocker: public(address)
-future_unlocker: public(address)
 
 next_ve_contract: public(address)
 queued_next_ve_contract: public(address)
@@ -137,7 +129,6 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32]):
     @param _symbol Token symbol
     """
     self.admin = msg.sender
-    self.unlocker = msg.sender
     self.token = token_addr
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
@@ -177,27 +168,6 @@ def apply_transfer_ownership():
     assert _admin != ZERO_ADDRESS  # dev: admin not set
     self.admin = _admin
     log ApplyOwnership(_admin)
-
-@external
-def commit_transfer_unlocker(addr: address):
-    """
-    @notice Transfer unlocker role of VotingEscrow contract to `addr`
-    @param addr Address to have inlocker role transferred to
-    """
-    assert msg.sender == self.unlocker  # dev: admin only
-    self.future_unlocker = addr
-    log CommitUnlocker(addr)
-
-@external
-def apply_transfer_unlocker():
-    """
-    @notice Apply unlocker transfer
-    """
-    assert msg.sender == self.unlocker  # dev: admin only
-    _unlocker: address = self.future_unlocker
-    assert _unlocker != ZERO_ADDRESS  # dev: admin not set
-    self.unlocker = _unlocker
-    log ApplyUnlocker(_unlocker)
 
 @external
 @view
