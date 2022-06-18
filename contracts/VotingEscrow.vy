@@ -44,8 +44,9 @@ event Penalty:
     ts: uint256
 
 event Supply:
-    prevSupply: uint256
-    supply: uint256
+    old_supply: uint256
+    new_supply: uint256
+    ts: uint256
 
 event Initialized:
     token: address
@@ -297,7 +298,7 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
         assert ERC20(self.token).transferFrom(_from, self, _value)
 
     log Deposit(_from, _addr, _value, _locked.end, type, block.timestamp)
-    log Supply(supply_before, supply_before + _value)
+    log Supply(supply_before, supply_before + _value, block.timestamp)
 
 
 @external
@@ -411,7 +412,7 @@ def withdraw():
         log Penalty(msg.sender, penalty, block.timestamp)
     
     log Withdraw(msg.sender, old_locked.amount - penalty, block.timestamp)
-    log Supply(supply_before, supply_before - old_locked.amount)
+    log Supply(supply_before, supply_before - old_locked.amount, block.timestamp)
 
 
 @internal
