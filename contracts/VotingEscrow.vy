@@ -1,51 +1,29 @@
 # @version 0.3.3
 """
-@title Voting Escrow
-@author Curve Finance
+@title Voting YFI
+@author Curve Finance, Yearn Finance
 @license MIT
-@notice Votes have a weight depending on time, so that users are
-        committed to the future of (whatever they are voting for)
-@dev Vote weight decays linearly over time. Lock time cannot be
-     more than `MAXTIME` (4 years).
-     User can unlock funds with a penalty. The unlocker can remove 
-     the lock for everyone. 
+@notice
+    Votes have a weight depending on time, so that users are
+    committed to the future of whatever they are voting for.
+@dev
+    Vote weight decays linearly over time. Lock time cannot be more than 4 years.
+    A user can unlock funds early incurring a penalty.
 """
 from vyper.interfaces import ERC20
-
-# Voting escrow to have time-weighted votes
-# Votes have a weight depending on time, so that users are committed
-# to the future of (whatever they are voting for).
-# The weight in this implementation is linear, and lock cannot be more than maxtime:
-# w ^
-# 1 +        /
-#   |      /
-#   |    /
-#   |  /
-#   |/
-# 0 +--------+------> time
-#       maxtime (4 years?)
 
 struct Point:
     bias: int128
     slope: int128  # - dweight / dt
     ts: uint256
     blk: uint256  # block
-# We cannot really do block numbers per se b/c slope is per time, not per block
-# and per block could be fairly bad b/c Ethereum changes blocktimes.
-# What we can do is to extrapolate ***At functions
 
 struct LockedBalance:
     amount: uint256
     end: uint256
 
-
 interface IVeYfiRewards:
     def queueNewRewards(_amount: uint256) -> bool: nonpayable
-
-DEPOSIT_FOR_TYPE: constant(int128) = 0
-CREATE_LOCK_TYPE: constant(int128) = 1
-INCREASE_LOCK_AMOUNT: constant(int128) = 2
-INCREASE_UNLOCK_TIME: constant(int128) = 3
 
 event Deposit:
     deposit_from: indexed(address)
@@ -72,6 +50,11 @@ event Supply:
 event Initialized:
     token: address
     reward_pool: address
+
+DEPOSIT_FOR_TYPE: constant(int128) = 0
+CREATE_LOCK_TYPE: constant(int128) = 1
+INCREASE_LOCK_AMOUNT: constant(int128) = 2
+INCREASE_UNLOCK_TIME: constant(int128) = 3
 
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
