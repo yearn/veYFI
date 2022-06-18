@@ -83,6 +83,11 @@ event Withdraw:
     value: uint256
     ts: uint256
 
+event Penalty:
+    provider: indexed(address)
+    value: uint256
+    ts: uint256
+
 event Supply:
     prevSupply: uint256
     supply: uint256
@@ -606,6 +611,7 @@ def force_withdraw():
             self._transferQueuedPenalty()
 
     log Withdraw(msg.sender, value, block.timestamp)
+    log Penalty(msg.sender, penalty, block.timestamp)
     log Supply(supply_before, supply_before - value)
 
 
