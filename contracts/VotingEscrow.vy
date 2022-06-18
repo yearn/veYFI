@@ -91,11 +91,6 @@ slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 queuedPenalty: public(uint256)
 lastPenaltyTranfer: public(uint256)
 
-name: public(String[64])
-symbol: public(String[32])
-version: public(String[32])
-decimals: public(uint256)
-
 reward_pool: public(address)
 
 @external
@@ -111,18 +106,21 @@ def __init__(token_addr: address, reward_pool: address):
 
     log Initialized(token_addr, reward_pool)
 
-    self.name = _name
-    self.symbol = _symbol
-    log Initialized(token_addr)
 
+@view
 @external
+def name() -> String[10]:
+    return "Voting YFI"
 
+@view
 @external
 def symbol() -> String[5]:
     return "veYFI"
 
 @view
 @external
+def decimals() -> uint8:
+    return 18
 
 @external
 @view
