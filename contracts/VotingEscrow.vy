@@ -76,7 +76,8 @@ event Initialized:
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
-MULTIPLIER: constant(uint256) = 10 ** 18
+SCALE: constant(uint256) = 10 ** 18
+MAX_PENALTY_RATIO: constant(uint256) = SCALE * 3 / 4  # 75% for early exit of max lock
 
 token: public(address)
 supply: public(uint256)
@@ -201,7 +202,7 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     initial_last_point: Point = last_point
     block_slope: uint256 = 0  # dblock/dt
     if block.timestamp > last_point.ts:
-        block_slope = MULTIPLIER * (block.number - last_point.blk) / (block.timestamp - last_point.ts)
+        block_slope = SCALE * (block.number - last_point.blk) / (block.timestamp - last_point.ts)
     # If last point is already recorded in this block, slope=0
     # But that's ok b/c we know the block in such case
 
@@ -224,7 +225,7 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
             last_point.slope = 0
         last_checkpoint = t_i
         last_point.ts = t_i
-        last_point.blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / MULTIPLIER
+        last_point.blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / SCALE
         _epoch += 1
         if t_i == block.timestamp:
             last_point.blk = block.number
@@ -281,27 +282,6 @@ def checkpoint():
     """
     self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
 
-@internal
-def _transferQueuedPenalty():
-    toTransfer: uint256 = self.queuedPenalty
-    self.queuedPenalty = 0
-
-    assert ERC20(self.token).approve(self.reward_pool, toTransfer)
-    IVeYfiRewards(self.reward_pool).queueNewRewards(toTransfer)
-    self.lastPenaltyTranfer = block.timestamp
-
-@external
-def transferQueuedPenalty() ->bool:
-    """
-    @notice
-    Transfer penalty to the veYFIRewardContract
-    @dev Penalty are queued in this contract.
-    @return true
-    """
-    self._transferQueuedPenalty()
-
-    return True
-
 
 @internal
 def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
@@ -350,8 +330,8 @@ def deposit_for(_addr: address, _value: uint256):
     _locked: LockedBalance = self.locked[_addr]
 
     assert _value > 0  # dev: need non-zero value
-    assert _locked.amount > 0, "No existing lock found"
-    assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
+    assert _locked.amount > 0  # dev: no existing lock found
+    assert _locked.end > block.timestamp  # dev: lock expired, call withdraw
 
     self._deposit_for(msg.sender, _addr, _value, 0, _locked, DEPOSIT_FOR_TYPE)
 
@@ -363,13 +343,13 @@ def create_lock(_value: uint256, _unlock_time: uint256):
     @param _value Amount to deposit
     @param _unlock_time Epoch time when tokens unlock, rounded down to whole weeks
     """
-    unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
+    unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # locktime is rounded down to weeks
     _locked: LockedBalance = self.locked[msg.sender]
 
     assert _value > 0  # dev: need non-zero value
-    assert _locked.amount == 0, "Withdraw old tokens first"
-    assert unlock_time > block.timestamp, "Can only lock until time in the future"
-    assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max"
+    assert _locked.amount == 0  # dev: withdraw old tokens first
+    assert unlock_time > block.timestamp  #  dev: unlock time must be in the future
+    assert unlock_time <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
 
     self._deposit_for(msg.sender, msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
 
@@ -384,8 +364,8 @@ def increase_amount(_value: uint256):
     _locked: LockedBalance = self.locked[msg.sender]
 
     assert _value > 0  # dev: need non-zero value
-    assert _locked.amount > 0, "No existing lock found"
-    assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
+    assert _locked.amount > 0  # dev: no existing lock found
+    assert _locked.end > block.timestamp  # dev: lock expired, call withdraw
 
     self._deposit_for(msg.sender, msg.sender, _value, 0, _locked, INCREASE_LOCK_AMOUNT)
 
@@ -400,10 +380,10 @@ def increase_unlock_time(_unlock_time: uint256):
     _locked: LockedBalance = self.locked[msg.sender]
     unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
 
-    assert _locked.end > block.timestamp, "Lock expired"
-    assert _locked.amount > 0, "Nothing is locked"
-    assert unlock_time > _locked.end, "Can only increase lock duration"
-    assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max"
+    assert _locked.end > block.timestamp  # dev: lock expired
+    assert _locked.amount > 0  # dev: nothing is locked
+    assert unlock_time > _locked.end  # dev: can only increase lock duration
+    assert unlock_time <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
 
     self._deposit_for(msg.sender, msg.sender, 0, unlock_time, _locked, INCREASE_UNLOCK_TIME)
 
@@ -416,22 +396,20 @@ def withdraw():
     @dev Only possible if the lock has expired
     """
         
-    _locked: LockedBalance = self.locked[msg.sender]
-    value: uint256 = convert(_locked.amount, uint256)
+    old_locked: LockedBalance = self.locked[msg.sender]
+    value: uint256 = convert(old_locked.amount, uint256)
 
-    assert block.timestamp >= _locked.end, "The lock didn't expire"
+    assert block.timestamp >= old_locked.end  # dev: the lock hasn't expired yet
 
-    old_locked: LockedBalance = _locked
-    _locked.end = 0
-    _locked.amount = 0
-    self.locked[msg.sender] = _locked
+    zero_locked: LockedBalance = LockedBalance({amount: 0, end: 0})
+    self.locked[msg.sender] = zero_locked
     supply_before: uint256 = self.supply
     self.supply = supply_before - value
 
     # old_locked can have either expired <= timestamp or zero end
     # _locked has only 0 end
     # Both can have >= 0 amount
-    self._checkpoint(msg.sender, old_locked, _locked)
+    self._checkpoint(msg.sender, old_locked, zero_locked)
 
     assert ERC20(self.token).transfer(msg.sender, value)
 
@@ -446,37 +424,35 @@ def force_withdraw():
     @notice Withdraw all tokens for `msg.sender`
     @dev Will pay a penalty based on time.
     With a 4 years lock on withdraw, you pay 75% penalty during the first year.
-    penalty decrease linearly to zero starting when time left is under 3 years.
+    Penalty decrease linearly to zero starting when time left is under 3 years.
     """
-    _locked: LockedBalance = self.locked[msg.sender]
-    assert block.timestamp < _locked.end, "lock expired"
+    old_locked: LockedBalance = self.locked[msg.sender]
+    assert block.timestamp < old_locked.end  # dev: lock expired
     
-    time_left: uint256 = _locked.end - block.timestamp
-    penalty_ratio: uint256 = min(MULTIPLIER * 3 / 4,  MULTIPLIER * time_left / MAXTIME)
+    time_left: uint256 = old_locked.end - block.timestamp
 
-    value: uint256 = convert(_locked.amount, uint256)
+    value: uint256 = convert(old_locked.amount, uint256)
 
-    old_locked: LockedBalance = _locked
-    _locked.end = 0
-    _locked.amount = 0
-    self.locked[msg.sender] = _locked
+    zero_locked: LockedBalance = LockedBalance({amount: 0, end: 0})
+    self.locked[msg.sender] = zero_locked
     supply_before: uint256 = self.supply
     self.supply = supply_before - value
 
     # old_locked can have either expired <= timestamp or zero end
     # _locked has only 0 end
     # Both can have >= 0 amount
-    self._checkpoint(msg.sender, old_locked, _locked)
+    self._checkpoint(msg.sender, old_locked, zero_locked)
     
-    penalty: uint256 = value * penalty_ratio / MULTIPLIER
+    penalty_ratio: uint256 = min(time_left * SCALE / MAXTIME, MAX_PENALTY_RATIO)
+    penalty: uint256 = value * penalty_ratio / SCALE
     assert ERC20(self.token).transfer(msg.sender, value - penalty)
-    if penalty != 0:
-        self.queuedPenalty += penalty
-        if (block.timestamp - self.lastPenaltyTranfer > DAY):
-            self._transferQueuedPenalty()
+    
+    # push the penalty to reward pool
+    assert ERC20(self.token).approve(self.reward_pool, penalty)
+    assert IVeYfiRewards(self.reward_pool).queueNewRewards(penalty)  # dev: penalty not queued
+    log Penalty(msg.sender, penalty, block.timestamp)
 
     log Withdraw(msg.sender, value, block.timestamp)
-    log Penalty(msg.sender, penalty, block.timestamp)
     log Supply(supply_before, supply_before - value)
 
 # The following ERC20/minime-compatible methods are not real balanceOf and supply!
@@ -550,8 +526,6 @@ def balanceOfAt(addr: address, _block: uint256) -> uint256:
     @param _block Block to calculate the voting power at
     @return Voting power
     """
-    # Copying and pasting totalSupply code because Vyper cannot pass by
-    # reference yet
     assert _block <= block.number
 
     # Binary search
