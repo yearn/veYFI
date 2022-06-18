@@ -35,7 +35,7 @@ struct Point:
 # What we can do is to extrapolate ***At functions
 
 struct LockedBalance:
-    amount: int128
+    amount: uint256
     end: uint256
 
 
@@ -176,10 +176,10 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
         # Calculate slopes and biases
         # Kept at zero when they have to
         if old_locked.end > block.timestamp and old_locked.amount > 0:
-            u_old.slope = old_locked.amount / convert(MAXTIME, int128)
+            u_old.slope = convert(old_locked.amount / MAXTIME, int128)
             u_old.bias = u_old.slope * convert(old_locked.end - block.timestamp, int128)
         if new_locked.end > block.timestamp and new_locked.amount > 0:
-            u_new.slope = new_locked.amount / convert(MAXTIME, int128)
+            u_new.slope = convert(new_locked.amount / MAXTIME, int128)
             u_new.bias = u_new.slope * convert(new_locked.end - block.timestamp, int128)
 
         # Read values of scheduled changes in the slope
@@ -299,7 +299,7 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
     self.supply = supply_before + _value
     old_locked: LockedBalance = _locked
     # Adding to existing lock, or if a lock is expired - creating a new one
-    _locked.amount += convert(_value, int128)
+    _locked.amount += _value
     if unlock_time != 0:
         _locked.end = unlock_time
     self.locked[_addr] = _locked
