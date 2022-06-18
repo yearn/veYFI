@@ -64,7 +64,6 @@ MAX_PENALTY_RATIO: constant(uint256) = SCALE * 3 / 4  # 75% for early exit of ma
 
 token: public(address)
 supply: public(uint256)
-
 locked: public(HashMap[address, LockedBalance])
 
 epoch: public(uint256)
@@ -72,10 +71,8 @@ point_history: public(Point[100000000000000000000000000000])  # epoch -> unsigne
 user_point_history: public(HashMap[address, Point[1000000000]])  # user -> Point[user_epoch]
 user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
-queuedPenalty: public(uint256)
-lastPenaltyTranfer: public(uint256)
-
 reward_pool: public(address)
+
 
 @external
 def __init__(token_addr: address, reward_pool: address):
@@ -96,15 +93,18 @@ def __init__(token_addr: address, reward_pool: address):
 def name() -> String[10]:
     return "Voting YFI"
 
+
 @view
 @external
 def symbol() -> String[5]:
     return "veYFI"
 
+
 @view
 @external
 def decimals() -> uint8:
     return 18
+
 
 @external
 @view
@@ -318,6 +318,7 @@ def deposit_for(_addr: address, _value: uint256):
 
     self._deposit_for(msg.sender, _addr, _value, 0, _locked, DEPOSIT_FOR_TYPE)
 
+
 @external
 @nonreentrant('lock')
 def create_lock(_value: uint256, _unlock_time: uint256):
@@ -335,6 +336,7 @@ def create_lock(_value: uint256, _unlock_time: uint256):
     assert unlock_time <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
 
     self._deposit_for(msg.sender, msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
+
 
 @external
 @nonreentrant('lock')
@@ -468,6 +470,7 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
     if upoint.bias < 0:
         upoint.bias = 0
     return convert(upoint.bias, uint256)
+
 
 @external
 @view
