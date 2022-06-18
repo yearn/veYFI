@@ -23,24 +23,24 @@ struct LockedBalance:
     end: uint256
 
 interface IVeYfiRewards:
-    def queueNewRewards(_amount: uint256) -> bool: nonpayable
+    def queueNewRewards(amount: uint256) -> bool: nonpayable
 
 event Deposit:
-    deposit_from: indexed(address)
-    provider: indexed(address)
-    value: uint256
-    locktime: indexed(uint256)
-    type: int128
+    sender: indexed(address)
+    user: indexed(address)
+    action: indexed(uint256)
+    amount: uint256
+    locktime: uint256
     ts: uint256
 
 event Withdraw:
-    provider: indexed(address)
-    value: uint256
+    user: indexed(address)
+    amount: uint256
     ts: uint256
 
 event Penalty:
-    provider: indexed(address)
-    value: uint256
+    user: indexed(address)
+    amount: uint256
     ts: uint256
 
 event Supply:
@@ -52,10 +52,11 @@ event Initialized:
     token: address
     reward_pool: address
 
-DEPOSIT_FOR_TYPE: constant(int128) = 0
-CREATE_LOCK_TYPE: constant(int128) = 1
-INCREASE_LOCK_AMOUNT: constant(int128) = 2
-INCREASE_UNLOCK_TIME: constant(int128) = 3
+# enum DepositAction
+DEPOSIT_FOR_TYPE: constant(uint256) = 0
+CREATE_LOCK_TYPE: constant(uint256) = 1
+INCREASE_LOCK_AMOUNT: constant(uint256) = 2
+INCREASE_UNLOCK_TIME: constant(uint256) = 3
 
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
@@ -268,37 +269,38 @@ def checkpoint():
 
 
 @internal
-def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
+def _deposit_for(sender: address, user: address, amount: uint256, unlock_time: uint256, old_locked: LockedBalance, action: uint256):
     """
     @notice Deposit and lock tokens for a user
-    @param _from Address to take funds from 
-    @param _addr User's wallet address
-    @param _value Amount to deposit
-    @param unlock_time New time when to unlock the tokens, or 0 if unchanged
-    @param locked_balance Previous locked amount / timestamp
+    @param sender The account which funds the deposit
+    @param user The account which receives the deposit
+    @param amount Amount to deposit
+    @param unlock_time The new unlock time, 0 for unchanged
+    @param locked_balance Previous locked balance of the user
+    @param action Action type of the operation
     """
-    _locked: LockedBalance = locked_balance
     supply_before: uint256 = self.supply
 
-    self.supply = supply_before + _value
-    old_locked: LockedBalance = _locked
+    new_locked: LockedBalance = old_locked
+    self.supply = supply_before + amount
     # Adding to existing lock, or if a lock is expired - creating a new one
-    _locked.amount += _value
+    new_locked.amount += amount
     if unlock_time != 0:
-        _locked.end = unlock_time
-    self.locked[_addr] = _locked
+        new_locked.end = unlock_time
+
+    self.locked[user] = new_locked
 
     # Possibilities:
     # Both old_locked.end could be current or expired (>/< block.timestamp)
     # value == 0 (extend lock) or value > 0 (add to lock or extend lock)
     # _locked.end > block.timestamp (always)
-    self._checkpoint(_addr, old_locked, _locked)
+    self._checkpoint(user, old_locked, new_locked)
 
-    if _value != 0:
-        assert ERC20(self.token).transferFrom(_from, self, _value)
+    if amount > 0:
+        assert ERC20(self.token).transferFrom(sender, self, amount)
 
-    log Deposit(_from, _addr, _value, _locked.end, type, block.timestamp)
-    log Supply(supply_before, supply_before + _value, block.timestamp)
+    log Deposit(sender, user, action, amount, new_locked.end, block.timestamp)
+    log Supply(supply_before, supply_before + amount, block.timestamp)
 
 
 @external
