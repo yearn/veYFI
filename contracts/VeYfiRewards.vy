@@ -1,4 +1,4 @@
-# @version 0.2.16
+# @version 0.3.3
 """
 @title Curve Fee Distribution
 @author Curve Finance
@@ -43,7 +43,7 @@ struct Point:
     blk: uint256  # block
 
 
-TWO_WEEKS: constant(uint256) = 14 * 86400
+WEEK: constant(uint256) = 7 * 86400
 TOKEN_CHECKPOINT_DEADLINE: constant(uint256) = 86400
 
 start_time: public(uint256)
