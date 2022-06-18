@@ -25,10 +25,16 @@ struct LockedBalance:
     amount: uint256
     end: uint256
 
+enum DepositAction:
+    DEPOSIT_FOR
+    CREATE_LOCK
+    INCREASE_AMOUNT
+    INCREASE_DURATION
+
 event Deposit:
     sender: indexed(address)
     user: indexed(address)
-    action: indexed(uint256)
+    action: indexed(DepositAction)
     amount: uint256
     locktime: uint256
     ts: uint256
@@ -51,12 +57,6 @@ event Supply:
 event Initialized:
     token: address
     reward_pool: address
-
-# enum DepositAction
-DEPOSIT_FOR_TYPE: constant(uint256) = 0
-CREATE_LOCK_TYPE: constant(uint256) = 1
-INCREASE_LOCK_AMOUNT: constant(uint256) = 2
-INCREASE_UNLOCK_TIME: constant(uint256) = 3
 
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
@@ -258,7 +258,7 @@ def checkpoint():
 
 
 @internal
-def _deposit_for(sender: address, user: address, amount: uint256, unlock_time: uint256, old_locked: LockedBalance, action: uint256):
+def _deposit_for(sender: address, user: address, amount: uint256, unlock_time: uint256, old_locked: LockedBalance, action: DepositAction):
     """
     @notice Deposit and lock tokens for a user
     @param sender The account which funds the deposit
@@ -308,7 +308,7 @@ def deposit_for(addr: address, amount: uint256):
     assert _locked.amount > 0  # dev: no existing lock found
     assert _locked.end > block.timestamp  # dev: lock expired, call withdraw
 
-    self._deposit_for(msg.sender, addr, amount, 0, _locked, DEPOSIT_FOR_TYPE)
+    self._deposit_for(msg.sender, addr, amount, 0, _locked, DepositAction.DEPOSIT_FOR)
 
 
 @external
@@ -327,7 +327,7 @@ def create_lock(amount: uint256, unlock_time: uint256):
     assert unlock_week > block.timestamp  #  dev: unlock time must be in the future
     assert unlock_week <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
 
-    self._deposit_for(msg.sender, msg.sender, amount, unlock_week, locked, CREATE_LOCK_TYPE)
+    self._deposit_for(msg.sender, msg.sender, amount, unlock_week, locked, DepositAction.CREATE_LOCK)
 
 
 @external
@@ -344,7 +344,7 @@ def increase_amount(amount: uint256):
     assert locked.amount > 0  # dev: no existing lock found
     assert locked.end > block.timestamp  # dev: lock expired, call withdraw
 
-    self._deposit_for(msg.sender, msg.sender, amount, 0, locked, INCREASE_LOCK_AMOUNT)
+    self._deposit_for(msg.sender, msg.sender, amount, 0, locked, DepositAction.INCREASE_AMOUNT)
 
 
 @external
@@ -362,7 +362,7 @@ def increase_unlock_time(unlock_time: uint256):
     assert unlock_week > locked.end  # dev: can only increase lock duration
     assert unlock_week <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
 
-    self._deposit_for(msg.sender, msg.sender, 0, unlock_week, locked, INCREASE_UNLOCK_TIME)
+    self._deposit_for(msg.sender, msg.sender, 0, unlock_week, locked, DepositAction.INCREASE_DURATION)
 
 
 @external
