@@ -116,32 +116,13 @@ def __init__(token_addr: address, reward_pool: address):
     log Initialized(token_addr)
 
 @external
-def set_reward_pool(addr: address):
-    assert msg.sender == self.admin  # dev: admin only
-    assert addr != ZERO_ADDRESS
-    self.reward_pool = addr
-    log NewRewardPool(addr)
 
 @external
-def commit_transfer_ownership(addr: address):
-    """
-    @notice Transfer ownership of VotingEscrow contract to `addr`
-    @param addr Address to have ownership transferred to
-    """
-    assert msg.sender == self.admin  # dev: admin only
-    self.future_admin = addr
-    log CommitOwnership(addr)
+def symbol() -> String[5]:
+    return "veYFI"
 
+@view
 @external
-def apply_transfer_ownership():
-    """
-    @notice Apply ownership transfer
-    """
-    assert msg.sender == self.admin  # dev: admin only
-    _admin: address = self.future_admin
-    assert _admin != ZERO_ADDRESS  # dev: admin not set
-    self.admin = _admin
-    log ApplyOwnership(_admin)
 
 @external
 @view
