@@ -71,9 +71,7 @@ event Supply:
 
 event Initialized:
     token: address
-
-event NewRewardPool:
-    reward_pool: indexed(address)
+    reward_pool: address
 
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
@@ -101,21 +99,17 @@ decimals: public(uint256)
 reward_pool: public(address)
 
 @external
-def __init__(token_addr: address, _name: String[64], _symbol: String[32]):
+def __init__(token_addr: address, reward_pool: address):
     """
     @notice Contract constructor
-    @param token_addr `ERC20YFI` token address
-    @param _name Token name
-    @param _symbol Token symbol
+    @param token_addr YFI token address
+    @param reward_pool Pool for early exit penalties
     """
-    self.admin = msg.sender
     self.token = token_addr
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
 
-    _decimals: uint256 = ERC20(token_addr).decimals()
-    assert _decimals <= 255
-    self.decimals = _decimals
+    log Initialized(token_addr, reward_pool)
 
     self.name = _name
     self.symbol = _symbol
