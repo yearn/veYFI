@@ -49,9 +49,6 @@ interface ERC20:
 interface IVeYfiRewards:
     def queueNewRewards(_amount: uint256) -> bool: nonpayable
 
-interface Migrator:
-    def migrateLock(_account: address, _amount: uint256):nonpayable
-
 DEPOSIT_FOR_TYPE: constant(int128) = 0
 CREATE_LOCK_TYPE: constant(int128) = 1
 INCREASE_LOCK_AMOUNT: constant(int128) = 2
@@ -98,17 +95,6 @@ event Initialized:
 event NewRewardPool:
     reward_pool: indexed(address)
 
-event Migrate:
-    account: indexed(address)
-    amount: uint256
-    to: indexed(address)
-
-event NextVeContractSet:
-    ve: indexed(address)
-
-event QueuedNextVeContractSet:
-    ve: indexed(address)
-
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
@@ -139,7 +125,6 @@ future_unlocker: public(address)
 
 next_ve_contract: public(address)
 queued_next_ve_contract: public(address)
-migration: public(bool)
 
 reward_pool: public(address)
 
@@ -171,21 +156,6 @@ def set_reward_pool(addr: address):
     assert addr != ZERO_ADDRESS
     self.reward_pool = addr
     log NewRewardPool(addr)
-
-@external
-def set_next_ve_contract(addr: address):
-    assert msg.sender == self.admin  # dev: admin only
-    self.queued_next_ve_contract = addr
-    log QueuedNextVeContractSet(addr)
-
-@external
-def commit_next_ve_contract():
-    assert msg.sender == self.admin  # dev: admin only
-    next: address = self.queued_next_ve_contract 
-    assert next != ZERO_ADDRESS
-    self.next_ve_contract = next
-    self.migration = True
-    log NextVeContractSet(next)
 
 @external
 def commit_transfer_ownership(addr: address):
@@ -237,8 +207,6 @@ def get_last_user_slope(addr: address) -> int128:
     @param addr Address of the user wallet
     @return Value of the slope
     """
-    if self.migration:
-        return 0
     uepoch: uint256 = self.user_point_epoch[addr]
     return self.user_point_history[addr][uepoch].slope
 
@@ -252,8 +220,6 @@ def user_point_history__ts(_addr: address, _idx: uint256) -> uint256:
     @param _idx User epoch number
     @return Epoch time of the checkpoint
     """
-    if self.migration:
-        return 0
     return self.user_point_history[_addr][_idx].ts
 
 
@@ -265,8 +231,6 @@ def locked__end(_addr: address) -> uint256:
     @param _addr User wallet
     @return Epoch time of the lock end
     """
-    if self.migration:
-        return 0
     return self.locked[_addr].end
 
 
@@ -426,7 +390,6 @@ def _deposit_for(_from: address, _addr: address, _value: uint256, unlock_time: u
     @param unlock_time New time when to unlock the tokens, or 0 if unchanged
     @param locked_balance Previous locked amount / timestamp
     """
-    assert(self.migration == False) # dev: must migrate
     _locked: LockedBalance = locked_balance
     supply_before: uint256 = self.supply
 
@@ -582,7 +545,6 @@ def force_withdraw():
     With a 4 years lock on withdraw, you pay 75% penalty during the first year.
     penalty decrease linearly to zero starting when time left is under 3 years.
     """
-    assert(self.migration == False)
     _locked: LockedBalance = self.locked[msg.sender]
     assert block.timestamp < _locked.end, "lock expired"
     
@@ -613,29 +575,6 @@ def force_withdraw():
     log Withdraw(msg.sender, value, block.timestamp)
     log Penalty(msg.sender, penalty, block.timestamp)
     log Supply(supply_before, supply_before - value)
-
-
-@external
-@nonreentrant('lock')
-def migrate():
-    assert(self.next_ve_contract != ZERO_ADDRESS) # dev: no next ve contract
-
-    _locked: LockedBalance = self.locked[msg.sender]
-    assert block.timestamp < _locked.end, "lock expired"
-    value: uint256 = convert(_locked.amount, uint256)
-
-    ERC20(self.token).approve(self.next_ve_contract, value)
-    Migrator(self.next_ve_contract).migrateLock(msg.sender, value)
-
-    old_locked: LockedBalance = _locked
-    _locked.end = 0
-    _locked.amount = 0
-    self.locked[msg.sender] = _locked
-    supply_before: uint256 = self.supply
-    self.supply = supply_before - value
-    self._checkpoint(msg.sender, old_locked, _locked)
-
-    log Migrate(msg.sender, value, self.next_ve_contract)
 
 # The following ERC20/minime-compatible methods are not real balanceOf and supply!
 # They measure the weights for the purpose of voting, so they don't represent
@@ -674,9 +613,6 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
     @param _t Epoch time to return voting power at
     @return User voting power
     """
-    if self.migration:
-        return 0
-
     _epoch: uint256 = self.user_point_epoch[addr]
     if _epoch == 0:
         return 0
@@ -711,8 +647,6 @@ def balanceOfAt(addr: address, _block: uint256) -> uint256:
     @param _block Block to calculate the voting power at
     @return Voting power
     """
-    if self.migration:
-        return 0
     # Copying and pasting totalSupply code because Vyper cannot pass by
     # reference yet
     assert _block <= block.number
@@ -763,9 +697,6 @@ def supply_at(point: Point, t: uint256) -> uint256:
     @param t Time to calculate the total voting power at
     @return Total voting power at that time
     """
-    if self.migration:
-        return 0
-
     last_point: Point = point
     t_i: uint256 = (last_point.ts / WEEK) * WEEK
     for i in range(255):
@@ -794,9 +725,6 @@ def totalSupply(t: uint256 = block.timestamp) -> uint256:
     @dev Adheres to the ERC20 `totalSupply` interface for Aragon compatibility
     @return Total voting power
     """
-    if self.migration:
-        return 0
-
     _epoch: uint256 = self.epoch
     last_point: Point = self.point_history[_epoch]
     return self.supply_at(last_point, t)
@@ -810,9 +738,6 @@ def totalSupplyAt(_block: uint256) -> uint256:
     @param _block Block to calculate the total voting power at
     @return Total voting power at `_block`
     """
-    if self.migration:
-        return 0
-
     assert _block <= block.number
     _epoch: uint256 = self.epoch
     target_epoch: uint256 = self.find_block_epoch(_block, _epoch)
