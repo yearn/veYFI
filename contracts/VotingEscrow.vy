@@ -47,13 +47,6 @@ CREATE_LOCK_TYPE: constant(int128) = 1
 INCREASE_LOCK_AMOUNT: constant(int128) = 2
 INCREASE_UNLOCK_TIME: constant(int128) = 3
 
-
-event CommitOwnership:
-    admin: address
-
-event ApplyOwnership:
-    admin: address
-
 event Deposit:
     deposit_from: indexed(address)
     provider: indexed(address)
@@ -104,12 +97,6 @@ name: public(String[64])
 symbol: public(String[32])
 version: public(String[32])
 decimals: public(uint256)
-
-admin: public(address)  # Can and will be a smart contract
-future_admin: public(address)
-
-next_ve_contract: public(address)
-queued_next_ve_contract: public(address)
 
 reward_pool: public(address)
 
