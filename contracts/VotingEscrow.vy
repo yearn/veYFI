@@ -108,8 +108,8 @@ def decimals() -> uint8:
     return 18
 
 
-@external
 @view
+@external
 def get_last_user_slope(addr: address) -> int128:
     """
     @notice Get the most recently recorded rate of voting power decrease for `addr`
@@ -120,27 +120,16 @@ def get_last_user_slope(addr: address) -> int128:
     return self.user_point_history[addr][uepoch].slope
 
 
-@external
 @view
-def user_point_history__ts(_addr: address, _idx: uint256) -> uint256:
+@external
+def user_point_history__ts(addr: address, idx: uint256) -> uint256:
     """
-    @notice Get the timestamp for checkpoint `_idx` for `_addr`
-    @param _addr User wallet address
-    @param _idx User epoch number
+    @notice Get the timestamp for checkpoint `idx` for `addr`
+    @param addr User wallet address
+    @param idx User epoch number
     @return Epoch time of the checkpoint
     """
-    return self.user_point_history[_addr][_idx].ts
-
-
-@external
-@view
-def locked__end(_addr: address) -> uint256:
-    """
-    @notice Get timestamp when `_addr`'s lock finishes
-    @param _addr User wallet
-    @return Epoch time of the lock end
-    """
-    return self.locked[_addr].end
+    return self.user_point_history[addr][idx].ts
 
 
 @internal
@@ -305,75 +294,75 @@ def _deposit_for(sender: address, user: address, amount: uint256, unlock_time: u
 
 @external
 @nonreentrant('lock')
-def deposit_for(_addr: address, _value: uint256):
+def deposit_for(addr: address, amount: uint256):
     """
-    @notice Deposit `_value` tokens for `_addr` and add to the lock
+    @notice Deposit `amount` tokens for `addr` and add to the lock
     @dev Anyone (even a smart contract) can deposit for someone else, but
          cannot extend their locktime and deposit for a brand new user
-    @param _addr User's wallet address
-    @param _value Amount to add to user's lock
+    @param addr User's wallet address
+    @param amount Amount to add to user's lock
     """
-    _locked: LockedBalance = self.locked[_addr]
+    _locked: LockedBalance = self.locked[addr]
 
-    assert _value > 0  # dev: need non-zero value
+    assert amount > 0  # dev: need non-zero value
     assert _locked.amount > 0  # dev: no existing lock found
     assert _locked.end > block.timestamp  # dev: lock expired, call withdraw
 
-    self._deposit_for(msg.sender, _addr, _value, 0, _locked, DEPOSIT_FOR_TYPE)
+    self._deposit_for(msg.sender, addr, amount, 0, _locked, DEPOSIT_FOR_TYPE)
 
 
 @external
 @nonreentrant('lock')
-def create_lock(_value: uint256, _unlock_time: uint256):
+def create_lock(amount: uint256, unlock_time: uint256):
     """
-    @notice Deposit `_value` tokens for `msg.sender` and lock until `_unlock_time`
-    @param _value Amount to deposit
-    @param _unlock_time Epoch time when tokens unlock, rounded down to whole weeks
+    @notice Deposit `amount` tokens for `msg.sender` and lock until `unlock_time`
+    @param amount Amount to deposit
+    @param unlock_time Epoch time when tokens unlock, rounded down to whole weeks
     """
-    unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # locktime is rounded down to weeks
-    _locked: LockedBalance = self.locked[msg.sender]
+    unlock_week: uint256 = unlock_time / WEEK * WEEK  # locktime is rounded down to weeks
+    locked: LockedBalance = self.locked[msg.sender]
 
-    assert _value > 0  # dev: need non-zero value
-    assert _locked.amount == 0  # dev: withdraw old tokens first
-    assert unlock_time > block.timestamp  #  dev: unlock time must be in the future
-    assert unlock_time <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
+    assert amount > 0  # dev: need non-zero value
+    assert locked.amount == 0  # dev: withdraw old tokens first
+    assert unlock_week > block.timestamp  #  dev: unlock time must be in the future
+    assert unlock_week <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
 
-    self._deposit_for(msg.sender, msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
+    self._deposit_for(msg.sender, msg.sender, amount, unlock_week, locked, CREATE_LOCK_TYPE)
 
 
 @external
 @nonreentrant('lock')
-def increase_amount(_value: uint256):
+def increase_amount(amount: uint256):
     """
-    @notice Deposit `_value` additional tokens for `msg.sender`
+    @notice Deposit `amount` additional tokens for `msg.sender`
             without modifying the unlock time
-    @param _value Amount of tokens to deposit and add to the lock
+    @param amount Amount of tokens to deposit and add to the lock
     """
-    _locked: LockedBalance = self.locked[msg.sender]
+    locked: LockedBalance = self.locked[msg.sender]
 
-    assert _value > 0  # dev: need non-zero value
-    assert _locked.amount > 0  # dev: no existing lock found
-    assert _locked.end > block.timestamp  # dev: lock expired, call withdraw
+    assert amount > 0  # dev: need non-zero value
+    assert locked.amount > 0  # dev: no existing lock found
+    assert locked.end > block.timestamp  # dev: lock expired, call withdraw
 
-    self._deposit_for(msg.sender, msg.sender, _value, 0, _locked, INCREASE_LOCK_AMOUNT)
+    self._deposit_for(msg.sender, msg.sender, amount, 0, locked, INCREASE_LOCK_AMOUNT)
 
 
 @external
 @nonreentrant('lock')
-def increase_unlock_time(_unlock_time: uint256):
+def increase_unlock_time(unlock_time: uint256):
     """
-    @notice Extend the unlock time for `msg.sender` to `_unlock_time`
-    @param _unlock_time New epoch time for unlocking
+    @notice Extend the unlock time for `msg.sender` to `unlock_time`
+    @param unlock_time New epoch time for unlocking
     """
-    _locked: LockedBalance = self.locked[msg.sender]
-    unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
+    locked: LockedBalance = self.locked[msg.sender]
+    unlock_week: uint256 = unlock_time / WEEK * WEEK  # Locktime is rounded down to weeks
 
-    assert _locked.end > block.timestamp  # dev: lock expired
-    assert _locked.amount > 0  # dev: nothing is locked
-    assert unlock_time > _locked.end  # dev: can only increase lock duration
-    assert unlock_time <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
+    assert locked.end > block.timestamp  # dev: lock expired
+    assert locked.amount > 0  # dev: nothing is locked
+    assert unlock_week > locked.end  # dev: can only increase lock duration
+    assert unlock_week <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
 
-    self._deposit_for(msg.sender, msg.sender, 0, unlock_time, _locked, INCREASE_UNLOCK_TIME)
+    self._deposit_for(msg.sender, msg.sender, 0, unlock_week, locked, INCREASE_UNLOCK_TIME)
 
 
 @external
@@ -417,12 +406,12 @@ def withdraw():
     log Supply(supply_before, supply_before - old_locked.amount, block.timestamp)
 
 
-@internal
 @view
-def find_block_epoch(_block: uint256, max_epoch: uint256) -> uint256:
+@internal
+def find_block_epoch(height: uint256, max_epoch: uint256) -> uint256:
     """
-    @notice Binary search to estimate timestamp for block number
-    @param _block Block to find
+    @notice Binary search to estimate timestamp for height number
+    @param height Block to find
     @param max_epoch Don't go beyond this epoch
     @return Approximate timestamp for block
     """
@@ -433,21 +422,21 @@ def find_block_epoch(_block: uint256, max_epoch: uint256) -> uint256:
         if _min >= _max:
             break
         _mid: uint256 = (_min + _max + 1) / 2
-        if self.point_history[_mid].blk <= _block:
+        if self.point_history[_mid].blk <= height:
             _min = _mid
         else:
             _max = _mid - 1
     return _min
 
 
-@external
 @view
-def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
+@external
+def balanceOf(addr: address, ts: uint256 = block.timestamp) -> uint256:
     """
     @notice Get the current voting power for `msg.sender`
     @dev Adheres to the ERC20 `balanceOf` interface for Aragon compatibility
     @param addr User wallet address
-    @param _t Epoch time to return voting power at
+    @param ts Epoch time to return voting power at
     @return User voting power
     """
     _epoch: uint256 = self.user_point_epoch[addr]
@@ -455,7 +444,7 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
         return 0
 
     upoint: Point = self.user_point_history[addr][_epoch]
-    if upoint.ts > _t:
+    if upoint.ts > ts:
         # Binary search
         _min: uint256 = 0
         _max: uint256 = _epoch
@@ -463,29 +452,29 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
             if _min >= _max:
                 break
             _mid: uint256 = (_min + _max + 1) / 2
-            if self.user_point_history[addr][_mid].ts <= _t:
+            if self.user_point_history[addr][_mid].ts <= ts:
                 _min = _mid
             else:
                 _max = _mid - 1
 
         upoint = self.user_point_history[addr][_min]
-    upoint.bias -= upoint.slope * convert(_t - upoint.ts, int128)
+    upoint.bias -= upoint.slope * convert(ts - upoint.ts, int128)
     if upoint.bias < 0:
         upoint.bias = 0
     return convert(upoint.bias, uint256)
 
 
-@external
 @view
-def balanceOfAt(addr: address, _block: uint256) -> uint256:
+@external
+def balanceOfAt(addr: address, height: uint256) -> uint256:
     """
-    @notice Measure voting power of `addr` at block height `_block`
+    @notice Measure voting power of `addr` at block height `height`
     @dev Adheres to MiniMe `balanceOfAt` interface: https://github.com/Giveth/minime
     @param addr User's wallet address
-    @param _block Block to calculate the voting power at
+    @param height Block to calculate the voting power at
     @return Voting power
     """
-    assert _block <= block.number
+    assert height <= block.number
 
     # Binary search
     _min: uint256 = 0
@@ -494,7 +483,7 @@ def balanceOfAt(addr: address, _block: uint256) -> uint256:
         if _min >= _max:
             break
         _mid: uint256 = (_min + _max + 1) / 2
-        if self.user_point_history[addr][_mid].blk <= _block:
+        if self.user_point_history[addr][_mid].blk <= height:
             _min = _mid
         else:
             _max = _mid - 1
@@ -502,7 +491,7 @@ def balanceOfAt(addr: address, _block: uint256) -> uint256:
     upoint: Point = self.user_point_history[addr][_min]
 
     max_epoch: uint256 = self.epoch
-    _epoch: uint256 = self.find_block_epoch(_block, max_epoch)
+    _epoch: uint256 = self.find_block_epoch(height, max_epoch)
     point_0: Point = self.point_history[_epoch]
     d_block: uint256 = 0
     d_t: uint256 = 0
@@ -515,7 +504,7 @@ def balanceOfAt(addr: address, _block: uint256) -> uint256:
         d_t = block.timestamp - point_0.ts
     block_time: uint256 = point_0.ts
     if d_block != 0:
-        block_time += d_t * (_block - point_0.blk) / d_block
+        block_time += d_t * (height - point_0.blk) / d_block
 
     upoint.bias -= upoint.slope * convert(block_time - upoint.ts, int128)
     if upoint.bias >= 0:
@@ -524,13 +513,13 @@ def balanceOfAt(addr: address, _block: uint256) -> uint256:
         return 0
 
 
-@internal
 @view
-def supply_at(point: Point, t: uint256) -> uint256:
+@internal
+def supply_at(point: Point, ts: uint256) -> uint256:
     """
     @notice Calculate total voting power at some point in the past
     @param point The point (bias/slope) to start search from
-    @param t Time to calculate the total voting power at
+    @param ts Time to calculate the total voting power at
     @return Total voting power at that time
     """
     last_point: Point = point
@@ -538,12 +527,12 @@ def supply_at(point: Point, t: uint256) -> uint256:
     for i in range(255):
         t_i += WEEK
         d_slope: int128 = 0
-        if t_i > t:
-            t_i = t
+        if t_i > ts:
+            t_i = ts
         else:
             d_slope = self.slope_changes[t_i]
         last_point.bias -= last_point.slope * convert(t_i - last_point.ts, int128)
-        if t_i == t:
+        if t_i == ts:
             break
         last_point.slope += d_slope
         last_point.ts = t_i
@@ -553,9 +542,9 @@ def supply_at(point: Point, t: uint256) -> uint256:
     return convert(last_point.bias, uint256)
 
 
-@external
 @view
-def totalSupply(t: uint256 = block.timestamp) -> uint256:
+@external
+def totalSupply(ts: uint256 = block.timestamp) -> uint256:
     """
     @notice Calculate total voting power
     @dev Adheres to the ERC20 `totalSupply` interface for Aragon compatibility
@@ -563,30 +552,30 @@ def totalSupply(t: uint256 = block.timestamp) -> uint256:
     """
     _epoch: uint256 = self.epoch
     last_point: Point = self.point_history[_epoch]
-    return self.supply_at(last_point, t)
+    return self.supply_at(last_point, ts)
 
 
-@external
 @view
-def totalSupplyAt(_block: uint256) -> uint256:
+@external
+def totalSupplyAt(height: uint256) -> uint256:
     """
     @notice Calculate total voting power at some point in the past
-    @param _block Block to calculate the total voting power at
-    @return Total voting power at `_block`
+    @param height Block to calculate the total voting power at
+    @return Total voting power at `height`
     """
-    assert _block <= block.number
+    assert height <= block.number
     _epoch: uint256 = self.epoch
-    target_epoch: uint256 = self.find_block_epoch(_block, _epoch)
+    target_epoch: uint256 = self.find_block_epoch(height, _epoch)
 
     point: Point = self.point_history[target_epoch]
     dt: uint256 = 0
     if target_epoch < _epoch:
         point_next: Point = self.point_history[target_epoch + 1]
         if point.blk != point_next.blk:
-            dt = (_block - point.blk) * (point_next.ts - point.ts) / (point_next.blk - point.blk)
+            dt = (height - point.blk) * (point_next.ts - point.ts) / (point_next.blk - point.blk)
     else:
         if point.blk != block.number:
-            dt = (_block - point.blk) * (block.timestamp - point.ts) / (block.number - point.blk)
+            dt = (height - point.blk) * (block.timestamp - point.ts) / (block.number - point.blk)
     # Now dt contains info on how far are we beyond point
 
     return self.supply_at(point, point.ts + dt)   
