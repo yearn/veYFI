@@ -1,4 +1,4 @@
-# @version 0.2.16
+# @version 0.3.3
 """
 @title Voting Escrow
 @author Curve Finance
@@ -252,10 +252,10 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
         # Calculate slopes and biases
         # Kept at zero when they have to
         if old_locked.end > block.timestamp and old_locked.amount > 0:
-            u_old.slope = old_locked.amount / MAXTIME
+            u_old.slope = old_locked.amount / convert(MAXTIME, int128)
             u_old.bias = u_old.slope * convert(old_locked.end - block.timestamp, int128)
         if new_locked.end > block.timestamp and new_locked.amount > 0:
-            u_new.slope = new_locked.amount / MAXTIME
+            u_new.slope = new_locked.amount / convert(MAXTIME, int128)
             u_new.bias = u_new.slope * convert(new_locked.end - block.timestamp, int128)
 
         # Read values of scheduled changes in the slope
