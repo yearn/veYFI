@@ -392,72 +392,42 @@ def increase_unlock_time(_unlock_time: uint256):
 @nonreentrant('lock')
 def withdraw():
     """
-    @notice Withdraw all tokens for `msg.sender`
-    @dev Only possible if the lock has expired
+    @notice Withdraw lock for a sender
+    @dev
+        If a lock has expired, sends a full amount to the sender.
+        If a lock is still active, the sender pays a 75% penalty during the first year
+        and a linearly decreasing penalty from 75% to 0 based on the remaining lock time.
     """
+    old_locked: LockedBalance = self.locked[msg.sender]
+    assert old_locked.amount > 0  # dev: create a lock first to withdraw
+    
+    time_left: uint256 = 0
+    penalty: uint256 = 0
+
+    if old_locked.end > block.timestamp:
+        time_left = old_locked.end - block.timestamp
+        penalty_ratio: uint256 = min(time_left * SCALE / MAXTIME, MAX_PENALTY_RATIO)
+        penalty = old_locked.amount * penalty_ratio / SCALE
+
+    zero_locked: LockedBalance = LockedBalance({amount: 0, end: 0})
+    self.locked[msg.sender] = zero_locked
+
+    supply_before: uint256 = self.supply
+    self.supply = supply_before - old_locked.amount
+
+    self._checkpoint(msg.sender, old_locked, zero_locked)
+    
+    assert ERC20(self.token).transfer(msg.sender, old_locked.amount - penalty)
+    
+    if penalty > 0:
+        assert ERC20(self.token).approve(self.reward_pool, penalty)
+        assert IVeYfiRewards(self.reward_pool).queueNewRewards(penalty)
         
-    old_locked: LockedBalance = self.locked[msg.sender]
-    value: uint256 = convert(old_locked.amount, uint256)
-
-    assert block.timestamp >= old_locked.end  # dev: the lock hasn't expired yet
-
-    zero_locked: LockedBalance = LockedBalance({amount: 0, end: 0})
-    self.locked[msg.sender] = zero_locked
-    supply_before: uint256 = self.supply
-    self.supply = supply_before - value
-
-    # old_locked can have either expired <= timestamp or zero end
-    # _locked has only 0 end
-    # Both can have >= 0 amount
-    self._checkpoint(msg.sender, old_locked, zero_locked)
-
-    assert ERC20(self.token).transfer(msg.sender, value)
-
-    log Withdraw(msg.sender, value, block.timestamp)
-    log Supply(supply_before, supply_before - value)
-
-
-@external
-@nonreentrant('lock')
-def force_withdraw():
-    """
-    @notice Withdraw all tokens for `msg.sender`
-    @dev Will pay a penalty based on time.
-    With a 4 years lock on withdraw, you pay 75% penalty during the first year.
-    Penalty decrease linearly to zero starting when time left is under 3 years.
-    """
-    old_locked: LockedBalance = self.locked[msg.sender]
-    assert block.timestamp < old_locked.end  # dev: lock expired
+        log Penalty(msg.sender, penalty, block.timestamp)
     
-    time_left: uint256 = old_locked.end - block.timestamp
+    log Withdraw(msg.sender, old_locked.amount - penalty, block.timestamp)
+    log Supply(supply_before, supply_before - old_locked.amount)
 
-    value: uint256 = convert(old_locked.amount, uint256)
-
-    zero_locked: LockedBalance = LockedBalance({amount: 0, end: 0})
-    self.locked[msg.sender] = zero_locked
-    supply_before: uint256 = self.supply
-    self.supply = supply_before - value
-
-    # old_locked can have either expired <= timestamp or zero end
-    # _locked has only 0 end
-    # Both can have >= 0 amount
-    self._checkpoint(msg.sender, old_locked, zero_locked)
-    
-    penalty_ratio: uint256 = min(time_left * SCALE / MAXTIME, MAX_PENALTY_RATIO)
-    penalty: uint256 = value * penalty_ratio / SCALE
-    assert ERC20(self.token).transfer(msg.sender, value - penalty)
-    
-    # push the penalty to reward pool
-    assert ERC20(self.token).approve(self.reward_pool, penalty)
-    assert IVeYfiRewards(self.reward_pool).queueNewRewards(penalty)  # dev: penalty not queued
-    log Penalty(msg.sender, penalty, block.timestamp)
-
-    log Withdraw(msg.sender, value, block.timestamp)
-    log Supply(supply_before, supply_before - value)
-
-# The following ERC20/minime-compatible methods are not real balanceOf and supply!
-# They measure the weights for the purpose of voting, so they don't represent
-# real coins.
 
 @internal
 @view
