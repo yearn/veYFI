@@ -22,9 +22,6 @@ struct LockedBalance:
     amount: uint256
     end: uint256
 
-interface IVeYfiRewards:
-    def queueNewRewards(amount: uint256) -> bool: nonpayable
-
 event Deposit:
     sender: indexed(address)
     user: indexed(address)
@@ -397,8 +394,7 @@ def withdraw():
     assert ERC20(self.token).transfer(msg.sender, old_locked.amount - penalty)
     
     if penalty > 0:
-        assert ERC20(self.token).approve(self.reward_pool, penalty)
-        assert IVeYfiRewards(self.reward_pool).queueNewRewards(penalty)
+        assert ERC20(self.token).transfer(self.reward_pool, penalty)
         
         log Penalty(msg.sender, penalty, block.timestamp)
     
