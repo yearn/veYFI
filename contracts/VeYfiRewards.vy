@@ -52,14 +52,14 @@ time_cursor_of: public(HashMap[address, uint256])
 user_epoch_of: public(HashMap[address, uint256])
 
 last_token_time: public(uint256)
-tokens_per_week: public(uint256[1000000000000000])
+tokens_per_week: public(HashMap[uint256, uint256])
 
 voting_escrow: public(address)
 token: public(address)
 total_received: public(uint256)
 token_last_balance: public(uint256)
 
-ve_supply: public(uint256[1000000000000000])  # VE total supply at week bounds
+ve_supply: public(HashMap[uint256, uint256])
 
 admin: public(address)
 future_admin: public(address)
