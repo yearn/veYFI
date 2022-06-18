@@ -10,6 +10,7 @@
      User can unlock funds with a penalty. The unlocker can remove 
      the lock for everyone. 
 """
+from vyper.interfaces import ERC20
 
 # Voting escrow to have time-weighted votes
 # Votes have a weight depending on time, so that users are committed
@@ -37,14 +38,6 @@ struct LockedBalance:
     amount: int128
     end: uint256
 
-
-interface ERC20:
-    def decimals() -> uint256: view
-    def name() -> String[64]: view
-    def symbol() -> String[32]: view
-    def transfer(to: address, amount: uint256) -> bool: nonpayable
-    def transferFrom(spender: address, to: address, amount: uint256) -> bool: nonpayable
-    def approve(spender: address, amount: uint256) -> bool: nonpayable
 
 interface IVeYfiRewards:
     def queueNewRewards(_amount: uint256) -> bool: nonpayable
