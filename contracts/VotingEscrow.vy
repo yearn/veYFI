@@ -69,8 +69,8 @@ supply: public(uint256)
 locked: public(HashMap[address, LockedBalance])
 
 epoch: public(uint256)
-point_history: public(Point[100000000000000000000000000000])  # epoch -> unsigned point
-user_point_history: public(HashMap[address, Point[1000000000]])  # user -> Point[user_epoch]
+point_history: public(HashMap[uint256, Point])  # epoch -> unsigned point
+user_point_history: public(HashMap[address, HashMap[uint256, Point]])  # user -> Point[user_epoch]
 user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 reward_pool: public(address)
