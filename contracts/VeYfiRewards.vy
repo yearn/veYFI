@@ -338,7 +338,7 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
 
 @external
 @nonreentrant('lock')
-def claim_many(_receivers: address[20]) -> bool:
+def claim_many(_receivers: DynArray[address, 20]) -> bool:
     """
     @notice Make multiple fee claims in a single call
     @dev Used to claim for many accounts at once, or to make
