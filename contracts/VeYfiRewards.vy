@@ -29,6 +29,11 @@ event Claimed:
     claim_epoch: uint256
     max_epoch: uint256
 
+event AllowedToRelock:
+    user: indexed(address)
+    relocker: indexed(address)
+    allowed: bool
+
 struct Point:
     bias: int128
     slope: int128  # - dweight / dt
@@ -50,7 +55,7 @@ start_time: public(uint256)
 time_cursor: public(uint256)
 time_cursor_of: public(HashMap[address, uint256])
 user_epoch_of: public(HashMap[address, uint256])
-allow_relock: public(HashMap[address, HashMap[address, bool]])  # user -> relocker -> allowed
+allowed_to_relock: public(HashMap[address, HashMap[address, bool]])  # user -> relocker -> allowed
 
 last_token_time: public(uint256)
 tokens_per_week: public(HashMap[uint256, uint256])
@@ -308,7 +313,7 @@ def claim(user: address = msg.sender, relock: bool = False) -> uint256:
     amount: uint256 = self._claim(user, last_token_time)
     if amount != 0:
         # you can only relock for yourself
-        if relock and msg.sender == user or self.allow_relock[user][msg.sender]:
+        if relock and msg.sender == user or self.allowed_to_relock[user][msg.sender]:
             YFI.approve(VEYFI.address, amount)
             VEYFI.modify_lock(amount, 0, user)
         else:
@@ -374,13 +379,14 @@ def queueNewRewards(_amount: uint256) -> bool:
 
 
 @external
-def allow_relock_for(user: address, allowed: bool) -> bool:
+def toggle_allowed_to_relock(user: address) -> bool:
     """
     @notice Control whether a user or a contract can relock rewards on your behalf
     @param user account to delegate the right to relock
-    @param allowed whether to allow them to relock
     """
-    self.allow_relock[msg.sender][user] = allowed
+    old_value: bool = self.allowed_to_relock[msg.sender][user]
+    self.allowed_to_relock[msg.sender][user] = not old_value
+    log AllowedToRelock(msg.sender, user, not old_value)
     return True
 
 
