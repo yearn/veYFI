@@ -9,6 +9,10 @@ dependencies:
   - name: openzeppelin
     github: OpenZeppelin/openzeppelin-contracts
     version: 4.6.0
+  - name: openzeppelin-upgradeable
+    github: OpenZeppelin/openzeppelin-contracts-upgradeable
+    version: 4.6.0
+  
   - name: vault
     github: yearn/yearn-vaults
     version: 0.4.3
@@ -16,6 +20,7 @@ dependencies:
 solidity:
   import_remapping:
     - "@openzeppelin/contracts=openzeppelin/v4.6.0"
+    - "@openzeppelin-upgradeable/contracts=openzeppelin-upgradeable/v4.6.0"
 
 ethereum:
   local:

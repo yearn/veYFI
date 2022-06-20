@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.14;
 import "./IBaseGauge.sol";
+import "./IERC4626.sol";
 
-interface IGauge is IBaseGauge {
+interface IGauge is IBaseGauge, IERC4626 {
     function initialize(
         address _stakingToken,
         address _rewardToken,
@@ -11,10 +12,6 @@ interface IGauge is IBaseGauge {
         address _ve,
         address _veYfiRewardPool
     ) external;
-
-    function totalSupply() external view returns (uint256);
-
-    function balanceOf(address _account) external view returns (uint256);
 
     function boostedBalanceOf(address _account) external view returns (uint256);
 
