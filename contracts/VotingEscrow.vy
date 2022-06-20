@@ -55,16 +55,16 @@ event Initialized:
     token: address
     reward_pool: address
 
+YFI: immutable(ERC20)
+
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
-MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
+MAX_LOCK_DURATION: constant(uint256) = 4 * 365 * 86400  # 4 years
 SCALE: constant(uint256) = 10 ** 18
 MAX_PENALTY_RATIO: constant(uint256) = SCALE * 3 / 4  # 75% for early exit of max lock
-YFI: immutable(ERC20)
 
 supply: public(uint256)
 locked: public(HashMap[address, LockedBalance])
-
 epoch: public(uint256)
 point_history: public(HashMap[uint256, Point])  # epoch -> unsigned point
 user_point_history: public(HashMap[address, HashMap[uint256, Point]])  # user -> Point[user_epoch]
@@ -147,11 +147,13 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
         # Calculate slopes and biases
         # Kept at zero when they have to
         if old_locked.end > block.timestamp and old_locked.amount > 0:
-            u_old.slope = convert(old_locked.amount / MAXTIME, int128)
-            u_old.bias = u_old.slope * convert(old_locked.end - block.timestamp, int128)
+            u_old.slope = convert(old_locked.amount / MAX_LOCK_DURATION, int128)
+            time_left: uint256 = min(old_locked.end - block.timestamp, MAX_LOCK_DURATION)
+            u_old.bias = u_old.slope * convert(time_left, int128)
         if new_locked.end > block.timestamp and new_locked.amount > 0:
-            u_new.slope = convert(new_locked.amount / MAXTIME, int128)
-            u_new.bias = u_new.slope * convert(new_locked.end - block.timestamp, int128)
+            u_new.slope = convert(new_locked.amount / MAX_LOCK_DURATION, int128)
+            time_left: uint256 = min(new_locked.end - block.timestamp, MAX_LOCK_DURATION)
+            u_new.bias = u_new.slope * convert(time_left, int128)
 
         # Read values of scheduled changes in the slope
         # old_locked.end can be in the past and in the future
@@ -259,10 +261,14 @@ def checkpoint():
 def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sender):
     """
     @notice Create or modify a lock for a user. Support deposits on behalf of a user.
-    @dev Minimum initial deposit is 1 YFI
-    @param amount YFI amount to add to a lock
-    @param unlock_time Unix timestamp when the lock ends, at most 4 years in the future
-    @param user A user to deposit to. If different from msg.sender, unlock_time has no effect.
+    @dev
+        Minimum deposit to create a lock is 1 YFI.
+        You can lock for longer than 4 years, but the max voting power is capped at 4 years.
+        You can only increase lock duration if it has less than 4 years remaining.
+        You can decrease lock duration if it has more than 4 years remaining.
+    @param amount YFI amount to add to a lock. 0 to not modify.
+    @param unlock_time Unix timestamp when the lock ends, must be in the future. 0 to not modify.
+    @param user A user to deposit to. If different from msg.sender, unlock_time has no effect
     """
     old_lock: LockedBalance = self.locked[user]
     new_lock: LockedBalance = old_lock
@@ -272,10 +278,12 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
     # only a user can modify their own unlock time or unwind preference
     if msg.sender == user:
         if unlock_time != 0:
-            unlock_week = unlock_time / WEEK * WEEK  # Locktime is rounded down to weeks    
-            assert unlock_week > old_lock.end  # dev: can only increase lock duration
+            unlock_week = unlock_time / WEEK * WEEK  # Locktime is rounded down to weeks
             assert unlock_week > block.timestamp  #  dev: unlock time must be in the future
-            assert unlock_week <= block.timestamp + MAXTIME  # dev: lock exceeds max duration of 4 years
+            if unlock_week - block.timestamp < MAX_LOCK_DURATION:
+                assert unlock_week > old_lock.end  # dev: can only increase lock duration
+            else:
+                assert unlock_week > block.timestamp + MAX_LOCK_DURATION  # dev: can only decrease to 4 years
             new_lock.end = unlock_week
 
     # create lock
@@ -317,8 +325,8 @@ def withdraw() -> Withdrawn:
     penalty: uint256 = 0
 
     if old_locked.end > block.timestamp:
-        time_left = old_locked.end - block.timestamp
-        penalty_ratio: uint256 = min(time_left * SCALE / MAXTIME, MAX_PENALTY_RATIO)
+        time_left = min(old_locked.end - block.timestamp, MAX_LOCK_DURATION)
+        penalty_ratio: uint256 = min(time_left * SCALE / MAX_LOCK_DURATION, MAX_PENALTY_RATIO)
         penalty = old_locked.amount * penalty_ratio / SCALE
 
     zero_locked: LockedBalance = empty(LockedBalance)
