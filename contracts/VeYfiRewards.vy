@@ -64,7 +64,6 @@ ve_supply: public(HashMap[uint256, uint256])
 admin: public(address)
 future_admin: public(address)
 emergency_return: public(address)
-is_killed: public(bool)
 
 
 @external
@@ -307,7 +306,6 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
     @param _addr Address to claim fees for
     @return uint256 Amount of fees claimed in the call
     """
-    assert not self.is_killed
     if _lock:
         assert _addr == msg.sender 
 
@@ -348,7 +346,6 @@ def claim_many(_receivers: DynArray[address, 20]) -> bool:
                       terminates at the first `ZERO_ADDRESS`.
     @return bool success
     """
-    assert not self.is_killed
 
     if block.timestamp >= self.time_cursor:
         self._checkpoint_total_supply()
