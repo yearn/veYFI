@@ -50,26 +50,13 @@ user_epoch_of: public(HashMap[address, uint256])
 last_token_time: public(uint256)
 tokens_per_week: public(HashMap[uint256, uint256])
 
-voting_escrow: public(address)
-YFI: immutable(ERC20)
 total_received: public(uint256)
 token_last_balance: public(uint256)
-
 ve_supply: public(HashMap[uint256, uint256])
-
-admin: public(address)
-future_admin: public(address)
-emergency_return: public(address)
 
 
 @external
-def __init__(
-    _voting_escrow: address,
-    _start_time: uint256,
-    _token: address,
-    _admin: address,
-    _emergency_return: address
-):
+def __init__(veyfi: address, start_time: uint256, token: address):
     """
     @notice Contract constructor
     @param _voting_escrow VotingEscrow contract address
@@ -79,14 +66,12 @@ def __init__(
     @param _emergency_return Address to transfer `_token` balance to
                              if this contract is killed
     """
-    t: uint256 = _start_time / WEEK * WEEK
+    t: uint256 = start_time / WEEK * WEEK
     self.start_time = t
     self.last_token_time = t
     self.time_cursor = t
-    YFI = ERC20(_token)
-    self.voting_escrow = _voting_escrow
-    self.admin = _admin
-    self.emergency_return = _emergency_return
+    YFI = ERC20(token)
+    VEYFI = VotingYFI(veyfi)
 
 
 @internal
