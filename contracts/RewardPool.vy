@@ -1,29 +1,23 @@
-# @version 0.2.16
+# @version 0.3.4
 """
-@title Curve Fee Distribution
-@author Curve Finance
+@title YFI Reward Pool
+@author Curve Finance, Yearn Finance
 @license MIT
 """
-
 from vyper.interfaces import ERC20
 
-
-interface VotingEscrow:
+interface VotingYFI:
     def user_point_epoch(addr: address) -> uint256: view
     def epoch() -> uint256: view
     def user_point_history(addr: address, loc: uint256) -> Point: view
     def point_history(loc: uint256) -> Point: view
     def checkpoint(): nonpayable
-    def deposit_for(addr: address, amount: uint256): nonpayable
+    def token() -> address: view
+    def modify_lock(amount: uint256, unlock_time: uint256, user: address) -> LockedBalance: nonpayable
 
-event CommitAdmin:
-    admin: address
-
-event ApplyAdmin:
-    admin: address
-
-event ToggleAllowCheckpointToken:
-    toggle_flag: bool
+event Initialized:
+    veyfi: address
+    start_time: uint256
 
 event CheckpointToken:
     time: uint256
@@ -35,6 +29,10 @@ event Claimed:
     claim_epoch: uint256
     max_epoch: uint256
 
+event AllowedToRelock:
+    user: indexed(address)
+    relocker: indexed(address)
+    allowed: bool
 
 struct Point:
     bias: int128
@@ -42,39 +40,33 @@ struct Point:
     ts: uint256
     blk: uint256  # block
 
+struct LockedBalance:
+    amount: uint256
+    end: uint256
 
-TWO_WEEKS: constant(uint256) = 14 * 86400
+
+WEEK: constant(uint256) = 7 * 86400
 TOKEN_CHECKPOINT_DEADLINE: constant(uint256) = 86400
+
+YFI: immutable(ERC20)
+VEYFI: immutable(VotingYFI)
 
 start_time: public(uint256)
 time_cursor: public(uint256)
 time_cursor_of: public(HashMap[address, uint256])
 user_epoch_of: public(HashMap[address, uint256])
+allowed_to_relock: public(HashMap[address, HashMap[address, bool]])  # user -> relocker -> allowed
 
 last_token_time: public(uint256)
-tokens_per_week: public(uint256[1000000000000000])
+tokens_per_week: public(HashMap[uint256, uint256])
 
-voting_escrow: public(address)
-token: public(address)
 total_received: public(uint256)
 token_last_balance: public(uint256)
-
-ve_supply: public(uint256[1000000000000000])  # VE total supply at week bounds
-
-admin: public(address)
-future_admin: public(address)
-emergency_return: public(address)
-is_killed: public(bool)
+ve_supply: public(HashMap[uint256, uint256])
 
 
 @external
-def __init__(
-    _voting_escrow: address,
-    _start_time: uint256,
-    _token: address,
-    _admin: address,
-    _emergency_return: address
-):
+def __init__(veyfi: address, start_time: uint256):
     """
     @notice Contract constructor
     @param _voting_escrow VotingEscrow contract address
@@ -84,30 +76,30 @@ def __init__(
     @param _emergency_return Address to transfer `_token` balance to
                              if this contract is killed
     """
-    t: uint256 = _start_time / TWO_WEEKS * TWO_WEEKS
+    t: uint256 = start_time / WEEK * WEEK
     self.start_time = t
     self.last_token_time = t
     self.time_cursor = t
-    self.token = _token
-    self.voting_escrow = _voting_escrow
-    self.admin = _admin
-    self.emergency_return = _emergency_return
+    VEYFI = VotingYFI(veyfi)
+    YFI = ERC20(VEYFI.token())
+
+    log Initialized(veyfi, start_time)
 
 
 @internal
 def _checkpoint_token():
-    token_balance: uint256 = ERC20(self.token).balanceOf(self)
+    token_balance: uint256 = YFI.balanceOf(self)
     to_distribute: uint256 = token_balance - self.token_last_balance
     self.token_last_balance = token_balance
 
     t: uint256 = self.last_token_time
     since_last: uint256 = block.timestamp - t
     self.last_token_time = block.timestamp
-    this_week: uint256 = t / TWO_WEEKS * TWO_WEEKS
+    this_week: uint256 = t / WEEK * WEEK
     next_week: uint256 = 0
 
     for i in range(20):
-        next_week = this_week + TWO_WEEKS
+        next_week = this_week + WEEK
         if block.timestamp < next_week:
             if since_last == 0 and block.timestamp == t:
                 self.tokens_per_week[this_week] += to_distribute
@@ -134,20 +126,19 @@ def checkpoint_token():
          by the contract owner. Beyond initial distro, it can be enabled for anyone
          to call.
     """
-    assert (msg.sender == self.admin) or\
-           ((block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE))
+    assert block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE
     self._checkpoint_token()
 
 
 @internal
 def _find_timestamp_epoch(ve: address, _timestamp: uint256) -> uint256:
     _min: uint256 = 0
-    _max: uint256 = VotingEscrow(ve).epoch()
+    _max: uint256 = VEYFI.epoch()
     for i in range(128):
         if _min >= _max:
             break
         _mid: uint256 = (_min + _max + 2) / 2
-        pt: Point = VotingEscrow(ve).point_history(_mid)
+        pt: Point = VEYFI.point_history(_mid)
         if pt.ts <= _timestamp:
             _min = _mid
         else:
@@ -164,7 +155,7 @@ def _find_timestamp_user_epoch(ve: address, user: address, _timestamp: uint256, 
         if _min >= _max:
             break
         _mid: uint256 = (_min + _max + 2) / 2
-        pt: Point = VotingEscrow(ve).user_point_history(user, _mid)
+        pt: Point = VEYFI.user_point_history(user, _mid)
         if pt.ts <= _timestamp:
             _min = _mid
         else:
@@ -176,41 +167,38 @@ def _find_timestamp_user_epoch(ve: address, user: address, _timestamp: uint256, 
 @external
 def ve_for_at(_user: address, _timestamp: uint256) -> uint256:
     """
-    @notice Get the veCRV balance for `_user` at `_timestamp`
+    @notice Get the veYFI balance for `_user` at `_timestamp`
     @param _user Address to query balance for
     @param _timestamp Epoch time
-    @return uint256 veCRV balance
+    @return uint256 veYFI balance
     """
-    ve: address = self.voting_escrow
-    max_user_epoch: uint256 = VotingEscrow(ve).user_point_epoch(_user)
-    epoch: uint256 = self._find_timestamp_user_epoch(ve, _user, _timestamp, max_user_epoch)
-    pt: Point = VotingEscrow(ve).user_point_history(_user, epoch)
-
+    max_user_epoch: uint256 = VEYFI.user_point_epoch(_user)
+    epoch: uint256 = self._find_timestamp_user_epoch(VEYFI.address, _user, _timestamp, max_user_epoch)
+    pt: Point = VEYFI.user_point_history(_user, epoch)
     zero: int128 = 0
     return convert(max(pt.bias - pt.slope * convert(_timestamp - pt.ts, int128), zero), uint256)
 
 
 @internal
 def _checkpoint_total_supply():
-    ve: address = self.voting_escrow
     t: uint256 = self.time_cursor
-    rounded_timestamp: uint256 = block.timestamp / TWO_WEEKS * TWO_WEEKS
-    VotingEscrow(ve).checkpoint()
-    zero: int128 = 0
+    rounded_timestamp: uint256 = block.timestamp / WEEK * WEEK
+    VEYFI.checkpoint()
 
     for i in range(20):
         if t > rounded_timestamp:
             break
         else:
-            epoch: uint256 = self._find_timestamp_epoch(ve, t)
-            pt: Point = VotingEscrow(ve).point_history(epoch)
+            epoch: uint256 = self._find_timestamp_epoch(VEYFI.address, t)
+            pt: Point = VEYFI.point_history(epoch)
             dt: int128 = 0
             if t > pt.ts:
                 # If the point is at 0 epoch, it can actually be earlier than the first deposit
                 # Then make dt 0
                 dt = convert(t - pt.ts, int128)
+            zero: int128 = 0
             self.ve_supply[t] = convert(max(pt.bias - pt.slope * dt, zero), uint256)
-        t += TWO_WEEKS
+        t += WEEK
 
     self.time_cursor = t
 
@@ -218,7 +206,7 @@ def _checkpoint_total_supply():
 @external
 def checkpoint_total_supply():
     """
-    @notice Update the veCRV total supply checkpoint
+    @notice Update the veYFI total supply checkpoint
     @dev The checkpoint is also updated by the first claimant each
          new epoch week. This function may be called independently
          of a claim, to reduce claiming gas costs.
@@ -227,12 +215,12 @@ def checkpoint_total_supply():
 
 
 @internal
-def _claim(addr: address, ve: address, _last_token_time: uint256) -> uint256:
+def _claim(addr: address, last_token_time: uint256) -> uint256:
     # Minimal user_epoch is 0 (if user had no point)
     user_epoch: uint256 = 0
     to_distribute: uint256 = 0
 
-    max_user_epoch: uint256 = VotingEscrow(ve).user_point_epoch(addr)
+    max_user_epoch: uint256 = VEYFI.user_point_epoch(addr)
     _start_time: uint256 = self.start_time
 
     if max_user_epoch == 0:
@@ -242,28 +230,28 @@ def _claim(addr: address, ve: address, _last_token_time: uint256) -> uint256:
     week_cursor: uint256 = self.time_cursor_of[addr]
     if week_cursor == 0:
         # Need to do the initial binary search
-        user_epoch = self._find_timestamp_user_epoch(ve, addr, _start_time, max_user_epoch)
+        user_epoch = self._find_timestamp_user_epoch(VEYFI.address, addr, _start_time, max_user_epoch)
     else:
         user_epoch = self.user_epoch_of[addr]
 
     if user_epoch == 0:
         user_epoch = 1
 
-    user_point: Point = VotingEscrow(ve).user_point_history(addr, user_epoch)
+    user_point: Point = VEYFI.user_point_history(addr, user_epoch)
 
     if week_cursor == 0:
-        week_cursor = (user_point.ts + TWO_WEEKS - 1) / TWO_WEEKS * TWO_WEEKS
+        week_cursor = (user_point.ts + WEEK - 1) / WEEK * WEEK
 
-    if week_cursor >= _last_token_time:
+    if week_cursor >= last_token_time:
         return 0
 
     if week_cursor < _start_time:
         week_cursor = _start_time
     old_user_point: Point = empty(Point)
-    zero: int128 = 0
+
     # Iterate over weeks
     for i in range(50):
-        if week_cursor >= _last_token_time:
+        if week_cursor >= last_token_time:
             break
 
         if week_cursor >= user_point.ts and user_epoch <= max_user_epoch:
@@ -272,19 +260,20 @@ def _claim(addr: address, ve: address, _last_token_time: uint256) -> uint256:
             if user_epoch > max_user_epoch:
                 user_point = empty(Point)
             else:
-                user_point = VotingEscrow(ve).user_point_history(addr, user_epoch)
+                user_point = VEYFI.user_point_history(addr, user_epoch)
 
         else:
             # Calc
             # + i * 2 is for rounding errors
             dt: int128 = convert(week_cursor - old_user_point.ts, int128)
+            zero: int128 = 0
             balance_of: uint256 = convert(max(old_user_point.bias - dt * old_user_point.slope, zero), uint256)
             if balance_of == 0 and user_epoch > max_user_epoch:
                 break
             if balance_of > 0:
                 to_distribute += balance_of * self.tokens_per_week[week_cursor] / self.ve_supply[week_cursor]
 
-            week_cursor += TWO_WEEKS
+            week_cursor += WEEK
 
     user_epoch = min(max_user_epoch, user_epoch - 1)
     self.user_epoch_of[addr] = user_epoch
@@ -294,43 +283,41 @@ def _claim(addr: address, ve: address, _last_token_time: uint256) -> uint256:
 
     return to_distribute
 
+
 @external
 @nonreentrant('lock')
-def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
+def claim(user: address = msg.sender, relock: bool = False) -> uint256:
     """
-    @notice Claim fees for `_addr`
-    @dev Each call to claim look at a maximum of 50 user veCRV points.
-         For accounts with many veCRV related actions, this function
-         may need to be called more than once to claim all available
-         fees. In the `Claimed` event that fires, if `claim_epoch` is
-         less than `max_epoch`, the account may claim again.
-    @param _addr Address to claim fees for
-    @return uint256 Amount of fees claimed in the call
+    @notice Claim fees for a user
+    @dev 
+        Each call to claim looks at a maximum of 50 user veYFI points.
+        For accounts with many veYFI related actions, this function
+        may need to be called more than once to claim all available
+        fees. In the `Claimed` event that fires, if `claim_epoch` is
+        less than `max_epoch`, the account may claim again.
+    @param user account to claim the fees for
+    @param relock whether to increase the lock from the claimed fees
+    @return uint256 amount of the claimed fees
     """
-    assert not self.is_killed
-    if _lock:
-        assert _addr == msg.sender 
-
     if block.timestamp >= self.time_cursor:
         self._checkpoint_total_supply()
 
     last_token_time: uint256 = self.last_token_time
 
-    if (block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE):
+    if block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE:
         self._checkpoint_token()
         last_token_time = block.timestamp
 
-    last_token_time = last_token_time / TWO_WEEKS * TWO_WEEKS
+    last_token_time = last_token_time / WEEK * WEEK
 
-    amount: uint256 = self._claim(_addr, self.voting_escrow, last_token_time)
+    amount: uint256 = self._claim(user, last_token_time)
     if amount != 0:
-        token: address = self.token
-        if _lock:
-            voting_escrow: address = self.voting_escrow
-            ERC20(token).approve(voting_escrow, amount)
-            VotingEscrow(voting_escrow).deposit_for(_addr, amount)
+        # you can only relock for yourself
+        if relock and msg.sender == user or self.allowed_to_relock[user][msg.sender]:
+            YFI.approve(VEYFI.address, amount)
+            VEYFI.modify_lock(amount, 0, user)
         else:
-            assert ERC20(token).transfer(_addr, amount)
+            assert YFI.transfer(user, amount)
         self.token_last_balance -= amount
 
     return amount
@@ -338,45 +325,40 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
 
 @external
 @nonreentrant('lock')
-def claim_many(_receivers: address[20]) -> bool:
+def claim_many(receivers: DynArray[address, 20]) -> DynArray[uint256, 20]:
     """
     @notice Make multiple fee claims in a single call
     @dev Used to claim for many accounts at once, or to make
          multiple claims for the same address when that address
-         has significant veCRV history
-    @param _receivers List of addresses to claim for. Claiming
-                      terminates at the first `ZERO_ADDRESS`.
+         has significant veYFI history
+    @param receivers list of addresses to claim for
     @return bool success
     """
-    assert not self.is_killed
+    amounts: DynArray[uint256, 20] = empty(DynArray[uint256, 20])
 
     if block.timestamp >= self.time_cursor:
         self._checkpoint_total_supply()
 
     last_token_time: uint256 = self.last_token_time
 
-    if (block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE):
+    if block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE:
         self._checkpoint_token()
         last_token_time = block.timestamp
 
-    last_token_time = last_token_time / TWO_WEEKS * TWO_WEEKS
-    voting_escrow: address = self.voting_escrow
-    token: address = self.token
+    last_token_time = last_token_time / WEEK * WEEK
     total: uint256 = 0
 
-    for addr in _receivers:
-        if addr == ZERO_ADDRESS:
-            break
-
-        amount: uint256 = self._claim(addr, voting_escrow, last_token_time)
-        if amount != 0:
-            assert ERC20(token).transfer(addr, amount)
+    for addr in receivers:
+        amount: uint256 = self._claim(addr, last_token_time)
+        amounts.append(amount)
+        if amount > 0:
+            assert YFI.transfer(addr, amount)
             total += amount
 
-    if total != 0:
+    if total > 0:
         self.token_last_balance -= total
 
-    return True
+    return amounts
 
 
 @external
@@ -396,6 +378,19 @@ def queueNewRewards(_amount: uint256) -> bool:
     return True
 
 
+@external
+def toggle_allowed_to_relock(user: address) -> bool:
+    """
+    @notice Control whether a user or a contract can relock rewards on your behalf
+    @param user account to delegate the right to relock
+    """
+    old_value: bool = self.allowed_to_relock[msg.sender][user]
+    self.allowed_to_relock[msg.sender][user] = not old_value
+    log AllowedToRelock(msg.sender, user, not old_value)
+    return True
+
+
+@view
 @external
 def commit_admin(_addr: address):
     """
@@ -439,23 +434,17 @@ def recover_balance(_coin: address) -> bool:
     """
     @notice Recover ERC20 tokens from this contract
     @dev Tokens are sent to the emergency return address.
-    @param _coin Token address
+    @param token Token address
     @return bool success
     """
-    assert msg.sender == self.admin #dev: !authorized
-    assert _coin != self.token #dev: protected token
+    assert msg.sender == self.admin
+    assert token != YFI
 
-    amount: uint256 = ERC20(_coin).balanceOf(self)
-    response: Bytes[32] = raw_call(
-        _coin,
-        concat(
-            method_id("transfer(address,uint256)"),
-            convert(self.emergency_return, bytes32),
-            convert(amount, bytes32),
-        ),
-        max_outsize=32,
-    )
-    if len(response) != 0:
-        assert convert(response, bool)
+    amount: uint256 = token.balanceOf(self)
+    return token.transfer(self.emergency_return, amount, default_return_value=True)
 
-    return True
+
+@view
+@external
+def veyfi() -> address:
+    return VEYFI.address
