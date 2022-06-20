@@ -13,7 +13,7 @@
 from vyper.interfaces import ERC20
 
 interface RewardPool:
-    def burn(token: address) -> bool: nonpayable
+    def burn() -> bool: nonpayable
 
 struct Point:
     bias: int128
@@ -397,12 +397,12 @@ def withdraw() -> Withdrawn:
     self.supply = supply_before - old_locked.amount
 
     self._checkpoint(msg.sender, old_locked, zero_locked)
-    
+
     assert ERC20(self.token).transfer(msg.sender, old_locked.amount - penalty)
     
     if penalty > 0:
         assert ERC20(self.token).approve(self.reward_pool, penalty)
-        assert RewardPool(self.reward_pool).burn(self.token)
+        assert RewardPool(self.reward_pool).burn()
 
         log Penalty(msg.sender, penalty, block.timestamp)
     
