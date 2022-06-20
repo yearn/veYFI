@@ -12,8 +12,8 @@ interface VotingYFI:
     def user_point_history(addr: address, loc: uint256) -> Point: view
     def point_history(loc: uint256) -> Point: view
     def checkpoint(): nonpayable
-    def deposit_for(addr: address, amount: uint256): nonpayable
     def token() -> address: view
+    def modify_lock(amount: uint256, unlock_time: uint256, user: address) -> LockedBalance: nonpayable
 
 event Initialized:
     veyfi: address
@@ -34,6 +34,11 @@ struct Point:
     slope: int128  # - dweight / dt
     ts: uint256
     blk: uint256  # block
+
+struct LockedBalance:
+    amount: uint256
+    end: uint256
+
 
 WEEK: constant(uint256) = 7 * 86400
 TOKEN_CHECKPOINT_DEADLINE: constant(uint256) = 86400
@@ -275,19 +280,21 @@ def _claim(addr: address, last_token_time: uint256) -> uint256:
 
 @external
 @nonreentrant('lock')
-def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
+def claim(user: address = msg.sender, relock: bool = False) -> uint256:
     """
-    @notice Claim fees for `_addr`
-    @dev Each call to claim look at a maximum of 50 user veYFI points.
-         For accounts with many veYFI related actions, this function
-         may need to be called more than once to claim all available
-         fees. In the `Claimed` event that fires, if `claim_epoch` is
-         less than `max_epoch`, the account may claim again.
-    @param _addr Address to claim fees for
-    @return uint256 Amount of fees claimed in the call
+    @notice Claim fees for a user
+    @dev 
+        Each call to claim looks at a maximum of 50 user veYFI points.
+        For accounts with many veYFI related actions, this function
+        may need to be called more than once to claim all available
+        fees. In the `Claimed` event that fires, if `claim_epoch` is
+        less than `max_epoch`, the account may claim again.
+    @param user account to claim the fees for
+    @param relock whether to increase the lock from the claimed fees
+    @return uint256 amount of the claimed fees
     """
-    if _lock:
-        assert _addr == msg.sender 
+    if relock:
+        assert user == msg.sender  # dev: you can only relock for yourself
 
     if block.timestamp >= self.time_cursor:
         self._checkpoint_total_supply()
@@ -300,13 +307,13 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
 
     last_token_time = last_token_time / WEEK * WEEK
 
-    amount: uint256 = self._claim(_addr, last_token_time)
+    amount: uint256 = self._claim(user, last_token_time)
     if amount != 0:
-        if _lock:
+        if relock:
             YFI.approve(VEYFI.address, amount)
-            VEYFI.deposit_for(_addr, amount)
+            VEYFI.modify_lock(amount, 0, user)
         else:
-            assert YFI.transfer(_addr, amount)
+            assert YFI.transfer(user, amount)
         self.token_last_balance -= amount
 
     return amount
@@ -314,16 +321,16 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
 
 @external
 @nonreentrant('lock')
-def claim_many(receivers: DynArray[address, 20]) -> bool:
+def claim_many(receivers: DynArray[address, 20]) -> DynArray[uint256, 20]:
     """
     @notice Make multiple fee claims in a single call
     @dev Used to claim for many accounts at once, or to make
          multiple claims for the same address when that address
          has significant veYFI history
-    @param receivers List of addresses to claim for. Claiming
-                      terminates at the first `ZERO_ADDRESS`.
+    @param receivers list of addresses to claim for
     @return bool success
     """
+    amounts: DynArray[uint256, 20] = empty(DynArray[uint256, 20])
 
     if block.timestamp >= self.time_cursor:
         self._checkpoint_total_supply()
@@ -339,6 +346,7 @@ def claim_many(receivers: DynArray[address, 20]) -> bool:
 
     for addr in receivers:
         amount: uint256 = self._claim(addr, last_token_time)
+        amounts.append(amount)
         if amount > 0:
             assert YFI.transfer(addr, amount)
             total += amount
@@ -346,7 +354,7 @@ def claim_many(receivers: DynArray[address, 20]) -> bool:
     if total > 0:
         self.token_last_balance -= total
 
-    return True
+    return amounts
 
 
 @external
