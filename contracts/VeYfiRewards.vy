@@ -55,7 +55,7 @@ last_token_time: public(uint256)
 tokens_per_week: public(HashMap[uint256, uint256])
 
 voting_escrow: public(address)
-token: public(address)
+YFI: immutable(ERC20)
 total_received: public(uint256)
 token_last_balance: public(uint256)
 
@@ -87,7 +87,7 @@ def __init__(
     self.start_time = t
     self.last_token_time = t
     self.time_cursor = t
-    self.token = _token
+    YFI = ERC20(_token)
     self.voting_escrow = _voting_escrow
     self.admin = _admin
     self.emergency_return = _emergency_return
@@ -95,7 +95,7 @@ def __init__(
 
 @internal
 def _checkpoint_token():
-    token_balance: uint256 = ERC20(self.token).balanceOf(self)
+    token_balance: uint256 = YFI.balanceOf(self)
     to_distribute: uint256 = token_balance - self.token_last_balance
     self.token_last_balance = token_balance
 
@@ -322,13 +322,12 @@ def claim(_addr: address = msg.sender, _lock: bool = False) -> uint256:
 
     amount: uint256 = self._claim(_addr, self.voting_escrow, last_token_time)
     if amount != 0:
-        token: address = self.token
         if _lock:
             voting_escrow: address = self.voting_escrow
-            ERC20(token).approve(voting_escrow, amount)
+            YFI.approve(voting_escrow, amount)
             VotingEscrow(voting_escrow).deposit_for(_addr, amount)
         else:
-            assert ERC20(token).transfer(_addr, amount)
+            assert YFI.transfer(_addr, amount)
         self.token_last_balance -= amount
 
     return amount
@@ -358,7 +357,6 @@ def claim_many(_receivers: DynArray[address, 20]) -> bool:
 
     last_token_time = last_token_time / WEEK * WEEK
     voting_escrow: address = self.voting_escrow
-    token: address = self.token
     total: uint256 = 0
 
     for addr in _receivers:
@@ -367,7 +365,7 @@ def claim_many(_receivers: DynArray[address, 20]) -> bool:
 
         amount: uint256 = self._claim(addr, voting_escrow, last_token_time)
         if amount != 0:
-            assert ERC20(token).transfer(addr, amount)
+            assert YFI.transfer(addr, amount)
             total += amount
 
     if total != 0:
@@ -440,7 +438,13 @@ def recover_balance(_coin: address) -> bool:
     @return bool success
     """
     assert msg.sender == self.admin
-    assert _coin != self.token
+    assert token != YFI
 
-    amount: uint256 = ERC20(_coin).balanceOf(self)
-    return ERC20(_coin).transfer(self.emergency_return, amount, default_return_value=True)
+    amount: uint256 = token.balanceOf(self)
+    return token.transfer(self.emergency_return, amount, default_return_value=True)
+
+
+@view
+@external
+def token() -> address:
+    return YFI.address

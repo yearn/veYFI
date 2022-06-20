@@ -67,8 +67,8 @@ WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
 SCALE: constant(uint256) = 10 ** 18
 MAX_PENALTY_RATIO: constant(uint256) = SCALE * 3 / 4  # 75% for early exit of max lock
+YFI: immutable(ERC20)
 
-token: public(address)
 supply: public(uint256)
 locked: public(HashMap[address, LockedBalance])
 
@@ -87,7 +87,7 @@ def __init__(token_addr: address, reward_pool: address):
     @param token_addr YFI token address
     @param reward_pool Pool for early exit penalties
     """
-    self.token = token_addr
+    YFI = ERC20(token_addr)
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
 
@@ -290,7 +290,7 @@ def _deposit_for(sender: address, user: address, amount: uint256, unlock_time: u
     self._checkpoint(user, old_locked, new_locked)
 
     if amount > 0:
-        assert ERC20(self.token).transferFrom(sender, self, amount)
+        assert YFI.transferFrom(sender, self, amount)
 
     log Deposit(sender, user, action, amount, new_locked.end, block.timestamp)
     log Supply(supply_before, supply_before + amount, block.timestamp)
@@ -398,10 +398,10 @@ def withdraw() -> Withdrawn:
 
     self._checkpoint(msg.sender, old_locked, zero_locked)
 
-    assert ERC20(self.token).transfer(msg.sender, old_locked.amount - penalty)
+    assert YFI.transfer(msg.sender, old_locked.amount - penalty)
     
     if penalty > 0:
-        assert ERC20(self.token).approve(self.reward_pool, penalty)
+        assert YFI.approve(self.reward_pool, penalty)
         assert RewardPool(self.reward_pool).burn()
 
         log Penalty(msg.sender, penalty, block.timestamp)
@@ -585,3 +585,9 @@ def totalSupplyAt(height: uint256) -> uint256:
     # Now dt contains info on how far are we beyond point
 
     return self.supply_at(point, point.ts + dt)   
+
+
+@view
+@external
+def token() -> address:
+    return YFI.address
