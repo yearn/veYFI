@@ -24,22 +24,14 @@ struct Point:
 struct LockedBalance:
     amount: uint256
     end: uint256
-    unwind: bool
 
 struct Withdrawn:
     amount: uint256
     penalty: uint256
 
-enum DepositAction:
-    DEPOSIT_FOR
-    CREATE_LOCK
-    INCREASE_AMOUNT
-    INCREASE_DURATION
-
-event Deposit:
+event ModifyLock:
     sender: indexed(address)
     user: indexed(address)
-    action: indexed(DepositAction)
     amount: uint256
     locktime: uint256
     ts: uint256
@@ -262,112 +254,50 @@ def checkpoint():
     self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
 
 
-@internal
-def _deposit_for(sender: address, user: address, amount: uint256, unlock_time: uint256, old_locked: LockedBalance, action: DepositAction):
+@external
+@nonreentrant('lock')
+def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sender):
     """
-    @notice Deposit and lock tokens for a user
-    @param sender The account which funds the deposit
-    @param user The account which receives the deposit
-    @param amount Amount to deposit
-    @param unlock_time The new unlock time, 0 for unchanged
-    @param locked_balance Previous locked balance of the user
-    @param action Action type of the operation
+    @notice Create or modify a lock for a user. Support deposits on behalf of a user.
+    @dev Minimum initial deposit is 1 YFI
+    @param amount YFI amount to add to a lock
+    @param unlock_time Unix timestamp when the lock ends, at most 4 years in the future
+    @param user A user to deposit to. If different from msg.sender, unlock_time has no effect.
     """
+    old_lock: LockedBalance = self.locked[user]
+    new_lock: LockedBalance = old_lock
+    new_lock.amount += amount
+
+    unlock_week: uint256 = 0
+    # only a user can modify their own unlock time or unwind preference
+    if msg.sender == user:
+        if unlock_time != 0:
+            unlock_week = unlock_time / WEEK * WEEK  # Locktime is rounded down to weeks    
+            assert unlock_week > old_lock.end  # dev: can only increase lock duration
+            assert unlock_week > block.timestamp  #  dev: unlock time must be in the future
+            assert unlock_week <= block.timestamp + MAXTIME  # dev: lock exceeds max duration of 4 years
+            new_lock.end = unlock_week
+
+    # create lock
+    if old_lock.amount == 0 and old_lock.end == 0:
+        assert msg.sender == user  # dev: you can only create a lock for yourself
+        assert amount >= 10 ** 18  # dev: minimum amount is 1 YFI
+        assert unlock_week != 0  # dev: must specify unlock time in the future
+    # modify lock
+    else:
+        assert old_lock.end > block.timestamp  # dev: lock expired
+
     supply_before: uint256 = self.supply
-
-    new_locked: LockedBalance = old_locked
     self.supply = supply_before + amount
-    # Adding to existing lock, or if a lock is expired - creating a new one
-    new_locked.amount += amount
-    if unlock_time != 0:
-        new_locked.end = unlock_time
-
-    self.locked[user] = new_locked
-
-    # Possibilities:
-    # Both old_locked.end could be current or expired (>/< block.timestamp)
-    # value == 0 (extend lock) or value > 0 (add to lock or extend lock)
-    # _locked.end > block.timestamp (always)
-    self._checkpoint(user, old_locked, new_locked)
+    self.locked[user] = new_lock
+    
+    self._checkpoint(user, old_lock, new_lock)
 
     if amount > 0:
-        assert YFI.transferFrom(sender, self, amount)
+        assert YFI.transferFrom(msg.sender, self, amount)
 
-    log Deposit(sender, user, action, amount, new_locked.end, block.timestamp)
     log Supply(supply_before, supply_before + amount, block.timestamp)
-
-
-@external
-@nonreentrant('lock')
-def deposit_for(addr: address, amount: uint256):
-    """
-    @notice Deposit `amount` tokens for `addr` and add to the lock
-    @dev Anyone (even a smart contract) can deposit for someone else, but
-         cannot extend their locktime and deposit for a brand new user
-    @param addr User's wallet address
-    @param amount Amount to add to user's lock
-    """
-    _locked: LockedBalance = self.locked[addr]
-
-    assert amount > 0  # dev: need non-zero value
-    assert _locked.amount > 0  # dev: no existing lock found
-    assert _locked.end > block.timestamp  # dev: lock expired, call withdraw
-
-    self._deposit_for(msg.sender, addr, amount, 0, _locked, DepositAction.DEPOSIT_FOR)
-
-
-@external
-@nonreentrant('lock')
-def create_lock(amount: uint256, unlock_time: uint256):
-    """
-    @notice Deposit `amount` tokens for `msg.sender` and lock until `unlock_time`
-    @param amount Amount to deposit
-    @param unlock_time Epoch time when tokens unlock, rounded down to whole weeks
-    """
-    unlock_week: uint256 = unlock_time / WEEK * WEEK  # locktime is rounded down to weeks
-    locked: LockedBalance = self.locked[msg.sender]
-
-    assert amount > 0  # dev: need non-zero value
-    assert locked.amount == 0  # dev: withdraw old tokens first
-    assert unlock_week > block.timestamp  #  dev: unlock time must be in the future
-    assert unlock_week <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
-
-    self._deposit_for(msg.sender, msg.sender, amount, unlock_week, locked, DepositAction.CREATE_LOCK)
-
-
-@external
-@nonreentrant('lock')
-def increase_amount(amount: uint256):
-    """
-    @notice Deposit `amount` additional tokens for `msg.sender`
-            without modifying the unlock time
-    @param amount Amount of tokens to deposit and add to the lock
-    """
-    locked: LockedBalance = self.locked[msg.sender]
-
-    assert amount > 0  # dev: need non-zero value
-    assert locked.amount > 0  # dev: no existing lock found
-    assert locked.end > block.timestamp  # dev: lock expired, call withdraw
-
-    self._deposit_for(msg.sender, msg.sender, amount, 0, locked, DepositAction.INCREASE_AMOUNT)
-
-
-@external
-@nonreentrant('lock')
-def increase_unlock_time(unlock_time: uint256):
-    """
-    @notice Extend the unlock time for `msg.sender` to `unlock_time`
-    @param unlock_time New epoch time for unlocking
-    """
-    locked: LockedBalance = self.locked[msg.sender]
-    unlock_week: uint256 = unlock_time / WEEK * WEEK  # Locktime is rounded down to weeks
-
-    assert locked.end > block.timestamp  # dev: lock expired
-    assert locked.amount > 0  # dev: nothing is locked
-    assert unlock_week > locked.end  # dev: can only increase lock duration
-    assert unlock_week <= block.timestamp + MAXTIME  # dev: voting lock can be 4 years max
-
-    self._deposit_for(msg.sender, msg.sender, 0, unlock_week, locked, DepositAction.INCREASE_DURATION)
+    log ModifyLock(msg.sender, user, new_lock.amount, new_lock.end, block.timestamp)
 
 
 @external
@@ -391,7 +321,7 @@ def withdraw() -> Withdrawn:
         penalty_ratio: uint256 = min(time_left * SCALE / MAXTIME, MAX_PENALTY_RATIO)
         penalty = old_locked.amount * penalty_ratio / SCALE
 
-    zero_locked: LockedBalance = LockedBalance({amount: 0, end: 0, unwind: False})
+    zero_locked: LockedBalance = empty(LockedBalance)
     self.locked[msg.sender] = zero_locked
 
     supply_before: uint256 = self.supply
