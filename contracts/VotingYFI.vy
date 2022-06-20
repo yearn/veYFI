@@ -284,7 +284,7 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
             if unlock_week - block.timestamp < MAX_LOCK_DURATION:
                 assert unlock_week > old_lock.end  # dev: can only increase lock duration
             else:
-                assert unlock_week > block.timestamp + MAX_LOCK_DURATION  # dev: can only decrease to 4 years
+                assert unlock_week > block.timestamp + MAX_LOCK_DURATION  # dev: can only decrease to ≥4 years
             new_lock.end = unlock_week
 
     # create lock
