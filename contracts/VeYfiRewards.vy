@@ -13,15 +13,11 @@ interface VotingYFI:
     def point_history(loc: uint256) -> Point: view
     def checkpoint(): nonpayable
     def deposit_for(addr: address, amount: uint256): nonpayable
+    def token() -> address: view
 
-event CommitAdmin:
-    admin: address
-
-event ApplyAdmin:
-    admin: address
-
-event ToggleAllowCheckpointToken:
-    toggle_flag: bool
+event Initialized:
+    veyfi: address
+    start_time: uint256
 
 event CheckpointToken:
     time: uint256
@@ -59,7 +55,7 @@ ve_supply: public(HashMap[uint256, uint256])
 
 
 @external
-def __init__(veyfi: address, start_time: uint256, token: address):
+def __init__(veyfi: address, start_time: uint256):
     """
     @notice Contract constructor
     @param _voting_escrow VotingEscrow contract address
@@ -73,8 +69,10 @@ def __init__(veyfi: address, start_time: uint256, token: address):
     self.start_time = t
     self.last_token_time = t
     self.time_cursor = t
-    YFI = ERC20(token)
     VEYFI = VotingYFI(veyfi)
+    YFI = ERC20(VEYFI.token())
+
+    log Initialized(veyfi, start_time)
 
 
 @internal
