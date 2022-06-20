@@ -50,6 +50,7 @@ start_time: public(uint256)
 time_cursor: public(uint256)
 time_cursor_of: public(HashMap[address, uint256])
 user_epoch_of: public(HashMap[address, uint256])
+allow_relock: public(HashMap[address, HashMap[address, bool]])  # user -> relocker -> allowed
 
 last_token_time: public(uint256)
 tokens_per_week: public(HashMap[uint256, uint256])
@@ -293,15 +294,12 @@ def claim(user: address = msg.sender, relock: bool = False) -> uint256:
     @param relock whether to increase the lock from the claimed fees
     @return uint256 amount of the claimed fees
     """
-    if relock:
-        assert user == msg.sender  # dev: you can only relock for yourself
-
     if block.timestamp >= self.time_cursor:
         self._checkpoint_total_supply()
 
     last_token_time: uint256 = self.last_token_time
 
-    if (block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE):
+    if block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE:
         self._checkpoint_token()
         last_token_time = block.timestamp
 
@@ -309,7 +307,8 @@ def claim(user: address = msg.sender, relock: bool = False) -> uint256:
 
     amount: uint256 = self._claim(user, last_token_time)
     if amount != 0:
-        if relock:
+        # you can only relock for yourself
+        if relock and msg.sender == user or self.allow_relock[user][msg.sender]:
             YFI.approve(VEYFI.address, amount)
             VEYFI.modify_lock(amount, 0, user)
         else:
@@ -371,6 +370,17 @@ def queueNewRewards(_amount: uint256) -> bool:
     if (block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE):
         self._checkpoint_token()
 
+    return True
+
+
+@external
+def allow_relock_for(user: address, allowed: bool) -> bool:
+    """
+    @notice Control whether a user or a contract can relock rewards on your behalf
+    @param user account to delegate the right to relock
+    @param allowed whether to allow them to relock
+    """
+    self.allow_relock[msg.sender][user] = allowed
     return True
 
 
