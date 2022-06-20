@@ -1,6 +1,6 @@
 # @version 0.3.4
 """
-@title Yearn Fee Distributor
+@title YFI Reward Pool
 @author Curve Finance, Yearn Finance
 @license MIT
 """

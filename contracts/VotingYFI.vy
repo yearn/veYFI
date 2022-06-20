@@ -7,7 +7,8 @@
     Votes have a weight depending on time, so that users are
     committed to the future of whatever they are voting for.
 @dev
-    Vote weight decays linearly over time. Lock time cannot be more than 4 years.
+    The voting power is capped at 4 years, but the lock can exceed that duration.
+    Vote weight decays linearly over time.
     A user can unlock funds early incurring a penalty.
 """
 from vyper.interfaces import ERC20
@@ -275,7 +276,7 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
     new_lock.amount += amount
 
     unlock_week: uint256 = 0
-    # only a user can modify their own unlock time or unwind preference
+    # only a user can modify their own unlock time
     if msg.sender == user:
         if unlock_time != 0:
             unlock_week = unlock_time / WEEK * WEEK  # Locktime is rounded down to weeks
