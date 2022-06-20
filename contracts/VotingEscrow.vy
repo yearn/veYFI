@@ -25,6 +25,10 @@ struct LockedBalance:
     amount: uint256
     end: uint256
 
+struct Withdrawn:
+    amount: uint256
+    penalty: uint256
+
 enum DepositAction:
     DEPOSIT_FOR
     CREATE_LOCK
@@ -367,7 +371,7 @@ def increase_unlock_time(unlock_time: uint256):
 
 @external
 @nonreentrant('lock')
-def withdraw():
+def withdraw() -> Withdrawn:
     """
     @notice Withdraw lock for a sender
     @dev
@@ -404,6 +408,8 @@ def withdraw():
     
     log Withdraw(msg.sender, old_locked.amount - penalty, block.timestamp)
     log Supply(supply_before, supply_before - old_locked.amount, block.timestamp)
+
+    return Withdrawn({amount: old_locked.amount - penalty, penalty: penalty})
 
 
 @view
