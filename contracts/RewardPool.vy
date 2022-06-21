@@ -69,12 +69,9 @@ ve_supply: public(HashMap[uint256, uint256])
 def __init__(veyfi: address, start_time: uint256):
     """
     @notice Contract constructor
-    @param _voting_escrow VotingEscrow contract address
-    @param _start_time Epoch time for fee distribution to start
-    @param _token Token that is distributed
-    @param _admin Admin address
-    @param _emergency_return Address to transfer `_token` balance to
-                             if this contract is killed
+    @param veyfi VotingYFI contract address
+    @param start_time Epoch time for fee distribution to start
+    @param token Fee token address (YFI)
     """
     t: uint256 = start_time / WEEK * WEEK
     self.start_time = t
@@ -324,56 +321,16 @@ def claim(user: address = msg.sender, relock: bool = False) -> uint256:
 
 
 @external
-@nonreentrant('lock')
-def claim_many(receivers: DynArray[address, 20]) -> DynArray[uint256, 20]:
+def burn() -> bool:
     """
-    @notice Make multiple fee claims in a single call
-    @dev Used to claim for many accounts at once, or to make
-         multiple claims for the same address when that address
-         has significant veYFI history
-    @param receivers list of addresses to claim for
+    @notice Receive YFI into the contract and trigger a token checkpoint
     @return bool success
     """
-    amounts: DynArray[uint256, 20] = empty(DynArray[uint256, 20])
-
-    if block.timestamp >= self.time_cursor:
-        self._checkpoint_total_supply()
-
-    last_token_time: uint256 = self.last_token_time
-
-    if block.timestamp > last_token_time + TOKEN_CHECKPOINT_DEADLINE:
-        self._checkpoint_token()
-        last_token_time = block.timestamp
-
-    last_token_time = last_token_time / WEEK * WEEK
-    total: uint256 = 0
-
-    for addr in receivers:
-        amount: uint256 = self._claim(addr, last_token_time)
-        amounts.append(amount)
-        if amount > 0:
-            assert YFI.transfer(addr, amount)
-            total += amount
-
-    if total > 0:
-        self.token_last_balance -= total
-
-    return amounts
-
-
-@external
-def queueNewRewards(_amount: uint256) -> bool:
-    """
-    @notice Receive token to distribute into the contract and trigger a token checkpoint
-    @param _amount Amount to transfer
-    @return bool success
-    """
-    assert _amount > 0
-    assert not self.is_killed
-
-    ERC20(self.token).transferFrom(msg.sender, self, _amount)
-    if (block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE):
-        self._checkpoint_token()
+    amount: uint256 = YFI.allowance(msg.sender, self)
+    if amount > 0:
+        YFI.transferFrom(msg.sender, self, amount)
+        if block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE:
+            self._checkpoint_token()
 
     return True
 
@@ -392,56 +349,8 @@ def toggle_allowed_to_relock(user: address) -> bool:
 
 @view
 @external
-def commit_admin(_addr: address):
-    """
-    @notice Commit transfer of ownership
-    @param _addr New admin address
-    """
-    assert msg.sender == self.admin  # dev: access denied
-    self.future_admin = _addr
-    log CommitAdmin(_addr)
-
-
-@external
-def apply_admin():
-    """
-    @notice Apply transfer of ownership
-    """
-    assert msg.sender == self.admin
-    assert self.future_admin != ZERO_ADDRESS
-    future_admin: address = self.future_admin
-    self.admin = future_admin
-    log ApplyAdmin(future_admin)
-
-
-@external
-def kill_me():
-    """
-    @notice Kill the contract
-    @dev Killing transfers the entire tokens to be distributed balance to the emergency return address
-         and blocks the ability to claim or burn. The contract cannot be unkilled.
-    """
-    assert msg.sender == self.admin
-
-    self.is_killed = True
-
-    token: address = self.token
-    assert ERC20(token).transfer(self.emergency_return, ERC20(token).balanceOf(self))
-
-
-@external
-def recover_balance(_coin: address) -> bool:
-    """
-    @notice Recover ERC20 tokens from this contract
-    @dev Tokens are sent to the emergency return address.
-    @param token Token address
-    @return bool success
-    """
-    assert msg.sender == self.admin
-    assert token != YFI
-
-    amount: uint256 = token.balanceOf(self)
-    return token.transfer(self.emergency_return, amount, default_return_value=True)
+def token() -> address:
+    return YFI.address
 
 
 @view
