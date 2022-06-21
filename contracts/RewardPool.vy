@@ -12,11 +12,11 @@ interface VotingYFI:
     def user_point_history(addr: address, loc: uint256) -> Point: view
     def point_history(loc: uint256) -> Point: view
     def checkpoint(): nonpayable
-    def token() -> address: view
+    def token() -> ERC20: view
     def modify_lock(amount: uint256, unlock_time: uint256, user: address) -> LockedBalance: nonpayable
 
 event Initialized:
-    veyfi: address
+    veyfi: VotingYFI
     start_time: uint256
 
 event CheckpointToken:
@@ -66,7 +66,7 @@ ve_supply: public(HashMap[uint256, uint256])
 
 
 @external
-def __init__(veyfi: address, start_time: uint256):
+def __init__(veyfi: VotingYFI, start_time: uint256):
     """
     @notice Contract constructor
     @param veyfi VotingYFI contract address
@@ -77,8 +77,8 @@ def __init__(veyfi: address, start_time: uint256):
     self.start_time = t
     self.last_token_time = t
     self.time_cursor = t
-    VEYFI = VotingYFI(veyfi)
-    YFI = ERC20(VEYFI.token())
+    VEYFI = veyfi
+    YFI = VEYFI.token()
 
     log Initialized(veyfi, start_time)
 
@@ -349,11 +349,11 @@ def toggle_allowed_to_relock(user: address) -> bool:
 
 @view
 @external
-def token() -> address:
-    return YFI.address
+def token() -> ERC20:
+    return YFI
 
 
 @view
 @external
-def veyfi() -> address:
-    return VEYFI.address
+def veyfi() -> VotingYFI:
+    return VEYFI

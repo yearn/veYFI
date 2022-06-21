@@ -53,10 +53,11 @@ event Supply:
     ts: uint256
 
 event Initialized:
-    token: address
-    reward_pool: address
+    token: ERC20
+    reward_pool: RewardPool
 
 YFI: immutable(ERC20)
+REWARD_POOL: immutable(RewardPool)
 
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
@@ -71,39 +72,21 @@ point_history: public(HashMap[uint256, Point])  # epoch -> unsigned point
 user_point_history: public(HashMap[address, HashMap[uint256, Point]])  # user -> Point[user_epoch]
 user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
-reward_pool: public(address)
 
 
 @external
-def __init__(token_addr: address, reward_pool: address):
+def __init__(token: ERC20, reward_pool: RewardPool):
     """
     @notice Contract constructor
-    @param token_addr YFI token address
+    @param token YFI token address
     @param reward_pool Pool for early exit penalties
     """
-    YFI = ERC20(token_addr)
+    YFI = token
+    REWARD_POOL = reward_pool
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
 
-    log Initialized(token_addr, reward_pool)
-
-
-@view
-@external
-def name() -> String[10]:
-    return "Voting YFI"
-
-
-@view
-@external
-def symbol() -> String[5]:
-    return "veYFI"
-
-
-@view
-@external
-def decimals() -> uint8:
-    return 18
+    log Initialized(token, reward_pool)
 
 
 @view
@@ -343,8 +326,8 @@ def withdraw() -> Withdrawn:
     assert YFI.transfer(msg.sender, old_locked.amount - penalty)
     
     if penalty > 0:
-        assert YFI.approve(self.reward_pool, penalty)
-        assert RewardPool(self.reward_pool).burn()
+        assert YFI.approve(REWARD_POOL.address, penalty)
+        assert REWARD_POOL.burn()
 
         log Penalty(msg.sender, penalty, block.timestamp)
     
@@ -531,5 +514,23 @@ def totalSupplyAt(height: uint256) -> uint256:
 
 @view
 @external
-def token() -> address:
-    return YFI.address
+def token() -> ERC20:
+    return YFI
+
+
+@view
+@external
+def name() -> String[10]:
+    return "Voting YFI"
+
+
+@view
+@external
+def symbol() -> String[5]:
+    return "veYFI"
+
+
+@view
+@external
+def decimals() -> uint8:
+    return 18
