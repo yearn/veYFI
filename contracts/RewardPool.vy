@@ -71,7 +71,6 @@ def __init__(veyfi: VotingYFI, start_time: uint256):
     @notice Contract constructor
     @param veyfi VotingYFI contract address
     @param start_time Epoch time for fee distribution to start
-    @param token Fee token address (YFI)
     """
     t: uint256 = start_time / WEEK * WEEK
     self.start_time = t

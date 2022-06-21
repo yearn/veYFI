@@ -520,6 +520,12 @@ def token() -> ERC20:
 
 @view
 @external
+def reward_pool() -> RewardPool:
+    return REWARD_POOL
+
+
+@view
+@external
 def name() -> String[10]:
     return "Voting YFI"
 
