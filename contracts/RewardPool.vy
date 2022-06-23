@@ -309,7 +309,7 @@ def claim(user: address = msg.sender, relock: bool = False) -> uint256:
     amount: uint256 = self._claim(user, last_token_time)
     if amount != 0:
         # you can only relock for yourself
-        if relock and msg.sender == user or self.allowed_to_relock[user][msg.sender]:
+        if relock and (msg.sender == user or self.allowed_to_relock[user][msg.sender]):
             YFI.approve(VEYFI.address, amount)
             VEYFI.modify_lock(amount, 0, user)
         else:
