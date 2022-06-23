@@ -114,12 +114,12 @@ def user_point_history__ts(addr: address, idx: uint256) -> uint256:
 
 
 @internal
-def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBalance):
+def _checkpoint(addr: address, old_lock: LockedBalance, new_lock: LockedBalance):
     """
     @notice Record global and per-user data to checkpoint
     @param addr User's wallet address. No user checkpoint if 0x0
-    @param old_locked Previous locked amount, end time and wind down preference for the user
-    @param new_locked New locked amount, end time and wind down preference for the user
+    @param old_lock Previous locked amount, end time and wind down preference for the user
+    @param new_lock New locked amount, end time and wind down preference for the user
     """
     u_old: Point = empty(Point)
     u_new: Point = empty(Point)
@@ -130,24 +130,24 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     if addr != ZERO_ADDRESS:
         # Calculate slopes and biases
         # Kept at zero when they have to
-        if old_locked.end > block.timestamp and old_locked.amount > 0:
-            u_old.slope = convert(old_locked.amount / MAX_LOCK_DURATION, int128)
-            time_left: uint256 = min(old_locked.end - block.timestamp, MAX_LOCK_DURATION)
+        if old_lock.end > block.timestamp and old_lock.amount > 0:
+            u_old.slope = convert(old_lock.amount / MAX_LOCK_DURATION, int128)
+            time_left: uint256 = min(old_lock.end - block.timestamp, MAX_LOCK_DURATION)
             u_old.bias = u_old.slope * convert(time_left, int128)
-        if new_locked.end > block.timestamp and new_locked.amount > 0:
-            u_new.slope = convert(new_locked.amount / MAX_LOCK_DURATION, int128)
-            time_left: uint256 = min(new_locked.end - block.timestamp, MAX_LOCK_DURATION)
+        if new_lock.end > block.timestamp and new_lock.amount > 0:
+            u_new.slope = convert(new_lock.amount / MAX_LOCK_DURATION, int128)
+            time_left: uint256 = min(new_lock.end - block.timestamp, MAX_LOCK_DURATION)
             u_new.bias = u_new.slope * convert(time_left, int128)
 
         # Read values of scheduled changes in the slope
-        # old_locked.end can be in the past and in the future
-        # new_locked.end must be in the future unless everything has expired, then 0
-        old_dslope = self.slope_changes[old_locked.end]
-        if new_locked.end != 0:
-            if new_locked.end == old_locked.end:
+        # old_lock.end can be in the past and in the future
+        # new_lock.end must be in the future unless everything has expired, then 0
+        old_dslope = self.slope_changes[old_lock.end]
+        if new_lock.end != 0:
+            if new_lock.end == old_lock.end:
                 new_dslope = old_dslope
             else:
-                new_dslope = self.slope_changes[new_locked.end]
+                new_dslope = self.slope_changes[new_lock.end]
 
     last_point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
     if epoch > 0:
@@ -208,19 +208,19 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
 
     if addr != ZERO_ADDRESS:
         # Schedule the slope changes (slope is going down)
-        # We subtract new_user_slope from [new_locked.end]
-        # and add old_user_slope to [old_locked.end]
-        if old_locked.end > block.timestamp:
+        # We subtract new_user_slope from [new_lock.end]
+        # and add old_user_slope to [old_lock.end]
+        if old_lock.end > block.timestamp:
             # old_dslope was <something> - u_old.slope, so we cancel that
             old_dslope += u_old.slope
-            if new_locked.end == old_locked.end:
+            if new_lock.end == old_lock.end:
                 old_dslope -= u_new.slope  # It was a new deposit, not extension
-            self.slope_changes[old_locked.end] = old_dslope
+            self.slope_changes[old_lock.end] = old_dslope
 
-        if new_locked.end > block.timestamp:
-            if new_locked.end > old_locked.end:
+        if new_lock.end > block.timestamp:
+            if new_lock.end > old_lock.end:
                 new_dslope -= u_new.slope  # old slope disappeared at this point
-                self.slope_changes[new_locked.end] = new_dslope
+                self.slope_changes[new_lock.end] = new_dslope
             # else: we recorded it already in old_dslope
 
         # Now handle user history
