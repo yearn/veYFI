@@ -67,11 +67,14 @@ MAX_PENALTY_RATIO: constant(uint256) = SCALE * 3 / 4  # 75% for early exit of ma
 
 supply: public(uint256)
 locked: public(HashMap[address, LockedBalance])
+# global history
 epoch: public(uint256)
 point_history: public(HashMap[uint256, Point])  # epoch -> unsigned point
-user_point_history: public(HashMap[address, HashMap[uint256, Point]])  # user -> Point[user_epoch]
-user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
+# per-user history
+user_epoch: public(HashMap[address, uint256])
+user_point_history: public(HashMap[address, HashMap[uint256, Point]])
+user_slope_changes: public(HashMap[uint256, int128])
 
 
 @external
@@ -97,7 +100,7 @@ def get_last_user_slope(addr: address) -> int128:
     @param addr Address of the user wallet
     @return Value of the slope
     """
-    uepoch: uint256 = self.user_point_epoch[addr]
+    uepoch: uint256 = self.user_epoch[addr]
     return self.user_point_history[addr][uepoch].slope
 
 
@@ -224,9 +227,9 @@ def _checkpoint(addr: address, old_lock: LockedBalance, new_lock: LockedBalance)
             # else: we recorded it already in old_dslope
 
         # Now handle user history
-        user_epoch: uint256 = self.user_point_epoch[addr] + 1
+        user_epoch: uint256 = self.user_epoch[addr] + 1
 
-        self.user_point_epoch[addr] = user_epoch
+        self.user_epoch[addr] = user_epoch
         u_new.ts = block.timestamp
         u_new.blk = block.number
         self.user_point_history[addr][user_epoch] = u_new
@@ -370,7 +373,7 @@ def balanceOf(addr: address, ts: uint256 = block.timestamp) -> uint256:
     @param ts Epoch time to return voting power at
     @return User voting power
     """
-    epoch: uint256 = self.user_point_epoch[addr]
+    epoch: uint256 = self.user_epoch[addr]
     if epoch == 0:
         return 0
 
@@ -409,7 +412,7 @@ def balanceOfAt(addr: address, height: uint256) -> uint256:
 
     # Binary search
     _min: uint256 = 0
-    _max: uint256 = self.user_point_epoch[addr]
+    _max: uint256 = self.user_epoch[addr]
     for i in range(128):  # Will be always enough for 128-bit numbers
         if _min >= _max:
             break
