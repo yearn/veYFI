@@ -94,26 +94,14 @@ def __init__(token: ERC20, reward_pool: RewardPool):
 
 @view
 @external
-def get_last_user_slope(addr: address) -> int128:
+def get_last_user_point(addr: address) -> Point:
     """
-    @notice Get the most recently recorded rate of voting power decrease for `addr`
+    @notice Get the most recently recorded point for a user
     @param addr Address of the user wallet
-    @return Value of the slope
+    @return Last recorded point
     """
-    uepoch: uint256 = self.user_epoch[addr]
-    return self.user_point_history[addr][uepoch].slope
-
-
-@view
-@external
-def user_point_history__ts(addr: address, idx: uint256) -> uint256:
-    """
-    @notice Get the timestamp for checkpoint `idx` for `addr`
-    @param addr User wallet address
-    @param idx User epoch number
-    @return Epoch time of the checkpoint
-    """
-    return self.user_point_history[addr][idx].ts
+    epoch: uint256 = self.user_epoch[addr]
+    return self.user_point_history[addr][epoch]
 
 
 @internal
