@@ -26,6 +26,10 @@ struct LockedBalance:
     amount: uint256
     end: uint256
 
+struct Kink:
+    slope: int128
+    ts: uint256
+
 struct Withdrawn:
     amount: uint256
     penalty: uint256
@@ -74,7 +78,7 @@ slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 # per-user history
 user_epoch: public(HashMap[address, uint256])
 user_point_history: public(HashMap[address, HashMap[uint256, Point]])
-user_slope_changes: public(HashMap[uint256, int128])
+user_slope_changes: public(HashMap[address, HashMap[uint256, int128]])
 
 
 @external
@@ -104,123 +108,133 @@ def get_last_user_point(addr: address) -> Point:
     return self.user_point_history[addr][epoch]
 
 
+@pure
 @internal
-def _checkpoint(addr: address, old_lock: LockedBalance, new_lock: LockedBalance):
-    """
-    @notice Record global and per-user data to checkpoint
-    @param addr User's wallet address. No user checkpoint if 0x0
-    @param old_lock Previous locked amount, end time and wind down preference for the user
-    @param new_lock New locked amount, end time and wind down preference for the user
-    """
-    u_old: Point = empty(Point)
-    u_new: Point = empty(Point)
-    old_dslope: int128 = 0
-    new_dslope: int128 = 0
-    epoch: uint256 = self.epoch
+def round_to_week(ts: uint256) -> uint256:
+    return ts / WEEK * WEEK
 
-    if addr != ZERO_ADDRESS:
-        # Calculate slopes and biases
-        # Kept at zero when they have to
-        if old_lock.end > block.timestamp and old_lock.amount > 0:
-            u_old.slope = convert(old_lock.amount / MAX_LOCK_DURATION, int128)
-            time_left: uint256 = min(old_lock.end - block.timestamp, MAX_LOCK_DURATION)
-            u_old.bias = u_old.slope * convert(time_left, int128)
-        if new_lock.end > block.timestamp and new_lock.amount > 0:
-            u_new.slope = convert(new_lock.amount / MAX_LOCK_DURATION, int128)
-            time_left: uint256 = min(new_lock.end - block.timestamp, MAX_LOCK_DURATION)
-            u_new.bias = u_new.slope * convert(time_left, int128)
 
-        # Read values of scheduled changes in the slope
-        # old_lock.end can be in the past and in the future
-        # new_lock.end must be in the future unless everything has expired, then 0
-        old_dslope = self.slope_changes[old_lock.end]
-        if new_lock.end != 0:
-            if new_lock.end == old_lock.end:
-                new_dslope = old_dslope
-            else:
-                new_dslope = self.slope_changes[new_lock.end]
+@view
+@internal
+def lock_to_point(lock: LockedBalance) -> Point:
+    point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
+    if lock.amount > 0:
+        # the lock is longer than the max duration
+        if lock.end > block.timestamp + MAX_LOCK_DURATION:
+            point.slope = 0
+            point.bias = convert(lock.amount, int128)
+        # the lock ends in the future but shorter than max duration
+        elif lock.end > block.timestamp:
+            point.slope = convert(lock.amount / MAX_LOCK_DURATION, int128)
+            point.bias = point.slope * convert(lock.end - block.timestamp, int128)
 
+    return point
+
+
+@view
+@internal
+def lock_to_kink(lock: LockedBalance) -> Kink:
+    kink: Kink = empty(Kink)
+    # the lock is longer than the max duration
+    if lock.amount > 0 and lock.end > self.round_to_week(block.timestamp + MAX_LOCK_DURATION):
+        kink.ts = self.round_to_week(lock.end - MAX_LOCK_DURATION)
+        kink.slope = convert(lock.amount / MAX_LOCK_DURATION, int128)
+
+    return kink
+
+
+@internal
+def _checkpoint_user(addr: address, old_lock: LockedBalance, new_lock: LockedBalance) -> Point[2]:
+    old_point: Point = self.lock_to_point(old_lock)
+    new_point: Point = self.lock_to_point(new_lock)
+
+    old_kink: Kink = self.lock_to_kink(old_lock)
+    new_kink: Kink = self.lock_to_kink(new_lock)
+
+    # schedule slope changes for the lock end
+    if old_point.slope != 0 and old_lock.end > block.timestamp:
+        self.slope_changes[old_lock.end] += old_point.slope
+        self.user_slope_changes[addr][old_lock.end] += old_point.slope
+    if new_point.slope != 0 and new_lock.end > block.timestamp:
+        self.slope_changes[new_lock.end] -= new_point.slope
+        self.user_slope_changes[addr][new_lock.end] -= new_point.slope
+
+    # schedule kinks for locks longer than max duration
+    if old_kink.slope != 0:
+        self.slope_changes[old_kink.ts] -= old_kink.slope
+        self.user_slope_changes[addr][old_kink.ts] -= old_kink.slope
+    if new_kink.slope != 0:
+        self.slope_changes[new_kink.ts] += new_kink.slope
+        self.user_slope_changes[addr][new_kink.ts] += new_kink.slope
+
+    self.user_epoch[addr] += 1
+    self.user_point_history[addr][self.user_epoch[addr]] = new_point
+
+    return [old_point, new_point]
+
+@internal
+def _checkpoint_global() -> Point:
     last_point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
+    epoch: uint256 = self.epoch
     if epoch > 0:
         last_point = self.point_history[epoch]
     last_checkpoint: uint256 = last_point.ts
     # initial_last_point is used for extrapolation to calculate block number
-    # (approximately, for *At methods) and to save them
-    # as we cannot figure that out exactly from inside the contract
     initial_last_point: Point = last_point
     block_slope: uint256 = 0  # dblock/dt
     if block.timestamp > last_point.ts:
         block_slope = SCALE * (block.number - last_point.blk) / (block.timestamp - last_point.ts)
-    # If last point is already recorded in this block, slope=0
-    # But that's ok b/c we know the block in such case
-
-    # Go over weeks to fill history and calculate what the current point is
-    t_i: uint256 = (last_checkpoint / WEEK) * WEEK
+    
+    # apply weekly slope changes and record weekly global snapshots
+    t_i: uint256 = self.round_to_week(last_checkpoint)
     for i in range(255):
-        # Hopefully it won't happen that this won't get used in 5 years!
-        # If it does, users will be able to withdraw but vote weight will be broken
-        t_i += WEEK
-        d_slope: int128 = 0
-        if t_i > block.timestamp:
-            t_i = block.timestamp
-        else:
-            d_slope = self.slope_changes[t_i]
+        t_i = min(t_i + WEEK, block.timestamp)
         last_point.bias -= last_point.slope * convert(t_i - last_checkpoint, int128)
-        last_point.slope += d_slope
-        if last_point.bias < 0:  # This can happen
-            last_point.bias = 0
-        if last_point.slope < 0:  # This cannot happen - just in case
-            last_point.slope = 0
+        last_point.slope += self.slope_changes[t_i]  # will read 0 if not aligned to week
+        last_point.bias = max(0, last_point.bias)  # this can happen
+        last_point.slope = max(0, last_point.slope)  # this shouldn't happen
         last_checkpoint = t_i
         last_point.ts = t_i
         last_point.blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / SCALE
         epoch += 1
-        if t_i == block.timestamp:
+        if t_i < block.timestamp:
+            self.point_history[epoch] = last_point
+        # skip last week
+        else:
             last_point.blk = block.number
             break
-        else:
-            self.point_history[epoch] = last_point
 
     self.epoch = epoch
-    # Now point_history is filled until t=now
+    return last_point
 
+
+@internal
+def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBalance):
+    """
+    @notice Record global and per-user data to checkpoint
+    @param addr User's wallet address. No user checkpoint if 0x0
+    @param old_locked Pevious locked amount / end lock time for the user
+    @param new_locked New locked amount / end lock time for the user
+    """
+    user_points: Point[2] = empty(Point[2])
+
+    if addr != ZERO_ADDRESS:
+        user_points = self._checkpoint_user(addr, old_locked, new_locked)
+
+    # fill point_history until t=now
+    last_point: Point = self._checkpoint_global()
+    
+    # only affects the last checkpoint at t=now
     if addr != ZERO_ADDRESS:
         # If last point was in this block, the slope change has been applied already
         # But in such case we have 0 slope(s)
-        last_point.slope += (u_new.slope - u_old.slope)
-        last_point.bias += (u_new.bias - u_old.bias)
-        if last_point.slope < 0:
-            last_point.slope = 0
-        if last_point.bias < 0:
-            last_point.bias = 0
+        last_point.slope += (user_points[1].slope - user_points[0].slope)
+        last_point.bias += (user_points[1].bias - user_points[0].bias)
+        last_point.slope = max(0, last_point.slope)
+        last_point.bias = max(0, last_point.bias)
 
     # Record the changed point into history
-    self.point_history[epoch] = last_point
-
-    if addr != ZERO_ADDRESS:
-        # Schedule the slope changes (slope is going down)
-        # We subtract new_user_slope from [new_lock.end]
-        # and add old_user_slope to [old_lock.end]
-        if old_lock.end > block.timestamp:
-            # old_dslope was <something> - u_old.slope, so we cancel that
-            old_dslope += u_old.slope
-            if new_lock.end == old_lock.end:
-                old_dslope -= u_new.slope  # It was a new deposit, not extension
-            self.slope_changes[old_lock.end] = old_dslope
-
-        if new_lock.end > block.timestamp:
-            if new_lock.end > old_lock.end:
-                new_dslope -= u_new.slope  # old slope disappeared at this point
-                self.slope_changes[new_lock.end] = new_dslope
-            # else: we recorded it already in old_dslope
-
-        # Now handle user history
-        user_epoch: uint256 = self.user_epoch[addr] + 1
-
-        self.user_epoch[addr] = user_epoch
-        u_new.ts = block.timestamp
-        u_new.blk = block.number
-        self.user_point_history[addr][user_epoch] = u_new
+    self.point_history[self.epoch] = last_point
 
 
 @external
@@ -253,7 +267,7 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
     # only a user can modify their own unlock time
     if msg.sender == user:
         if unlock_time != 0:
-            unlock_week = unlock_time / WEEK * WEEK  # Locktime is rounded down to weeks
+            unlock_week = self.round_to_week(unlock_time)  # Locktime is rounded down to weeks
             assert unlock_week > block.timestamp  #  dev: unlock time must be in the future
             if unlock_week - block.timestamp < MAX_LOCK_DURATION:
                 assert unlock_week > old_lock.end  # dev: can only increase lock duration
@@ -445,7 +459,7 @@ def supply_at(point: Point, ts: uint256) -> uint256:
     @return Total voting power at that time
     """
     last_point: Point = point
-    t_i: uint256 = (last_point.ts / WEEK) * WEEK
+    t_i: uint256 = self.round_to_week(last_point.ts)
     for i in range(255):
         t_i += WEEK
         d_slope: int128 = 0
