@@ -14,7 +14,7 @@
 from vyper.interfaces import ERC20
 
 interface RewardPool:
-    def burn() -> bool: nonpayable
+    def burn(amount: uint256) -> bool: nonpayable
 
 struct Point:
     bias: int128
@@ -267,7 +267,7 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
     # only a user can modify their own unlock time
     if msg.sender == user:
         if unlock_time != 0:
-            unlock_week = self.round_to_week(unlock_time)  # Locktime is rounded down to weeks
+            unlock_week = self.round_to_week(unlock_time)  # locktime is rounded down to weeks
             assert unlock_week > block.timestamp  #  dev: unlock time must be in the future
             if unlock_week - block.timestamp < MAX_LOCK_DURATION:
                 assert unlock_week > old_lock.end  # dev: can only increase lock duration
@@ -332,7 +332,7 @@ def withdraw() -> Withdrawn:
     
     if penalty > 0:
         assert YFI.approve(REWARD_POOL.address, penalty)
-        assert REWARD_POOL.burn()
+        assert REWARD_POOL.burn(penalty)
 
         log Penalty(msg.sender, penalty, block.timestamp)
     
