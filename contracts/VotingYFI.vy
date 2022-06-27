@@ -465,35 +465,6 @@ def getPriorVotes(user: address, height: uint256) -> uint256:
 
 
 @view
-@internal
-def supply_at(point: Point, ts: uint256) -> uint256:
-    """
-    @notice Calculate total voting power at some point in the past
-    @param point The point (bias/slope) to start search from
-    @param ts Time to calculate the total voting power at
-    @return Total voting power at that time
-    """
-    last_point: Point = point
-    t_i: uint256 = self.round_to_week(last_point.ts)
-    for i in range(255):
-        t_i += WEEK
-        d_slope: int128 = 0
-        if t_i > ts:
-            t_i = ts
-        else:
-            d_slope = self.slope_changes[self][t_i]
-        last_point.bias -= last_point.slope * convert(t_i - last_point.ts, int128)
-        if t_i == ts:
-            break
-        last_point.slope += d_slope
-        last_point.ts = t_i
-
-    if last_point.bias < 0:
-        last_point.bias = 0
-    return convert(last_point.bias, uint256)
-
-
-@view
 @external
 def totalSupply(ts: uint256 = block.timestamp) -> uint256:
     """
@@ -503,7 +474,8 @@ def totalSupply(ts: uint256 = block.timestamp) -> uint256:
     """
     epoch: uint256 = self.epoch[self]
     last_point: Point = self.point_history[self][epoch]
-    return self.supply_at(last_point, ts)
+    last_point = self.replay_slope_changes(self, last_point, ts)
+    return convert(last_point.bias, uint256)
 
 
 @view
@@ -527,9 +499,10 @@ def totalSupplyAt(height: uint256) -> uint256:
     else:
         if point.blk != block.number:
             dt = (height - point.blk) * (block.timestamp - point.ts) / (block.number - point.blk)
-    # Now dt contains info on how far are we beyond point
 
-    return self.supply_at(point, point.ts + dt)   
+    # Now dt contains info on how far are we beyond point
+    point = self.replay_slope_changes(self, point, point.ts + dt)
+    return convert(point.bias, uint256)
 
 
 @view
