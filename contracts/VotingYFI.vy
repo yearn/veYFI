@@ -246,7 +246,6 @@ def checkpoint():
 
 
 @external
-@nonreentrant('lock')
 def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sender) -> LockedBalance:
     """
     @notice Create or modify a lock for a user. Support deposits on behalf of a user.
@@ -300,7 +299,6 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
 
 
 @external
-@nonreentrant('lock')
 def withdraw() -> Withdrawn:
     """
     @notice Withdraw lock for a sender
