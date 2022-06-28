@@ -14,7 +14,7 @@
 from vyper.interfaces import ERC20
 
 interface RewardPool:
-    def burn() -> bool: nonpayable
+    def burn(amount: uint256) -> bool: nonpayable
 
 struct Point:
     bias: int128
@@ -25,6 +25,10 @@ struct Point:
 struct LockedBalance:
     amount: uint256
     end: uint256
+
+struct Kink:
+    slope: int128
+    ts: uint256
 
 struct Withdrawn:
     amount: uint256
@@ -53,10 +57,11 @@ event Supply:
     ts: uint256
 
 event Initialized:
-    token: address
-    reward_pool: address
+    token: ERC20
+    reward_pool: RewardPool
 
 YFI: immutable(ERC20)
+REWARD_POOL: immutable(RewardPool)
 
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
@@ -66,187 +71,167 @@ MAX_PENALTY_RATIO: constant(uint256) = SCALE * 3 / 4  # 75% for early exit of ma
 
 supply: public(uint256)
 locked: public(HashMap[address, LockedBalance])
-epoch: public(uint256)
-point_history: public(HashMap[uint256, Point])  # epoch -> unsigned point
-user_point_history: public(HashMap[address, HashMap[uint256, Point]])  # user -> Point[user_epoch]
-user_point_epoch: public(HashMap[address, uint256])
-slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
-reward_pool: public(address)
+# history
+epoch: public(HashMap[address, uint256])
+point_history: public(HashMap[address, HashMap[uint256, Point]])  # epoch -> unsigned point
+slope_changes: public(HashMap[address, HashMap[uint256, int128]])  # time -> signed slope change
 
 
 @external
-def __init__(token_addr: address, reward_pool: address):
+def __init__(token: ERC20, reward_pool: RewardPool):
     """
     @notice Contract constructor
-    @param token_addr YFI token address
+    @param token YFI token address
     @param reward_pool Pool for early exit penalties
     """
-    YFI = ERC20(token_addr)
-    self.point_history[0].blk = block.number
-    self.point_history[0].ts = block.timestamp
+    YFI = token
+    REWARD_POOL = reward_pool
+    self.point_history[self][0].blk = block.number
+    self.point_history[self][0].ts = block.timestamp
 
-    log Initialized(token_addr, reward_pool)
-
-
-@view
-@external
-def name() -> String[10]:
-    return "Voting YFI"
+    log Initialized(token, reward_pool)
 
 
 @view
 @external
-def symbol() -> String[5]:
-    return "veYFI"
-
-
-@view
-@external
-def decimals() -> uint8:
-    return 18
-
-
-@view
-@external
-def get_last_user_slope(addr: address) -> int128:
+def get_last_user_point(addr: address) -> Point:
     """
-    @notice Get the most recently recorded rate of voting power decrease for `addr`
+    @notice Get the most recently recorded point for a user
     @param addr Address of the user wallet
-    @return Value of the slope
+    @return Last recorded point
     """
-    uepoch: uint256 = self.user_point_epoch[addr]
-    return self.user_point_history[addr][uepoch].slope
+    epoch: uint256 = self.epoch[addr]
+    return self.point_history[addr][epoch]
+
+
+@pure
+@internal
+def round_to_week(ts: uint256) -> uint256:
+    return ts / WEEK * WEEK
 
 
 @view
-@external
-def user_point_history__ts(addr: address, idx: uint256) -> uint256:
-    """
-    @notice Get the timestamp for checkpoint `idx` for `addr`
-    @param addr User wallet address
-    @param idx User epoch number
-    @return Epoch time of the checkpoint
-    """
-    return self.user_point_history[addr][idx].ts
+@internal
+def lock_to_point(lock: LockedBalance) -> Point:
+    point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
+    if lock.amount > 0:
+        # the lock is longer than the max duration
+        if lock.end > block.timestamp + MAX_LOCK_DURATION:
+            point.slope = 0
+            point.bias = convert(lock.amount, int128)
+        # the lock ends in the future but shorter than max duration
+        elif lock.end > block.timestamp:
+            point.slope = convert(lock.amount / MAX_LOCK_DURATION, int128)
+            point.bias = point.slope * convert(lock.end - block.timestamp, int128)
+
+    return point
+
+
+@view
+@internal
+def lock_to_kink(lock: LockedBalance) -> Kink:
+    kink: Kink = empty(Kink)
+    # the lock is longer than the max duration
+    if lock.amount > 0 and lock.end > self.round_to_week(block.timestamp + MAX_LOCK_DURATION):
+        kink.ts = self.round_to_week(lock.end - MAX_LOCK_DURATION)
+        kink.slope = convert(lock.amount / MAX_LOCK_DURATION, int128)
+
+    return kink
 
 
 @internal
-def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBalance):
-    """
-    @notice Record global and per-user data to checkpoint
-    @param addr User's wallet address. No user checkpoint if 0x0
-    @param old_locked Previous locked amount, end time and wind down preference for the user
-    @param new_locked New locked amount, end time and wind down preference for the user
-    """
-    u_old: Point = empty(Point)
-    u_new: Point = empty(Point)
-    old_dslope: int128 = 0
-    new_dslope: int128 = 0
-    epoch: uint256 = self.epoch
+def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBalance) -> Point[2]:
+    old_point: Point = self.lock_to_point(old_lock)
+    new_point: Point = self.lock_to_point(new_lock)
 
-    if addr != ZERO_ADDRESS:
-        # Calculate slopes and biases
-        # Kept at zero when they have to
-        if old_locked.end > block.timestamp and old_locked.amount > 0:
-            u_old.slope = convert(old_locked.amount / MAX_LOCK_DURATION, int128)
-            time_left: uint256 = min(old_locked.end - block.timestamp, MAX_LOCK_DURATION)
-            u_old.bias = u_old.slope * convert(time_left, int128)
-        if new_locked.end > block.timestamp and new_locked.amount > 0:
-            u_new.slope = convert(new_locked.amount / MAX_LOCK_DURATION, int128)
-            time_left: uint256 = min(new_locked.end - block.timestamp, MAX_LOCK_DURATION)
-            u_new.bias = u_new.slope * convert(time_left, int128)
+    old_kink: Kink = self.lock_to_kink(old_lock)
+    new_kink: Kink = self.lock_to_kink(new_lock)
 
-        # Read values of scheduled changes in the slope
-        # old_locked.end can be in the past and in the future
-        # new_locked.end must be in the future unless everything has expired, then 0
-        old_dslope = self.slope_changes[old_locked.end]
-        if new_locked.end != 0:
-            if new_locked.end == old_locked.end:
-                new_dslope = old_dslope
-            else:
-                new_dslope = self.slope_changes[new_locked.end]
+    # schedule slope changes for the lock end
+    if old_point.slope != 0 and old_lock.end > block.timestamp:
+        self.slope_changes[self][old_lock.end] += old_point.slope
+        self.slope_changes[user][old_lock.end] += old_point.slope
+    if new_point.slope != 0 and new_lock.end > block.timestamp:
+        self.slope_changes[self][new_lock.end] -= new_point.slope
+        self.slope_changes[user][new_lock.end] -= new_point.slope
 
+    # schedule kinks for locks longer than max duration
+    if old_kink.slope != 0:
+        self.slope_changes[self][old_kink.ts] -= old_kink.slope
+        self.slope_changes[user][old_kink.ts] -= old_kink.slope
+    if new_kink.slope != 0:
+        self.slope_changes[self][new_kink.ts] += new_kink.slope
+        self.slope_changes[user][new_kink.ts] += new_kink.slope
+
+    self.epoch[user] += 1
+    self.point_history[user][self.epoch[user]] = new_point
+
+    return [old_point, new_point]
+
+@internal
+def _checkpoint_global() -> Point:
     last_point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
+    epoch: uint256 = self.epoch[self]
     if epoch > 0:
-        last_point = self.point_history[epoch]
+        last_point = self.point_history[self][epoch]
     last_checkpoint: uint256 = last_point.ts
     # initial_last_point is used for extrapolation to calculate block number
-    # (approximately, for *At methods) and to save them
-    # as we cannot figure that out exactly from inside the contract
     initial_last_point: Point = last_point
     block_slope: uint256 = 0  # dblock/dt
     if block.timestamp > last_point.ts:
         block_slope = SCALE * (block.number - last_point.blk) / (block.timestamp - last_point.ts)
-    # If last point is already recorded in this block, slope=0
-    # But that's ok b/c we know the block in such case
-
-    # Go over weeks to fill history and calculate what the current point is
-    t_i: uint256 = (last_checkpoint / WEEK) * WEEK
+    
+    # apply weekly slope changes and record weekly global snapshots
+    t_i: uint256 = self.round_to_week(last_checkpoint)
     for i in range(255):
-        # Hopefully it won't happen that this won't get used in 5 years!
-        # If it does, users will be able to withdraw but vote weight will be broken
-        t_i += WEEK
-        d_slope: int128 = 0
-        if t_i > block.timestamp:
-            t_i = block.timestamp
-        else:
-            d_slope = self.slope_changes[t_i]
+        t_i = min(t_i + WEEK, block.timestamp)
         last_point.bias -= last_point.slope * convert(t_i - last_checkpoint, int128)
-        last_point.slope += d_slope
-        if last_point.bias < 0:  # This can happen
-            last_point.bias = 0
-        if last_point.slope < 0:  # This cannot happen - just in case
-            last_point.slope = 0
+        last_point.slope += self.slope_changes[self][t_i]  # will read 0 if not aligned to week
+        last_point.bias = max(0, last_point.bias)  # this can happen
+        last_point.slope = max(0, last_point.slope)  # this shouldn't happen
         last_checkpoint = t_i
         last_point.ts = t_i
         last_point.blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / SCALE
         epoch += 1
-        if t_i == block.timestamp:
+        if t_i < block.timestamp:
+            self.point_history[self][epoch] = last_point
+        # skip last week
+        else:
             last_point.blk = block.number
             break
-        else:
-            self.point_history[epoch] = last_point
 
-    self.epoch = epoch
-    # Now point_history is filled until t=now
+    self.epoch[self] = epoch
+    return last_point
 
-    if addr != ZERO_ADDRESS:
+
+@internal
+def _checkpoint(user: address, old_lock: LockedBalance, new_lock: LockedBalance):
+    """
+    @notice Record global and per-user data to checkpoint
+    @param user User's wallet address. No user checkpoint if 0x0
+    @param old_lock Pevious locked amount / end lock time for the user
+    @param new_lock New locked amount / end lock time for the user
+    """
+    user_points: Point[2] = empty(Point[2])
+
+    if user != ZERO_ADDRESS:
+        user_points = self._checkpoint_user(user, old_lock, new_lock)
+
+    # fill point_history until t=now
+    last_point: Point = self._checkpoint_global()
+    
+    # only affects the last checkpoint at t=now
+    if user != ZERO_ADDRESS:
         # If last point was in this block, the slope change has been applied already
         # But in such case we have 0 slope(s)
-        last_point.slope += (u_new.slope - u_old.slope)
-        last_point.bias += (u_new.bias - u_old.bias)
-        if last_point.slope < 0:
-            last_point.slope = 0
-        if last_point.bias < 0:
-            last_point.bias = 0
+        last_point.slope += (user_points[1].slope - user_points[0].slope)
+        last_point.bias += (user_points[1].bias - user_points[0].bias)
+        last_point.slope = max(0, last_point.slope)
+        last_point.bias = max(0, last_point.bias)
 
     # Record the changed point into history
-    self.point_history[epoch] = last_point
-
-    if addr != ZERO_ADDRESS:
-        # Schedule the slope changes (slope is going down)
-        # We subtract new_user_slope from [new_locked.end]
-        # and add old_user_slope to [old_locked.end]
-        if old_locked.end > block.timestamp:
-            # old_dslope was <something> - u_old.slope, so we cancel that
-            old_dslope += u_old.slope
-            if new_locked.end == old_locked.end:
-                old_dslope -= u_new.slope  # It was a new deposit, not extension
-            self.slope_changes[old_locked.end] = old_dslope
-
-        if new_locked.end > block.timestamp:
-            if new_locked.end > old_locked.end:
-                new_dslope -= u_new.slope  # old slope disappeared at this point
-                self.slope_changes[new_locked.end] = new_dslope
-            # else: we recorded it already in old_dslope
-
-        # Now handle user history
-        user_epoch: uint256 = self.user_point_epoch[addr] + 1
-
-        self.user_point_epoch[addr] = user_epoch
-        u_new.ts = block.timestamp
-        u_new.blk = block.number
-        self.user_point_history[addr][user_epoch] = u_new
+    epoch: uint256 = self.epoch[self]
+    self.point_history[self][epoch] = last_point
 
 
 @external
@@ -258,7 +243,6 @@ def checkpoint():
 
 
 @external
-@nonreentrant('lock')
 def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sender) -> LockedBalance:
     """
     @notice Create or modify a lock for a user. Support deposits on behalf of a user.
@@ -279,7 +263,7 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
     # only a user can modify their own unlock time
     if msg.sender == user:
         if unlock_time != 0:
-            unlock_week = unlock_time / WEEK * WEEK  # Locktime is rounded down to weeks
+            unlock_week = self.round_to_week(unlock_time)  # locktime is rounded down to weeks
             assert unlock_week > block.timestamp  #  dev: unlock time must be in the future
             if unlock_week - block.timestamp < MAX_LOCK_DURATION:
                 assert unlock_week > old_lock.end  # dev: can only increase lock duration
@@ -312,7 +296,6 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
 
 
 @external
-@nonreentrant('lock')
 def withdraw() -> Withdrawn:
     """
     @notice Withdraw lock for a sender
@@ -343,8 +326,8 @@ def withdraw() -> Withdrawn:
     assert YFI.transfer(msg.sender, old_locked.amount - penalty)
     
     if penalty > 0:
-        assert YFI.approve(self.reward_pool, penalty)
-        assert RewardPool(self.reward_pool).burn()
+        assert YFI.approve(REWARD_POOL.address, penalty)
+        assert REWARD_POOL.burn(penalty)
 
         log Penalty(msg.sender, penalty, block.timestamp)
     
@@ -356,21 +339,20 @@ def withdraw() -> Withdrawn:
 
 @view
 @internal
-def find_block_epoch(height: uint256, max_epoch: uint256) -> uint256:
+def find_epoch_by_block(user: address, height: uint256, max_epoch: uint256) -> uint256:
     """
     @notice Binary search to estimate timestamp for height number
     @param height Block to find
     @param max_epoch Don't go beyond this epoch
-    @return Approximate timestamp for block
+    @return Epoch the block is in
     """
-    # Binary search
     _min: uint256 = 0
     _max: uint256 = max_epoch
     for i in range(128):  # Will be always enough for 128-bit numbers
         if _min >= _max:
             break
         _mid: uint256 = (_min + _max + 1) / 2
-        if self.point_history[_mid].blk <= height:
+        if self.point_history[user][_mid].blk <= height:
             _min = _mid
         else:
             _max = _mid - 1
@@ -378,73 +360,94 @@ def find_block_epoch(height: uint256, max_epoch: uint256) -> uint256:
 
 
 @view
+@internal
+def find_epoch_by_timestamp(user: address, ts: uint256, max_epoch: uint256) -> uint256:
+    """
+    @notice Binary search to estimate timestamp for height number
+    @param ts Timestamp to find
+    @param max_epoch Don't go beyond this epoch
+    @return Epoch the timestamp is in
+    """
+    _min: uint256 = 0
+    _max: uint256 = max_epoch
+    for i in range(128):  # Will be always enough for 128-bit numbers
+        if _min >= _max:
+            break
+        _mid: uint256 = (_min + _max + 1) / 2
+        if self.point_history[user][_mid].ts <= ts:
+            _min = _mid
+        else:
+            _max = _mid - 1
+    return _min
+
+
+@view
+@internal
+def replay_slope_changes(user: address, point: Point, ts: uint256) -> Point:
+    upoint: Point = point
+    t_i: uint256 = self.round_to_week(upoint.ts)
+
+    for i in range(500):
+        t_i += WEEK
+        d_slope: int128 = 0
+        if t_i > ts:
+            t_i = ts
+        else:
+            d_slope = self.slope_changes[user][t_i]
+        upoint.bias -= upoint.slope * convert(t_i - upoint.ts, int128)
+        if t_i == ts:
+            break
+        upoint.slope += d_slope
+        upoint.ts = t_i
+    
+    upoint.bias = max(0, upoint.bias)
+    return upoint
+
+
+@view
 @external
-def balanceOf(addr: address, ts: uint256 = block.timestamp) -> uint256:
+def balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
     """
     @notice Get the current voting power for `msg.sender`
-    @dev Adheres to the ERC20 `balanceOf` interface for Aragon compatibility
-    @param addr User wallet address
+    @param user User wallet address
     @param ts Epoch time to return voting power at
     @return User voting power
     """
-    epoch: uint256 = self.user_point_epoch[addr]
+    epoch: uint256 = self.epoch[user]
     if epoch == 0:
         return 0
 
-    upoint: Point = self.user_point_history[addr][epoch]
-    if upoint.ts > ts:
-        # Binary search
-        _min: uint256 = 0
-        _max: uint256 = epoch
-        for i in range(128):  # Will be always enough for 128-bit numbers
-            if _min >= _max:
-                break
-            _mid: uint256 = (_min + _max + 1) / 2
-            if self.user_point_history[addr][_mid].ts <= ts:
-                _min = _mid
-            else:
-                _max = _mid - 1
+    epoch = self.find_epoch_by_timestamp(user, ts, epoch)
+    upoint: Point = self.point_history[user][epoch]
+    
+    upoint = self.replay_slope_changes(user, upoint, ts)
 
-        upoint = self.user_point_history[addr][_min]
-    upoint.bias -= upoint.slope * convert(ts - upoint.ts, int128)
-    if upoint.bias < 0:
-        upoint.bias = 0
     return convert(upoint.bias, uint256)
 
 
 @view
 @external
-def balanceOfAt(addr: address, height: uint256) -> uint256:
+def getPriorVotes(user: address, height: uint256) -> uint256:
     """
-    @notice Measure voting power of `addr` at block height `height`
-    @dev Adheres to MiniMe `balanceOfAt` interface: https://github.com/Giveth/minime
-    @param addr User's wallet address
+    @notice Measure voting power of `user` at block height `height`
+    @dev Compatible with GovernorAlpha
+    @param user User's wallet address
     @param height Block to calculate the voting power at
     @return Voting power
     """
     assert height <= block.number
 
-    # Binary search
-    _min: uint256 = 0
-    _max: uint256 = self.user_point_epoch[addr]
-    for i in range(128):  # Will be always enough for 128-bit numbers
-        if _min >= _max:
-            break
-        _mid: uint256 = (_min + _max + 1) / 2
-        if self.user_point_history[addr][_mid].blk <= height:
-            _min = _mid
-        else:
-            _max = _mid - 1
+    uepoch: uint256 = self.epoch[user]
+    uepoch = self.find_epoch_by_block(user, height, uepoch)
+    upoint: Point = self.point_history[user][uepoch]
 
-    upoint: Point = self.user_point_history[addr][_min]
-
-    max_epoch: uint256 = self.epoch
-    epoch: uint256 = self.find_block_epoch(height, max_epoch)
-    point_0: Point = self.point_history[epoch]
+    max_epoch: uint256 = self.epoch[self]
+    epoch: uint256 = self.find_epoch_by_block(self, height, max_epoch)
+    point_0: Point = self.point_history[self][epoch]
     d_block: uint256 = 0
     d_t: uint256 = 0
     if epoch < max_epoch:
-        point_1: Point = self.point_history[epoch + 1]
+        point_1: Point = self.point_history[self][epoch + 1]
         d_block = point_1.blk - point_0.blk
         d_t = point_1.ts - point_0.ts
     else:
@@ -462,35 +465,6 @@ def balanceOfAt(addr: address, height: uint256) -> uint256:
 
 
 @view
-@internal
-def supply_at(point: Point, ts: uint256) -> uint256:
-    """
-    @notice Calculate total voting power at some point in the past
-    @param point The point (bias/slope) to start search from
-    @param ts Time to calculate the total voting power at
-    @return Total voting power at that time
-    """
-    last_point: Point = point
-    t_i: uint256 = (last_point.ts / WEEK) * WEEK
-    for i in range(255):
-        t_i += WEEK
-        d_slope: int128 = 0
-        if t_i > ts:
-            t_i = ts
-        else:
-            d_slope = self.slope_changes[t_i]
-        last_point.bias -= last_point.slope * convert(t_i - last_point.ts, int128)
-        if t_i == ts:
-            break
-        last_point.slope += d_slope
-        last_point.ts = t_i
-
-    if last_point.bias < 0:
-        last_point.bias = 0
-    return convert(last_point.bias, uint256)
-
-
-@view
 @external
 def totalSupply(ts: uint256 = block.timestamp) -> uint256:
     """
@@ -498,9 +472,10 @@ def totalSupply(ts: uint256 = block.timestamp) -> uint256:
     @dev Adheres to the ERC20 `totalSupply` interface for Aragon compatibility
     @return Total voting power
     """
-    epoch: uint256 = self.epoch
-    last_point: Point = self.point_history[epoch]
-    return self.supply_at(last_point, ts)
+    epoch: uint256 = self.epoch[self]
+    last_point: Point = self.point_history[self][epoch]
+    last_point = self.replay_slope_changes(self, last_point, ts)
+    return convert(last_point.bias, uint256)
 
 
 @view
@@ -512,24 +487,49 @@ def totalSupplyAt(height: uint256) -> uint256:
     @return Total voting power at `height`
     """
     assert height <= block.number
-    epoch: uint256 = self.epoch
-    target_epoch: uint256 = self.find_block_epoch(height, epoch)
+    epoch: uint256 = self.epoch[self]
+    target_epoch: uint256 = self.find_epoch_by_block(self, height, epoch)
 
-    point: Point = self.point_history[target_epoch]
+    point: Point = self.point_history[self][target_epoch]
     dt: uint256 = 0
     if target_epoch < epoch:
-        point_next: Point = self.point_history[target_epoch + 1]
+        point_next: Point = self.point_history[self][target_epoch + 1]
         if point.blk != point_next.blk:
             dt = (height - point.blk) * (point_next.ts - point.ts) / (point_next.blk - point.blk)
     else:
         if point.blk != block.number:
             dt = (height - point.blk) * (block.timestamp - point.ts) / (block.number - point.blk)
-    # Now dt contains info on how far are we beyond point
 
-    return self.supply_at(point, point.ts + dt)   
+    # Now dt contains info on how far are we beyond point
+    point = self.replay_slope_changes(self, point, point.ts + dt)
+    return convert(point.bias, uint256)
 
 
 @view
 @external
-def token() -> address:
-    return YFI.address
+def token() -> ERC20:
+    return YFI
+
+
+@view
+@external
+def reward_pool() -> RewardPool:
+    return REWARD_POOL
+
+
+@view
+@external
+def name() -> String[10]:
+    return "Voting YFI"
+
+
+@view
+@external
+def symbol() -> String[5]:
+    return "veYFI"
+
+
+@view
+@external
+def decimals() -> uint8:
+    return 18

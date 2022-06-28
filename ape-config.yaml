@@ -1,8 +1,9 @@
 plugins:
   - name: solidity
   - name: vyper
-  - name: hardhat
+  - name: foundry
   - name: infura
+  - name: tokens
 
 # require OpenZepplin Contracts
 dependencies:
@@ -12,7 +13,6 @@ dependencies:
   - name: openzeppelin-upgradeable
     github: OpenZeppelin/openzeppelin-contracts-upgradeable
     version: 4.6.0
-  
   - name: vault
     github: yearn/yearn-vaults
     version: 0.4.3
@@ -22,7 +22,14 @@ solidity:
     - "@openzeppelin/contracts=openzeppelin/v4.6.0"
     - "@openzeppelin-upgradeable/contracts=openzeppelin-upgradeable/v4.6.0"
 
+default_ecosystem: ethereum
+
 ethereum:
+  default_network: local
   local:
-    default_provider: hardhat
-    
+    default_provider: foundry
+  mainnet_fork:
+    default_provider: foundry
+
+foundry:
+  port: auto

@@ -12,11 +12,11 @@ interface VotingYFI:
     def user_point_history(addr: address, loc: uint256) -> Point: view
     def point_history(loc: uint256) -> Point: view
     def checkpoint(): nonpayable
-    def token() -> address: view
+    def token() -> ERC20: view
     def modify_lock(amount: uint256, unlock_time: uint256, user: address) -> LockedBalance: nonpayable
 
 event Initialized:
-    veyfi: address
+    veyfi: VotingYFI
     start_time: uint256
 
 event CheckpointToken:
@@ -66,19 +66,18 @@ ve_supply: public(HashMap[uint256, uint256])
 
 
 @external
-def __init__(veyfi: address, start_time: uint256):
+def __init__(veyfi: VotingYFI, start_time: uint256):
     """
     @notice Contract constructor
     @param veyfi VotingYFI contract address
     @param start_time Epoch time for fee distribution to start
-    @param token Fee token address (YFI)
     """
     t: uint256 = start_time / WEEK * WEEK
     self.start_time = t
     self.last_token_time = t
     self.time_cursor = t
-    VEYFI = VotingYFI(veyfi)
-    YFI = ERC20(VEYFI.token())
+    VEYFI = veyfi
+    YFI = VEYFI.token()
 
     log Initialized(veyfi, start_time)
 
@@ -310,7 +309,7 @@ def claim(user: address = msg.sender, relock: bool = False) -> uint256:
     amount: uint256 = self._claim(user, last_token_time)
     if amount != 0:
         # you can only relock for yourself
-        if relock and msg.sender == user or self.allowed_to_relock[user][msg.sender]:
+        if relock and (msg.sender == user or self.allowed_to_relock[user][msg.sender]):
             YFI.approve(VEYFI.address, amount)
             VEYFI.modify_lock(amount, 0, user)
         else:
@@ -321,14 +320,17 @@ def claim(user: address = msg.sender, relock: bool = False) -> uint256:
 
 
 @external
-def burn() -> bool:
+def burn(amount: uint256 = MAX_UINT256) -> bool:
     """
     @notice Receive YFI into the contract and trigger a token checkpoint
+    @param amount Amount of tokens to pull [default: allowance]
     @return bool success
     """
-    amount: uint256 = YFI.allowance(msg.sender, self)
-    if amount > 0:
-        YFI.transferFrom(msg.sender, self, amount)
+    _amount: uint256 = amount
+    if _amount == MAX_UINT256:
+        _amount = YFI.allowance(msg.sender, self)
+    if _amount > 0:
+        YFI.transferFrom(msg.sender, self, _amount)
         if block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE:
             self._checkpoint_token()
 
@@ -349,11 +351,11 @@ def toggle_allowed_to_relock(user: address) -> bool:
 
 @view
 @external
-def token() -> address:
-    return YFI.address
+def token() -> ERC20:
+    return YFI
 
 
 @view
 @external
-def veyfi() -> address:
-    return VEYFI.address
+def veyfi() -> VotingYFI:
+    return VEYFI
