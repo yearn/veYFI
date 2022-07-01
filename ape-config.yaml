@@ -1,7 +1,7 @@
 plugins:
   - name: solidity
   - name: vyper
-  - name: hardhat
+  - name: foundry
   - name: infura
   - name: tokens
   - name: etherscan
@@ -25,7 +25,7 @@ solidity:
 
 default_ecosystem: ethereum
 
-hardhat:
+foundry:
   port: auto
   fork:
     ethereum:
@@ -37,4 +37,4 @@ ethereum:
   mainnet:
     default_provider: infura
   mainnet_fork:
-    default_provider: hardhat
+    default_provider: foundry
