@@ -77,7 +77,7 @@ def create_token(project, gov):
 
 @pytest.fixture(scope="session")
 def ve_yfi(project, veyfi_and_reward_pool):
-    (veyfi, _) =veyfi_and_reward_pool
+    (veyfi, _) = veyfi_and_reward_pool
     yield veyfi
 
 

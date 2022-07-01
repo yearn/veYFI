@@ -165,13 +165,13 @@ def test_set_boosting_factor(
     gauge = create_gauge(vault)
 
     yfi.approve(ve_yfi, whale_amount, sender=whale)
-    ve_yfi.create_lock(
+    ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
     )
 
     yfi.mint(panda, whale_amount, sender=panda)
     yfi.approve(ve_yfi, whale_amount, sender=panda)
-    ve_yfi.create_lock(
+    ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=panda
     )
 

@@ -17,7 +17,7 @@ def cli():
 def main(network, account):
     yfi = account.deploy(project.Token, "yfi")
     # deploy veYFI
-    ve_yfi = account.deploy(project.VotingEscrow, yfi, "veYFI", "veYFI")
+    ve_yfi = account.deploy(project.VotingYFI, yfi, "veYFI", "veYFI")
 
     # Only when we have reached a new 2 week period we can deploy what's left, make sure some veYFI has been locked.
     begining_of_week = int(chain.pending_timestamp / 14 * 86400) * 14 * 86400

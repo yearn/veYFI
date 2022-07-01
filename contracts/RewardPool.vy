@@ -7,10 +7,8 @@
 from vyper.interfaces import ERC20
 
 interface VotingYFI:
-    def user_point_epoch(addr: address) -> uint256: view
-    def epoch() -> uint256: view
-    def user_point_history(addr: address, loc: uint256) -> Point: view
-    def point_history(loc: uint256) -> Point: view
+    def epoch(add: address) -> uint256: view
+    def point_history(addr: address, loc: uint256) -> Point: view
     def checkpoint(): nonpayable
     def token() -> ERC20: view
     def modify_lock(amount: uint256, unlock_time: uint256, user: address) -> LockedBalance: nonpayable
@@ -127,14 +125,14 @@ def checkpoint_token():
 
 
 @internal
-def _find_timestamp_epoch(ve: address, _timestamp: uint256) -> uint256:
+def _find_timestamp_epoch(_timestamp: uint256) -> uint256:
     _min: uint256 = 0
-    _max: uint256 = VEYFI.epoch()
+    _max: uint256 = VEYFI.epoch(VEYFI.address)
     for i in range(128):
         if _min >= _max:
             break
         _mid: uint256 = (_min + _max + 2) / 2
-        pt: Point = VEYFI.point_history(_mid)
+        pt: Point = VEYFI.point_history(VEYFI.address, _mid)
         if pt.ts <= _timestamp:
             _min = _mid
         else:
@@ -144,14 +142,14 @@ def _find_timestamp_epoch(ve: address, _timestamp: uint256) -> uint256:
 
 @view
 @internal
-def _find_timestamp_user_epoch(ve: address, user: address, _timestamp: uint256, max_user_epoch: uint256) -> uint256:
+def _find_timestamp_user_epoch(user: address, _timestamp: uint256, max_user_epoch: uint256) -> uint256:
     _min: uint256 = 0
     _max: uint256 = max_user_epoch
     for i in range(128):
         if _min >= _max:
             break
         _mid: uint256 = (_min + _max + 2) / 2
-        pt: Point = VEYFI.user_point_history(user, _mid)
+        pt: Point = VEYFI.point_history(user, _mid)
         if pt.ts <= _timestamp:
             _min = _mid
         else:
@@ -168,9 +166,9 @@ def ve_for_at(_user: address, _timestamp: uint256) -> uint256:
     @param _timestamp Epoch time
     @return uint256 veYFI balance
     """
-    max_user_epoch: uint256 = VEYFI.user_point_epoch(_user)
-    epoch: uint256 = self._find_timestamp_user_epoch(VEYFI.address, _user, _timestamp, max_user_epoch)
-    pt: Point = VEYFI.user_point_history(_user, epoch)
+    max_user_epoch: uint256 = VEYFI.epoch(_user)
+    epoch: uint256 = self._find_timestamp_user_epoch(_user, _timestamp, max_user_epoch)
+    pt: Point = VEYFI.point_history(_user, epoch)
     zero: int128 = 0
     return convert(max(pt.bias - pt.slope * convert(_timestamp - pt.ts, int128), zero), uint256)
 
@@ -185,8 +183,8 @@ def _checkpoint_total_supply():
         if t > rounded_timestamp:
             break
         else:
-            epoch: uint256 = self._find_timestamp_epoch(VEYFI.address, t)
-            pt: Point = VEYFI.point_history(epoch)
+            epoch: uint256 = self._find_timestamp_epoch(t)
+            pt: Point = VEYFI.point_history(VEYFI.address, epoch)
             dt: int128 = 0
             if t > pt.ts:
                 # If the point is at 0 epoch, it can actually be earlier than the first deposit
@@ -216,7 +214,7 @@ def _claim(addr: address, last_token_time: uint256) -> uint256:
     user_epoch: uint256 = 0
     to_distribute: uint256 = 0
 
-    max_user_epoch: uint256 = VEYFI.user_point_epoch(addr)
+    max_user_epoch: uint256 = VEYFI.epoch(addr)
     _start_time: uint256 = self.start_time
 
     if max_user_epoch == 0:
@@ -226,14 +224,14 @@ def _claim(addr: address, last_token_time: uint256) -> uint256:
     week_cursor: uint256 = self.time_cursor_of[addr]
     if week_cursor == 0:
         # Need to do the initial binary search
-        user_epoch = self._find_timestamp_user_epoch(VEYFI.address, addr, _start_time, max_user_epoch)
+        user_epoch = self._find_timestamp_user_epoch(addr, _start_time, max_user_epoch)
     else:
         user_epoch = self.user_epoch_of[addr]
 
     if user_epoch == 0:
         user_epoch = 1
 
-    user_point: Point = VEYFI.user_point_history(addr, user_epoch)
+    user_point: Point = VEYFI.point_history(addr, user_epoch)
 
     if week_cursor == 0:
         week_cursor = (user_point.ts + WEEK - 1) / WEEK * WEEK
@@ -256,7 +254,7 @@ def _claim(addr: address, last_token_time: uint256) -> uint256:
             if user_epoch > max_user_epoch:
                 user_point = empty(Point)
             else:
-                user_point = VEYFI.user_point_history(addr, user_epoch)
+                user_point = VEYFI.point_history(addr, user_epoch)
 
         else:
             # Calc

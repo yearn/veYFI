@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IGauge.sol";
 import "./BaseGauge.sol";
 
-import "./interfaces/IVotingEscrow.sol";
+import "./interfaces/IVotingYFI.sol";
 
 /** @title  Gauge stake vault token get YFI rewards
     @notice Deposit your vault token (one gauge per vault).
@@ -431,7 +431,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         view
         returns (uint256)
     {
-        uint256 veTotalSupply = IVotingEscrow(veToken).totalSupply();
+        uint256 veTotalSupply = IVotingYFI(veToken).totalSupply();
         if (veTotalSupply == 0) {
             return _realBalance;
         }
@@ -439,7 +439,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
             Math.min(
                 ((_realBalance * boostingFactor) +
                     (((totalSupply() *
-                        IVotingEscrow(veToken).balanceOf(_account)) /
+                        IVotingYFI(veToken).balanceOf(_account)) /
                         veTotalSupply) *
                         (BOOST_DENOMINATOR - boostingFactor))) /
                     BOOST_DENOMINATOR,
@@ -776,7 +776,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
             rewards[_account] = 0;
             if (_lock) {
                 rewardToken.approve(address(veToken), reward);
-                IVotingEscrow(veToken).deposit_for(_account, reward);
+                IVotingYFI(veToken).modify_lock(reward, 0, _account);
             } else {
                 rewardToken.safeTransfer(_account, reward);
             }

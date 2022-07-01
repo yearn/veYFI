@@ -7,7 +7,7 @@ def test_gauge_get_reward_for(
     yfi, ve_yfi, whale, whale_amount, shark, create_vault, create_gauge, gov, zap
 ):
     yfi.approve(ve_yfi, whale_amount, sender=whale)
-    ve_yfi.create_lock(
+    ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
     )
     assert yfi.balanceOf(whale) == 0
