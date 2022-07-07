@@ -16,9 +16,9 @@ interface IVeYFI {
     @notice Used to claim multiple gauges rewards
  */
 contract ZapClaim {
-    address immutable YFI;
-    address immutable VE_YFI;
-    address immutable VE_YFI_REWARDS;
+    address public immutable YFI;
+    address public immutable VE_YFI;
+    address public immutable VE_YFI_REWARDS;
 
     constructor(
         address _yfi,
