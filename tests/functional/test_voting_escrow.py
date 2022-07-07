@@ -30,7 +30,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     (due to smaller locktime).
     Alice's power grows to 100% by Bob's unlock.
     Checking that totalSupply is appropriate.
-    After the test is done, check all over again with balanceOfAt / totalSupplyAt
+    After the test is done, check all over again with getPriorVotes / totalSupplyAt
     """
     alice, bob = accounts[:2]
     amount = 1000 * 10**18
@@ -62,8 +62,10 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     chain.pending_timestamp += H
     chain.mine()
 
-    assert approx(ve_yfi.totalSupply(), amount // MAXTIME * (WEEK - 2 * H), TOL)
-    assert approx(ve_yfi.balanceOf(alice), amount // MAXTIME * (WEEK - 2 * H), TOL)
+    assert approx(ve_yfi.totalSupply(), rel=TOL) == amount // MAXTIME * (WEEK - 2 * H)
+    assert approx(ve_yfi.balanceOf(alice), rel=TOL) == amount // MAXTIME * (
+        WEEK - 2 * H
+    )
     assert ve_yfi.balanceOf(bob) == 0
     t0 = chain.blocks.head.timestamp
 
@@ -74,16 +76,14 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
             chain.pending_timestamp += H
             chain.mine()
         dt = chain.blocks.head.timestamp - t0
-        assert approx(
-            ve_yfi.totalSupply(),
-            amount // MAXTIME * max(WEEK - 2 * H - dt, 0),
-            TOL,
+        assert approx(ve_yfi.totalSupply(), rel=TOL) == amount // MAXTIME * max(
+            WEEK - 2 * H - dt, 0
         )
-        assert approx(
-            ve_yfi.balanceOf(alice),
-            amount // MAXTIME * max(WEEK - 2 * H - dt, 0),
-            TOL,
+
+        assert approx(ve_yfi.balanceOf(alice), rel=TOL) == amount // MAXTIME * max(
+            WEEK - 2 * H - dt, 0
         )
+
         assert ve_yfi.balanceOf(bob) == 0
         stages["alice_in_0"].append(
             (chain.blocks.head.number, chain.blocks.head.timestamp)
@@ -110,16 +110,16 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     ve_yfi.modify_lock(amount, chain.blocks.head.timestamp + 2 * WEEK, sender=alice)
     stages["alice_deposit_2"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
-    assert approx(ve_yfi.totalSupply(), amount // MAXTIME * 2 * WEEK, TOL)
-    assert approx(ve_yfi.balanceOf(alice), amount // MAXTIME * 2 * WEEK, TOL)
+    assert approx(ve_yfi.totalSupply(), rel=TOL) == amount // MAXTIME * 2 * WEEK
+    assert approx(ve_yfi.balanceOf(alice), rel=TOL) == amount // MAXTIME * 2 * WEEK
     assert ve_yfi.balanceOf(bob) == 0
 
     ve_yfi.modify_lock(amount, chain.blocks.head.timestamp + WEEK, sender=bob)
     stages["bob_deposit_2"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
-    assert approx(ve_yfi.totalSupply(), amount // MAXTIME * 3 * WEEK, TOL)
-    assert approx(ve_yfi.balanceOf(alice), amount // MAXTIME * 2 * WEEK, TOL)
-    assert approx(ve_yfi.balanceOf(bob), amount // MAXTIME * WEEK, TOL)
+    assert approx(ve_yfi.totalSupply(), rel=TOL) == amount // MAXTIME * 3 * WEEK
+    assert approx(ve_yfi.balanceOf(alice), rel=TOL) == amount // MAXTIME * 2 * WEEK
+    assert approx(ve_yfi.balanceOf(bob), rel=TOL) == amount // MAXTIME * WEEK
 
     t0 = chain.blocks.head.timestamp
     chain.pending_timestamp += H
@@ -137,8 +137,8 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
         w_alice = ve_yfi.balanceOf(alice)
         w_bob = ve_yfi.balanceOf(bob)
         assert w_total == w_alice + w_bob
-        assert approx(w_alice, amount // MAXTIME * max(2 * WEEK - dt, 0), TOL)
-        assert approx(w_bob, amount // MAXTIME * max(WEEK - dt, 0), TOL)
+        assert approx(w_alice, rel=TOL) == amount // MAXTIME * max(2 * WEEK - dt, 0)
+        assert approx(w_bob, rel=TOL) == amount // MAXTIME * max(WEEK - dt, 0)
         stages["alice_bob_in_2"].append(
             (chain.blocks.head.number, chain.blocks.head.timestamp)
         )
@@ -152,7 +152,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     w_total = ve_yfi.totalSupply()
     w_alice = ve_yfi.balanceOf(alice)
     assert w_alice == w_total
-    assert approx(w_total, amount // MAXTIME * (WEEK - 2 * H), TOL)
+    assert approx(w_total, rel=TOL) == amount // MAXTIME * (WEEK - 2 * H)
     assert ve_yfi.balanceOf(bob) == 0
 
     chain.pending_timestamp += H
@@ -167,7 +167,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
         w_total = ve_yfi.totalSupply()
         w_alice = ve_yfi.balanceOf(alice)
         assert w_total == w_alice
-        assert approx(w_total, amount // MAXTIME * max(WEEK - dt - 2 * H, 0), TOL)
+        assert approx(w_total, rel=TOL) == amount // MAXTIME * max(WEEK - dt - 2 * H, 0)
         assert ve_yfi.balanceOf(bob) == 0
         stages["alice_in_2"].append(
             (chain.blocks.head.number, chain.blocks.head.timestamp)
@@ -178,81 +178,83 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
 
     chain.pending_timestamp += H
     chain.mine()
-
-    ve_yfi.withdraw(sender=bob)
     stages["bob_withdraw_2"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
     assert ve_yfi.totalSupply() == 0
     assert ve_yfi.balanceOf(alice) == 0
     assert ve_yfi.balanceOf(bob) == 0
 
-    # Now test historical balanceOfAt and others
+    # Now test historical getPriorVotes and others
 
-    assert ve_yfi.balanceOfAt(alice, stages["before_deposits"][0]) == 0
-    assert ve_yfi.balanceOfAt(bob, stages["before_deposits"][0]) == 0
+    assert ve_yfi.getPriorVotes(alice, stages["before_deposits"][0]) == 0
+    assert ve_yfi.getPriorVotes(bob, stages["before_deposits"][0]) == 0
     assert ve_yfi.totalSupplyAt(stages["before_deposits"][0]) == 0
 
-    w_alice = ve_yfi.balanceOfAt(alice, stages["alice_deposit"][0])
-    assert approx(w_alice, amount // MAXTIME * (WEEK - H), TOL)
-    assert ve_yfi.balanceOfAt(bob, stages["alice_deposit"][0]) == 0
+    w_alice = ve_yfi.getPriorVotes(alice, stages["alice_deposit"][0])
+    assert approx(w_alice, rel=TOL) == amount // MAXTIME * (WEEK - H)
+    assert ve_yfi.getPriorVotes(bob, stages["alice_deposit"][0]) == 0
     w_total = ve_yfi.totalSupplyAt(stages["alice_deposit"][0])
     assert w_alice == w_total
 
     for i, (block, t) in enumerate(stages["alice_in_0"]):
-        w_alice = ve_yfi.balanceOfAt(alice, block)
-        w_bob = ve_yfi.balanceOfAt(bob, block)
+        w_alice = ve_yfi.getPriorVotes(alice, block)
+        w_bob = ve_yfi.getPriorVotes(bob, block)
         w_total = ve_yfi.totalSupplyAt(block)
         assert w_bob == 0
         assert w_alice == w_total
+        if w_alice == 0:
+            continue
         time_left = WEEK * (7 - i) // 7 - 2 * H
         error_1h = (
             H / time_left
         )  # Rounding error of 1 block is possible, and we have 1h blocks
-        assert approx(w_alice, amount // MAXTIME * time_left, error_1h)
+        assert approx(w_alice, rel=error_1h) == amount // MAXTIME * time_left
 
     w_total = ve_yfi.totalSupplyAt(stages["alice_withdraw"][0])
-    w_alice = ve_yfi.balanceOfAt(alice, stages["alice_withdraw"][0])
-    w_bob = ve_yfi.balanceOfAt(bob, stages["alice_withdraw"][0])
+    w_alice = ve_yfi.getPriorVotes(alice, stages["alice_withdraw"][0])
+    w_bob = ve_yfi.getPriorVotes(bob, stages["alice_withdraw"][0])
     assert w_alice == w_bob == w_total == 0
 
     w_total = ve_yfi.totalSupplyAt(stages["alice_deposit_2"][0])
-    w_alice = ve_yfi.balanceOfAt(alice, stages["alice_deposit_2"][0])
-    w_bob = ve_yfi.balanceOfAt(bob, stages["alice_deposit_2"][0])
-    assert approx(w_total, amount // MAXTIME * 2 * WEEK, TOL)
+    w_alice = ve_yfi.getPriorVotes(alice, stages["alice_deposit_2"][0])
+    w_bob = ve_yfi.getPriorVotes(bob, stages["alice_deposit_2"][0])
+    assert approx(w_total, rel=TOL) == amount // MAXTIME * 2 * WEEK
     assert w_total == w_alice
     assert w_bob == 0
 
     w_total = ve_yfi.totalSupplyAt(stages["bob_deposit_2"][0])
-    w_alice = ve_yfi.balanceOfAt(alice, stages["bob_deposit_2"][0])
-    w_bob = ve_yfi.balanceOfAt(bob, stages["bob_deposit_2"][0])
+    w_alice = ve_yfi.getPriorVotes(alice, stages["bob_deposit_2"][0])
+    w_bob = ve_yfi.getPriorVotes(bob, stages["bob_deposit_2"][0])
     assert w_total == w_alice + w_bob
-    assert approx(w_total, amount // MAXTIME * 3 * WEEK, TOL)
-    assert approx(w_alice, amount // MAXTIME * 2 * WEEK, TOL)
+    assert approx(w_total, rel=TOL) == amount // MAXTIME * 3 * WEEK
+    assert approx(w_alice, rel=TOL) == amount // MAXTIME * 2 * WEEK
 
     t0 = stages["bob_deposit_2"][1]
     for i, (block, t) in enumerate(stages["alice_bob_in_2"]):
-        w_alice = ve_yfi.balanceOfAt(alice, block)
-        w_bob = ve_yfi.balanceOfAt(bob, block)
+        w_alice = ve_yfi.getPriorVotes(alice, block)
+        w_bob = ve_yfi.getPriorVotes(bob, block)
         w_total = ve_yfi.totalSupplyAt(block)
         assert w_total == w_alice + w_bob
         dt = t - t0
         error_1h = H / (
             2 * WEEK - i * DAY
         )  # Rounding error of 1 block is possible, and we have 1h blocks
-        assert approx(w_alice, amount // MAXTIME * max(2 * WEEK - dt, 0), error_1h)
-        assert approx(w_bob, amount // MAXTIME * max(WEEK - dt, 0), error_1h)
+        assert approx(w_alice, rel=error_1h) == amount // MAXTIME * max(
+            2 * WEEK - dt, 0
+        )
+        assert approx(w_bob, rel=error_1h) == amount // MAXTIME * max(WEEK - dt, 0)
 
     w_total = ve_yfi.totalSupplyAt(stages["bob_withdraw_1"][0])
-    w_alice = ve_yfi.balanceOfAt(alice, stages["bob_withdraw_1"][0])
-    w_bob = ve_yfi.balanceOfAt(bob, stages["bob_withdraw_1"][0])
+    w_alice = ve_yfi.getPriorVotes(alice, stages["bob_withdraw_1"][0])
+    w_bob = ve_yfi.getPriorVotes(bob, stages["bob_withdraw_1"][0])
     assert w_total == w_alice
-    assert approx(w_total, amount // MAXTIME * (WEEK - 2 * H), TOL)
+    assert approx(w_total, rel=TOL) == amount // MAXTIME * (WEEK - 2 * H)
     assert w_bob == 0
 
     t0 = stages["bob_withdraw_1"][1]
     for i, (block, t) in enumerate(stages["alice_in_2"]):
-        w_alice = ve_yfi.balanceOfAt(alice, block)
-        w_bob = ve_yfi.balanceOfAt(bob, block)
+        w_alice = ve_yfi.getPriorVotes(alice, block)
+        w_bob = ve_yfi.getPriorVotes(bob, block)
         w_total = ve_yfi.totalSupplyAt(block)
         assert w_total == w_alice
         assert w_bob == 0
@@ -260,11 +262,13 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
         error_1h = H / (
             WEEK - i * DAY + DAY
         )  # Rounding error of 1 block is possible, and we have 1h blocks
-        assert approx(w_total, amount // MAXTIME * max(WEEK - dt - 2 * H, 0), error_1h)
+        assert approx(w_total, rel=error_1h) == amount // MAXTIME * max(
+            WEEK - dt - 2 * H, 0
+        )
 
     w_total = ve_yfi.totalSupplyAt(stages["bob_withdraw_2"][0])
-    w_alice = ve_yfi.balanceOfAt(alice, stages["bob_withdraw_2"][0])
-    w_bob = ve_yfi.balanceOfAt(bob, stages["bob_withdraw_2"][0])
+    w_alice = ve_yfi.getPriorVotes(alice, stages["bob_withdraw_2"][0])
+    w_bob = ve_yfi.getPriorVotes(bob, stages["bob_withdraw_2"][0])
     assert w_total == w_alice == w_bob == 0
 
 

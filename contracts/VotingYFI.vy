@@ -336,6 +336,10 @@ def withdraw() -> Withdrawn:
 
     return Withdrawn({amount: old_locked.amount - penalty, penalty: penalty})
 
+@view
+@external
+def e_find_epoch_by_block(user: address, height: uint256, max_epoch: uint256) -> uint256:
+    return self.find_epoch_by_block(user, height, max_epoch)
 
 @view
 @internal
