@@ -65,7 +65,7 @@ REWARD_POOL: immutable(RewardPool)
 
 DAY: constant(uint256) = 86400
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
-MAX_LOCK_DURATION: constant(uint256) = 4 * 365 * 86400  # 4 years
+MAX_LOCK_DURATION: constant(uint256) = 4 * 365 * 86400 / WEEK * WEEK  # 4 years
 SCALE: constant(uint256) = 10 ** 18
 MAX_PENALTY_RATIO: constant(uint256) = SCALE * 3 / 4  # 75% for early exit of max lock
 
@@ -141,14 +141,20 @@ def lock_to_kink(lock: LockedBalance) -> Kink:
 
 @internal
 def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBalance) -> Point[2]:
+    previous_point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
+
+    if old_lock.amount != 0:
+        epoch: uint256 = self.epoch[user]
+        previous_point = self.point_history[user][epoch]
+    
     old_point: Point = self.lock_to_point(old_lock)
     new_point: Point = self.lock_to_point(new_lock)
 
-    old_kink: Kink = self.lock_to_kink(old_lock)
+    old_kink: Kink = self.lock_to_kink(old_lock)        
     new_kink: Kink = self.lock_to_kink(new_lock)
 
     # schedule slope changes for the lock end
-    if old_point.slope != 0 and old_lock.end > block.timestamp:
+    if previous_point.slope != 0 and old_lock.end > block.timestamp:
         self.slope_changes[self][old_lock.end] += old_point.slope
         self.slope_changes[user][old_lock.end] += old_point.slope
     if new_point.slope != 0 and new_lock.end > block.timestamp:
@@ -165,7 +171,6 @@ def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBal
 
     self.epoch[user] += 1
     self.point_history[user][self.epoch[user]] = new_point
-
     return [old_point, new_point]
 
 @internal
@@ -337,11 +342,6 @@ def withdraw() -> Withdrawn:
     return Withdrawn({amount: old_locked.amount - penalty, penalty: penalty})
 
 @view
-@external
-def e_find_epoch_by_block(user: address, height: uint256, max_epoch: uint256) -> uint256:
-    return self.find_epoch_by_block(user, height, max_epoch)
-
-@view
 @internal
 def find_epoch_by_block(user: address, height: uint256, max_epoch: uint256) -> uint256:
     """
@@ -420,8 +420,8 @@ def balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
     epoch: uint256 = self.epoch[user]
     if epoch == 0:
         return 0
-
-    epoch = self.find_epoch_by_timestamp(user, ts, epoch)
+    if ts != block.timestamp:
+        epoch = self.find_epoch_by_timestamp(user, ts, epoch)
     upoint: Point = self.point_history[user][epoch]
     
     upoint = self.replay_slope_changes(user, upoint, ts)

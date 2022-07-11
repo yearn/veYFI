@@ -1,11 +1,48 @@
 from pytest import approx
 import ape
+from ape import chain
 
 H = 3600
 DAY = 86400
 WEEK = 7 * DAY
-MAXTIME = 126144000
+MAXTIME = 126144000 // WEEK * WEEK
 TOL = 120 / WEEK
+
+
+def test_over_four_years(chain, accounts, yfi, ve_yfi):
+    # set at begining of week
+    chain.pending_timestamp += WEEK - (
+        chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
+    )
+    chain.mine()
+
+    alice = accounts[0]
+    amount = 1000 * 10**18
+    yfi.mint(alice, amount * 20, sender=alice)
+
+    yfi.approve(ve_yfi.address, amount * 20, sender=alice)
+    now = chain.blocks.head.timestamp
+    unlock_time = now + MAXTIME + 8 * WEEK + 3600
+    ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years and one month lock
+    point = ve_yfi.point_history(alice.address, 1)
+    assert point.bias == amount
+    assert point.slope == 0
+    assert ve_yfi.totalSupply() == amount
+    chain.pending_timestamp += WEEK
+    chain.mine()
+    assert ve_yfi.totalSupply() == amount
+    chain.pending_timestamp += 8 * WEEK
+    chain.mine()
+    assert ve_yfi.totalSupply() < amount
+    assert ve_yfi.totalSupply() == ve_yfi.balanceOf(alice)
+
+    ve_yfi.checkpoint(sender=alice)
+    assert ve_yfi.totalSupply() == ve_yfi.balanceOf(alice)
+
+    ve_yfi.modify_lock(amount, 0, sender=alice)
+    chain.pending_timestamp += WEEK
+
+    assert approx(ve_yfi.totalSupply(), rel=10e-14) == ve_yfi.balanceOf(alice)
 
 
 def test_voting_powers(chain, accounts, yfi, ve_yfi):
