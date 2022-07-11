@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.14;
+pragma solidity 0.8.15;
 
 import "./interfaces/IGauge.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -12,13 +12,13 @@ interface IVeYFI {
     function deposit_for(address _addr, uint256 _amount) external;
 }
 
-/** @title  Zap
+/** @title  ZapClaim
     @notice Used to claim multiple gauges rewards
  */
-contract Zap {
-    address immutable YFI;
-    address immutable VE_YFI;
-    address immutable VE_YFI_REWARDS;
+contract ZapClaim {
+    address public immutable YFI;
+    address public immutable VE_YFI;
+    address public immutable VE_YFI_REWARDS;
 
     constructor(
         address _yfi,

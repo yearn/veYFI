@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.14;
-import "./interfaces/IVotingEscrow.sol";
+pragma solidity 0.8.15;
+import "./interfaces/IVotingYFI.sol";
 import "./interfaces/IGaugeFactory.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";

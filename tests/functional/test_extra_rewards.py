@@ -17,7 +17,7 @@ def test_extra_rewards_full_boost(
     gov,
 ):
     yfi.approve(ve_yfi, whale_amount, sender=whale)
-    ve_yfi.create_lock(
+    ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
     )
     assert yfi.balanceOf(whale) == 0
@@ -57,15 +57,10 @@ def test_extra_rewards_no_boost(
     create_extra_reward,
     gov,
 ):
-    # we create a big lock compared to what whale will deposit so he doesn't have a boost.
-    yfi.transfer(gov, whale_amount - 1, sender=whale)
-    yfi.approve(ve_yfi, whale_amount - 1, sender=gov)
-    ve_yfi.create_lock(
-        whale_amount - 1, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=gov
+    yfi.approve(ve_yfi, whale_amount, sender=whale)
+    ve_yfi.modify_lock(
+        whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
     )
-    yfi.approve(ve_yfi, 1, sender=whale)
-    ve_yfi.create_lock(1, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale)
-    assert yfi.balanceOf(whale) == 0
 
     lp_amount = 10**18
     vault = create_vault()
@@ -75,18 +70,18 @@ def test_extra_rewards_no_boost(
     extra_reward = create_extra_reward(gauge, yfo)
     gauge.addExtraReward(extra_reward, sender=gov)
 
-    yfo.mint(gov, 10**18, sender=gov)
-    yfo.approve(extra_reward, 10**18, sender=gov)
-    extra_reward.rewardPerToken() == 0
-    extra_reward.queueNewRewards(10**18, sender=gov)
+    yfo.mint(gov, lp_amount, sender=gov)
+    yfo.approve(extra_reward, lp_amount, sender=gov)
+    assert extra_reward.rewardPerToken() == 0
+    extra_reward.queueNewRewards(lp_amount, sender=gov)
     chain.pending_timestamp += 10
-    extra_reward.rewardPerToken() != 0
 
     vault.mint(whale, lp_amount, sender=gov)
     vault.approve(gauge, lp_amount, sender=whale)
     gauge.deposit(sender=whale)
     chain.pending_timestamp += 3600
     chain.mine()
+    v = extra_reward.earned(whale)
     assert pytest.approx(extra_reward.earned(whale), rel=10e-4) == 10**18 / 14 / 24
     extra_reward.getReward(sender=whale)
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 24

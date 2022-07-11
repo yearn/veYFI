@@ -23,7 +23,9 @@ def veyfi_and_reward_pool(accounts, project, yfi):
         )
     )
     veyfi = project.VotingYFI.deploy(yfi, reward_pool_address, sender=accounts[0])
-    start_time = chain.pending_timestamp
+    start_time = (
+        chain.pending_timestamp + 7 * 3600 * 24
+    )  # MUST offset by a week otherwise token distributed are lost since no lock has been made yet.
     reward_pool = project.RewardPool.deploy(veyfi, start_time, sender=accounts[0])
     assert str(reward_pool) == reward_pool_address, "broken setup"
     return veyfi, reward_pool
