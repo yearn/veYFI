@@ -321,9 +321,11 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     ) internal override {
         if (_from != address(0)) {
             _boostedBalances[_from] = _boostedBalanceOf(_from);
+            emit BoostedBalanceUpdated(_from, _boostedBalances[_from]);
         }
         if (_to != address(0)) {
             _boostedBalances[_to] = _boostedBalanceOf(_to);
+            emit BoostedBalanceUpdated(_to, _boostedBalances[_to]);
         }
     }
 
@@ -513,7 +515,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         // mint shares
         _mint(_receiver, _assets);
 
-        emit BoostedBalanceUpdated(_receiver, _boostedBalances[_receiver]);
+
         emit Deposit(msg.sender, _receiver, _assets, _assets);
     }
 
@@ -641,7 +643,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         }
 
         _burn(_owner, _assets);
-        emit BoostedBalanceUpdated(_owner, _boostedBalances[_owner]);
+
 
         if (_claim) {
             if (_owner != msg.sender) {
