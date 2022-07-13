@@ -87,7 +87,7 @@ def __init__(token: ERC20, reward_pool: RewardPool):
     YFI = token
     REWARD_POOL = reward_pool
     self.point_history[self][0].blk = block.number
-    self.point_history[self][0].ts = block.timestamp
+    self.point_history[self][0].ts = self.begining_of_week()
 
     log Initialized(token, reward_pool)
 
@@ -109,20 +109,30 @@ def get_last_user_point(addr: address) -> Point:
 def round_to_week(ts: uint256) -> uint256:
     return ts / WEEK * WEEK
 
+@view
+@internal
+def begining_of_week() -> uint256:
+    return block.timestamp / WEEK * WEEK
+
+@view
+@external
+def get_point(user: address) -> Point:
+    return self.lock_to_point(self.locked[user])
 
 @view
 @internal
 def lock_to_point(lock: LockedBalance) -> Point:
-    point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
+    begining_of_week: uint256 = self.begining_of_week()
+    point: Point = Point({bias: 0, slope: 0, ts: begining_of_week, blk: block.number})
     if lock.amount > 0:
         # the lock is longer than the max duration
-        if lock.end > block.timestamp + MAX_LOCK_DURATION:
+        if lock.end > begining_of_week + MAX_LOCK_DURATION:
             point.slope = 0
             point.bias = convert(lock.amount, int128)
         # the lock ends in the future but shorter than max duration
-        elif lock.end > block.timestamp:
+        elif lock.end > begining_of_week:
             point.slope = convert(lock.amount / MAX_LOCK_DURATION, int128)
-            point.bias = point.slope * convert(lock.end - block.timestamp, int128)
+            point.bias = point.slope * convert(lock.end - begining_of_week, int128)
 
     return point
 
@@ -132,7 +142,7 @@ def lock_to_point(lock: LockedBalance) -> Point:
 def lock_to_kink(lock: LockedBalance) -> Kink:
     kink: Kink = empty(Kink)
     # the lock is longer than the max duration
-    if lock.amount > 0 and lock.end > self.round_to_week(block.timestamp + MAX_LOCK_DURATION):
+    if lock.amount > 0 and lock.end > self.round_to_week(self.begining_of_week() + MAX_LOCK_DURATION):
         kink.ts = self.round_to_week(lock.end - MAX_LOCK_DURATION)
         kink.slope = convert(lock.amount / MAX_LOCK_DURATION, int128)
 
@@ -141,7 +151,8 @@ def lock_to_kink(lock: LockedBalance) -> Kink:
 
 @internal
 def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBalance) -> Point[2]:
-    previous_point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
+    begining_of_week: uint256 = self.begining_of_week()
+    previous_point: Point = Point({bias: 0, slope: 0, ts: begining_of_week, blk: block.number})
 
     if old_lock.amount != 0:
         epoch: uint256 = self.epoch[user]
@@ -154,10 +165,10 @@ def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBal
     new_kink: Kink = self.lock_to_kink(new_lock)
 
     # schedule slope changes for the lock end
-    if previous_point.slope != 0 and old_lock.end > block.timestamp:
+    if previous_point.slope != 0 and old_lock.end > begining_of_week:
         self.slope_changes[self][old_lock.end] += old_point.slope
         self.slope_changes[user][old_lock.end] += old_point.slope
-    if new_point.slope != 0 and new_lock.end > block.timestamp:
+    if new_point.slope != 0 and new_lock.end > begining_of_week:
         self.slope_changes[self][new_lock.end] -= new_point.slope
         self.slope_changes[user][new_lock.end] -= new_point.slope
 
@@ -175,7 +186,7 @@ def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBal
 
 @internal
 def _checkpoint_global() -> Point:
-    last_point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
+    last_point: Point = Point({bias: 0, slope: 0, ts: self.begining_of_week(), blk: block.number})
     epoch: uint256 = self.epoch[self]
     if epoch > 0:
         last_point = self.point_history[self][epoch]
@@ -183,13 +194,14 @@ def _checkpoint_global() -> Point:
     # initial_last_point is used for extrapolation to calculate block number
     initial_last_point: Point = last_point
     block_slope: uint256 = 0  # dblock/dt
-    if block.timestamp > last_point.ts:
-        block_slope = SCALE * (block.number - last_point.blk) / (block.timestamp - last_point.ts)
+    begining_of_week: uint256 = self.begining_of_week()
+    if begining_of_week > last_point.ts:
+        block_slope = SCALE * (block.number - last_point.blk) / (begining_of_week - last_point.ts)
     
     # apply weekly slope changes and record weekly global snapshots
     t_i: uint256 = self.round_to_week(last_checkpoint)
     for i in range(255):
-        t_i = min(t_i + WEEK, block.timestamp)
+        t_i = min(t_i + WEEK, begining_of_week)
         last_point.bias -= last_point.slope * convert(t_i - last_checkpoint, int128)
         last_point.slope += self.slope_changes[self][t_i]  # will read 0 if not aligned to week
         last_point.bias = max(0, last_point.bias)  # this can happen
@@ -198,7 +210,7 @@ def _checkpoint_global() -> Point:
         last_point.ts = t_i
         last_point.blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / SCALE
         epoch += 1
-        if t_i < block.timestamp:
+        if t_i < begining_of_week:
             self.point_history[self][epoch] = last_point
         # skip last week
         else:
@@ -265,15 +277,16 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
     new_lock.amount += amount
 
     unlock_week: uint256 = 0
+    begining_of_week: uint256 = self.begining_of_week()
     # only a user can modify their own unlock time
     if msg.sender == user:
         if unlock_time != 0:
             unlock_week = self.round_to_week(unlock_time)  # locktime is rounded down to weeks
-            assert unlock_week > block.timestamp  #  dev: unlock time must be in the future
-            if unlock_week - block.timestamp < MAX_LOCK_DURATION:
+            assert unlock_week > begining_of_week  #  dev: unlock time must be in the future
+            if unlock_week - begining_of_week <= MAX_LOCK_DURATION:
                 assert unlock_week > old_lock.end  # dev: can only increase lock duration
             else:
-                assert unlock_week > block.timestamp + MAX_LOCK_DURATION  # dev: can only decrease to ≥4 years
+                assert unlock_week > begining_of_week + MAX_LOCK_DURATION  # dev: can only decrease to ≥4 years
             new_lock.end = unlock_week
 
     # create lock
@@ -283,19 +296,18 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
         assert unlock_week != 0  # dev: must specify unlock time in the future
     # modify lock
     else:
-        assert old_lock.end > block.timestamp  # dev: lock expired
+        assert old_lock.end > begining_of_week  # dev: lock expired
 
     supply_before: uint256 = self.supply
     self.supply = supply_before + amount
     self.locked[user] = new_lock
-    
     self._checkpoint(user, old_lock, new_lock)
 
     if amount > 0:
         assert YFI.transferFrom(msg.sender, self, amount)
 
-    log Supply(supply_before, supply_before + amount, block.timestamp)
-    log ModifyLock(msg.sender, user, new_lock.amount, new_lock.end, block.timestamp)
+    log Supply(supply_before, supply_before + amount, begining_of_week)
+    log ModifyLock(msg.sender, user, new_lock.amount, new_lock.end, begining_of_week)
 
     return new_lock
 
@@ -309,14 +321,15 @@ def withdraw() -> Withdrawn:
         If a lock is still active, the sender pays a 75% penalty during the first year
         and a linearly decreasing penalty from 75% to 0 based on the remaining lock time.
     """
+    begining_of_week: uint256 = self.begining_of_week()
     old_locked: LockedBalance = self.locked[msg.sender]
     assert old_locked.amount > 0  # dev: create a lock first to withdraw
     
     time_left: uint256 = 0
     penalty: uint256 = 0
 
-    if old_locked.end > block.timestamp:
-        time_left = min(old_locked.end - block.timestamp, MAX_LOCK_DURATION)
+    if old_locked.end > begining_of_week:
+        time_left = min(old_locked.end - begining_of_week, MAX_LOCK_DURATION)
         penalty_ratio: uint256 = min(time_left * SCALE / MAX_LOCK_DURATION, MAX_PENALTY_RATIO)
         penalty = old_locked.amount * penalty_ratio / SCALE
 
@@ -334,10 +347,10 @@ def withdraw() -> Withdrawn:
         assert YFI.approve(REWARD_POOL.address, penalty)
         assert REWARD_POOL.burn(penalty)
 
-        log Penalty(msg.sender, penalty, block.timestamp)
+        log Penalty(msg.sender, penalty, begining_of_week)
     
-    log Withdraw(msg.sender, old_locked.amount - penalty, block.timestamp)
-    log Supply(supply_before, supply_before - old_locked.amount, block.timestamp)
+    log Withdraw(msg.sender, old_locked.amount - penalty, begining_of_week)
+    log Supply(supply_before, supply_before - old_locked.amount, begining_of_week)
 
     return Withdrawn({amount: old_locked.amount - penalty, penalty: penalty})
 
@@ -387,9 +400,10 @@ def find_epoch_by_timestamp(user: address, ts: uint256, max_epoch: uint256) -> u
 
 @view
 @internal
-def replay_slope_changes(user: address, point: Point, ts: uint256) -> Point:
+def replay_slope_changes(user: address, point: Point, _ts: uint256) -> Point:
     upoint: Point = point
-    t_i: uint256 = self.round_to_week(upoint.ts)
+    t_i: uint256 = upoint.ts
+    ts: uint256 = self.begining_of_week(_ts)
 
     for i in range(500):
         t_i += WEEK
@@ -456,7 +470,7 @@ def getPriorVotes(user: address, height: uint256) -> uint256:
         d_t = point_1.ts - point_0.ts
     else:
         d_block = block.number - point_0.blk
-        d_t = block.timestamp - point_0.ts
+        d_t = self.begining_of_week() - point_0.ts
     block_time: uint256 = point_0.ts
     if d_block != 0:
         block_time += d_t * (height - point_0.blk) / d_block
@@ -502,7 +516,7 @@ def totalSupplyAt(height: uint256) -> uint256:
             dt = (height - point.blk) * (point_next.ts - point.ts) / (point_next.blk - point.blk)
     else:
         if point.blk != block.number:
-            dt = (height - point.blk) * (block.timestamp - point.ts) / (block.number - point.blk)
+            dt = (height - point.blk) * (self.begining_of_week() - point.ts) / (block.number - point.blk)
 
     # Now dt contains info on how far are we beyond point
     point = self.replay_slope_changes(self, point, point.ts + dt)
