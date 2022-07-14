@@ -12,6 +12,7 @@ interface VotingYFI:
     def checkpoint(): nonpayable
     def token() -> ERC20: view
     def modify_lock(amount: uint256, unlock_time: uint256, user: address) -> LockedBalance: nonpayable
+    def balanceOf(addr: address, epoch: uint256) -> uint256: view
 
 event Initialized:
     veyfi: VotingYFI
@@ -157,22 +158,6 @@ def _find_timestamp_user_epoch(user: address, _timestamp: uint256, max_user_epoc
     return _min
 
 
-@view
-@external
-def ve_for_at(_user: address, _timestamp: uint256) -> uint256:
-    """
-    @notice Get the veYFI balance for `_user` at `_timestamp`
-    @param _user Address to query balance for
-    @param _timestamp Epoch time
-    @return uint256 veYFI balance
-    """
-    max_user_epoch: uint256 = VEYFI.epoch(_user)
-    epoch: uint256 = self._find_timestamp_user_epoch(_user, _timestamp, max_user_epoch)
-    pt: Point = VEYFI.point_history(_user, epoch)
-    zero: int128 = 0
-    return convert(max(pt.bias - pt.slope * convert(_timestamp - pt.ts, int128), zero), uint256)
-
-
 @internal
 def _checkpoint_total_supply():
     t: uint256 = self.time_cursor
@@ -222,50 +207,18 @@ def _claim(addr: address, last_token_time: uint256) -> uint256:
         return 0
 
     week_cursor: uint256 = self.time_cursor_of[addr]
-    if week_cursor == 0:
-        # Need to do the initial binary search
-        user_epoch = self._find_timestamp_user_epoch(addr, _start_time, max_user_epoch)
-    else:
-        user_epoch = self.user_epoch_of[addr]
-
-    if user_epoch == 0:
-        user_epoch = 1
-
-    user_point: Point = VEYFI.point_history(addr, user_epoch)
-
-    if week_cursor == 0:
-        week_cursor = (user_point.ts + WEEK - 1) / WEEK * WEEK
-
     if week_cursor >= last_token_time:
         return 0
-
-    if week_cursor < _start_time:
-        week_cursor = _start_time
-    old_user_point: Point = empty(Point)
 
     # Iterate over weeks
     for i in range(50):
         if week_cursor >= last_token_time:
             break
-
-        if week_cursor >= user_point.ts and user_epoch <= max_user_epoch:
-            user_epoch += 1
-            old_user_point = user_point
-            if user_epoch > max_user_epoch:
-                user_point = empty(Point)
-            else:
-                user_point = VEYFI.point_history(addr, user_epoch)
-
-        else:
-            # Calc
-            # + i * 2 is for rounding errors
-            dt: int128 = convert(week_cursor - old_user_point.ts, int128)
-            zero: int128 = 0
-            balance_of: uint256 = convert(max(old_user_point.bias - dt * old_user_point.slope, zero), uint256)
-            if balance_of == 0 and user_epoch > max_user_epoch:
+        balance_of: uint256 = VEYFI.balanceOf(addr, week_cursor)
+        if balance_of == 0 and user_epoch > max_user_epoch:
                 break
-            if balance_of > 0:
-                to_distribute += balance_of * self.tokens_per_week[week_cursor] / self.ve_supply[week_cursor]
+        if balance_of > 0:
+            to_distribute += balance_of * self.tokens_per_week[week_cursor] / self.ve_supply[week_cursor]
 
             week_cursor += WEEK
 
