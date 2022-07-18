@@ -20,9 +20,7 @@ def test_extra_rewards_full_boost(
     gov,
 ):
     yfi.approve(ve_yfi, whale_amount, sender=whale)
-    ve_yfi.modify_lock(
-        whale_amount, chain.pending_timestamp + MAXTIME, sender=whale
-    )
+    ve_yfi.modify_lock(whale_amount, chain.pending_timestamp + MAXTIME, sender=whale)
     assert yfi.balanceOf(whale) == 0
 
     lp_amount = 10**18
@@ -61,9 +59,7 @@ def test_extra_rewards_no_boost(
     gov,
 ):
     yfi.approve(ve_yfi, whale_amount, sender=whale)
-    ve_yfi.modify_lock(
-        whale_amount, chain.pending_timestamp + MAXTIME, sender=whale
-    )
+    ve_yfi.modify_lock(whale_amount, chain.pending_timestamp + MAXTIME, sender=whale)
 
     lp_amount = 10**18
     vault = create_vault()
