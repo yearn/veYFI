@@ -151,7 +151,7 @@ def lock_to_kink(lock: LockedBalance) -> Kink:
 
 @internal
 def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBalance) -> Point[2]:
-    begining_of_week: uint256 self.begining_of_week()
+    begining_of_week: uint256 = self.begining_of_week()
     previous_point: Point = Point({bias: 0, slope: 0, ts: begining_of_week, blk: block.number})
 
     if old_lock.amount != 0:
