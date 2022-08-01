@@ -9,18 +9,18 @@ plugins:
 dependencies:
   - name: openzeppelin
     github: OpenZeppelin/openzeppelin-contracts
-    version: 4.6.0
+    version: 4.7.1
   - name: openzeppelin-upgradeable
     github: OpenZeppelin/openzeppelin-contracts-upgradeable
-    version: 4.6.0
+    version: 4.7.1
   - name: vault
     github: yearn/yearn-vaults
     version: 0.4.3
 
 solidity:
   import_remapping:
-    - "@openzeppelin/contracts=openzeppelin/v4.6.0"
-    - "@openzeppelin-upgradeable/contracts=openzeppelin-upgradeable/v4.6.0"
+    - "@openzeppelin/contracts=openzeppelin/v4.7.1"
+    - "@openzeppelin-upgradeable/contracts=openzeppelin-upgradeable/v4.7.1"
 
 default_ecosystem: ethereum
 
