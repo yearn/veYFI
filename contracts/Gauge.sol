@@ -515,7 +515,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         // mint shares
         _mint(_receiver, _assets);
 
-
         emit Deposit(msg.sender, _receiver, _assets, _assets);
     }
 
@@ -643,7 +642,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         }
 
         _burn(_owner, _assets);
-
 
         if (_claim) {
             if (_owner != msg.sender) {
