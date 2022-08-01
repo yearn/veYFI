@@ -140,23 +140,6 @@ def _find_timestamp_epoch(_timestamp: uint256) -> uint256:
     return _min
 
 
-@view
-@internal
-def _find_timestamp_user_epoch(user: address, _timestamp: uint256, max_user_epoch: uint256) -> uint256:
-    _min: uint256 = 0
-    _max: uint256 = max_user_epoch
-    for i in range(128):
-        if _min >= _max:
-            break
-        _mid: uint256 = (_min + _max + 2) / 2
-        pt: Point = VEYFI.point_history(user, _mid)
-        if pt.ts <= _timestamp:
-            _min = _mid
-        else:
-            _max = _mid - 1
-    return _min
-
-
 @internal
 def _checkpoint_total_supply():
     t: uint256 = self.time_cursor
@@ -194,8 +177,6 @@ def checkpoint_total_supply():
 
 @internal
 def _claim(addr: address, last_token_time: uint256) -> uint256:
-    # Minimal user_epoch is 0 (if user had no point)
-    user_epoch: uint256 = 0
     to_distribute: uint256 = 0
 
     max_user_epoch: uint256 = VEYFI.epoch(addr)
