@@ -25,7 +25,7 @@ event CheckpointToken:
 event Claimed:
     recipient: indexed(address)
     amount: uint256
-    claim_epoch: uint256
+    week_cursor: uint256
     max_epoch: uint256
 
 event AllowedToRelock:
@@ -53,7 +53,6 @@ VEYFI: immutable(VotingYFI)
 start_time: public(uint256)
 time_cursor: public(uint256)
 time_cursor_of: public(HashMap[address, uint256])
-user_epoch_of: public(HashMap[address, uint256])
 allowed_to_relock: public(HashMap[address, HashMap[address, bool]])  # user -> relocker -> allowed
 
 last_token_time: public(uint256)
@@ -207,26 +206,31 @@ def _claim(addr: address, last_token_time: uint256) -> uint256:
         return 0
 
     week_cursor: uint256 = self.time_cursor_of[addr]
+
+    if week_cursor == 0:
+        user_point: Point = VEYFI.point_history(addr, 1)
+        week_cursor = (user_point.ts + WEEK - 1) / WEEK * WEEK
+
     if week_cursor >= last_token_time:
         return 0
+
+    if week_cursor < _start_time:
+        week_cursor = _start_time
 
     # Iterate over weeks
     for i in range(50):
         if week_cursor >= last_token_time:
             break
         balance_of: uint256 = VEYFI.balanceOf(addr, week_cursor)
-        if balance_of == 0 and user_epoch > max_user_epoch:
+        if balance_of == 0:
                 break
         if balance_of > 0:
             to_distribute += balance_of * self.tokens_per_week[week_cursor] / self.ve_supply[week_cursor]
 
             week_cursor += WEEK
-
-    user_epoch = min(max_user_epoch, user_epoch - 1)
-    self.user_epoch_of[addr] = user_epoch
     self.time_cursor_of[addr] = week_cursor
 
-    log Claimed(addr, to_distribute, user_epoch, max_user_epoch)
+    log Claimed(addr, to_distribute, week_cursor, max_user_epoch)
 
     return to_distribute
 
