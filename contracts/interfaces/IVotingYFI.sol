@@ -10,11 +10,11 @@ interface IVotingYFI is IERC20 {
 
     function totalSupply() external view returns (uint256);
 
-    function locked(address user) external view returns (LockedBalance memory);
+    function locked(address _user) external view returns (LockedBalance memory);
 
     function modify_lock(
-        uint256 amount,
-        uint256 unlock_time,
-        address user
+        uint256 _amount,
+        uint256 _unlock_time,
+        address _user
     ) external;
 }
