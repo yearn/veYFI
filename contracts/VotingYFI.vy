@@ -151,7 +151,8 @@ def lock_to_kink(lock: LockedBalance) -> Kink:
 
 @internal
 def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBalance) -> Point[2]:
-    previous_point: Point = Point({bias: 0, slope: 0, ts: self.begining_of_week(), blk: block.number})
+    begining_of_week: uint256 self.begining_of_week()
+    previous_point: Point = Point({bias: 0, slope: 0, ts: begining_of_week, blk: block.number})
 
     if old_lock.amount != 0:
         epoch: uint256 = self.epoch[user]
@@ -164,10 +165,10 @@ def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBal
     new_kink: Kink = self.lock_to_kink(new_lock)
 
     # schedule slope changes for the lock end
-    if previous_point.slope != 0 and old_lock.end > self.begining_of_week():
+    if previous_point.slope != 0 and old_lock.end > begining_of_week:
         self.slope_changes[self][old_lock.end] += old_point.slope
         self.slope_changes[user][old_lock.end] += old_point.slope
-    if new_point.slope != 0 and new_lock.end > self.begining_of_week():
+    if new_point.slope != 0 and new_lock.end > begining_of_week:
         self.slope_changes[self][new_lock.end] -= new_point.slope
         self.slope_changes[user][new_lock.end] -= new_point.slope
 
@@ -193,12 +194,12 @@ def _checkpoint_global() -> Point:
     # initial_last_point is used for extrapolation to calculate block number
     initial_last_point: Point = last_point
     block_slope: uint256 = 0  # dblock/dt
-    if self.begining_of_week() > last_point.ts:
-        block_slope = SCALE * (block.number - last_point.blk) / (self.begining_of_week() - last_point.ts)
+    begining_of_week: uint256 = self.begining_of_week()
+    if begining_of_week > last_point.ts:
+        block_slope = SCALE * (block.number - last_point.blk) / (begining_of_week - last_point.ts)
     
     # apply weekly slope changes and record weekly global snapshots
     t_i: uint256 = self.round_to_week(last_checkpoint)
-    begining_of_week: uint256 = self.begining_of_week()
     for i in range(255):
         t_i = min(t_i + WEEK, begining_of_week)
         last_point.bias -= last_point.slope * convert(t_i - last_checkpoint, int128)
