@@ -47,16 +47,21 @@ You will be able to start claiming from the veFYI reward pool two or three weeks
 
 ## Setup
 
-See [ape quickstart guide](https://docs.apeworx.io/ape/stable/userguides/quickstart.html)
+Install ape framework. See [ape quickstart guide](https://docs.apeworx.io/ape/stable/userguides/quickstart.html)
+
+Hardhat dependencies for running tests
+```bash
+npm install
+```
 
 ## Compile
 
-```py
+```bash
 ape compile
 ```
 
 ## Test
 
-```
+```bash
 ape test
 ```
