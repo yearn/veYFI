@@ -43,6 +43,7 @@ def test_over_four_years(chain, accounts, yfi, ve_yfi):
     chain.pending_timestamp += WEEK
 
     assert approx(ve_yfi.totalSupply(), rel=10e-14) == ve_yfi.balanceOf(alice)
+    assert ve_yfi.totalSupply() >= ve_yfi.balanceOf(alice)
 
 
 def test_voting_powers(chain, accounts, yfi, ve_yfi):
