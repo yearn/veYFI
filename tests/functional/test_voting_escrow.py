@@ -70,13 +70,35 @@ def test_lock_slightly_over_limit_is_rounded_down(
     assert ve_yfi.balanceOf(alice) == amount
     assert ve_yfi.slope_changes(ve_yfi, (chain.blocks.head.timestamp // WEEK +1) * WEEK) != 0
     assert ve_yfi.slope_changes(ve_yfi, (chain.blocks.head.timestamp // WEEK +1) * WEEK)  == ve_yfi.slope_changes(alice, (chain.blocks.head.timestamp // WEEK +1) * WEEK) 
-    chain.pending_timestamp += 3600 * 24 * 2
+    chain.pending_timestamp += 2 * DAY
     chain.mine()
     ve_yfi.modify_lock(amount, 0, sender=alice) # lock some more
     assert ve_yfi.balanceOf(alice) == amount * 2
-    chain.pending_timestamp += 3600 * 24 * 7
+    chain.pending_timestamp += WEEK
     chain.mine()
     assert ve_yfi.balanceOf(alice) < amount * 2
+
+
+def test_lock_over_limit_goes_to_zero(
+    chain, accounts, yfi, ve_yfi, setup_time
+):
+    setup_time()
+
+    alice = accounts[0]
+    amount = 1000 * 10**18
+    yfi.mint(alice, amount * 20, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 20, sender=alice)
+
+    now = chain.blocks.head.timestamp
+    unlock_time = now + MAXTIME + WEEK + 10
+    ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years ++
+    assert ve_yfi.point_history(alice.address, 1).slope == 0
+    assert ve_yfi.balanceOf(alice) == amount
+    assert ve_yfi.slope_changes(ve_yfi, (chain.blocks.head.timestamp // WEEK +1) * WEEK) != 0
+    chain.pending_timestamp += MAXTIME + WEEK
+    chain.mine()
+    assert ve_yfi.balanceOf(alice) == 0
+    assert ve_yfi.totalSupply() == 0
 
 def test_voting_powers(chain, accounts, yfi, ve_yfi):
     """
