@@ -1,26 +1,33 @@
 from pytest import approx
+import pytest
 import ape
 from ape import chain
 
 H = 3600
 DAY = 86400
 WEEK = 7 * DAY
-MAXTIME = 126144000 // WEEK * WEEK
+MAXTIME = 4 * 365 * 86400 // WEEK * WEEK
 TOL = 120 / WEEK
 
 
-def test_over_four_years(chain, accounts, yfi, ve_yfi):
-    # set at begining of week
-    chain.pending_timestamp += WEEK - (
-        chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
-    )
-    chain.mine()
+@pytest.fixture()
+def setup_time(chain):
+    def setup_time():
+        chain.pending_timestamp += WEEK - (
+            chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
+        )
+        chain.mine()
 
+    yield setup_time
+
+
+def test_over_four_years(chain, accounts, yfi, ve_yfi, setup_time):
+    setup_time()
     alice = accounts[0]
     amount = 1000 * 10**18
     yfi.mint(alice, amount * 20, sender=alice)
-
     yfi.approve(ve_yfi.address, amount * 20, sender=alice)
+
     now = chain.blocks.head.timestamp
     unlock_time = now + MAXTIME + 8 * WEEK + 3600
     ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years and one month lock
@@ -45,6 +52,31 @@ def test_over_four_years(chain, accounts, yfi, ve_yfi):
     assert approx(ve_yfi.totalSupply(), rel=10e-14) == ve_yfi.balanceOf(alice)
     assert ve_yfi.totalSupply() >= ve_yfi.balanceOf(alice)
 
+
+def test_lock_slightly_over_limit_is_rounded_down(
+    chain, accounts, yfi, ve_yfi, setup_time
+):
+    setup_time()
+
+    alice = accounts[0]
+    amount = 1000 * 10**18
+    yfi.mint(alice, amount * 20, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 20, sender=alice)
+
+    now = chain.blocks.head.timestamp
+    unlock_time = now + MAXTIME + WEEK + 10
+    ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years ++
+    assert ve_yfi.point_history(alice.address, 1).slope == 0
+    assert ve_yfi.balanceOf(alice) == amount
+    assert ve_yfi.slope_changes(ve_yfi, (chain.blocks.head.timestamp // WEEK +1) * WEEK) != 0
+    assert ve_yfi.slope_changes(ve_yfi, (chain.blocks.head.timestamp // WEEK +1) * WEEK)  == ve_yfi.slope_changes(alice, (chain.blocks.head.timestamp // WEEK +1) * WEEK) 
+    chain.pending_timestamp += 3600 * 24 * 2
+    chain.mine()
+    ve_yfi.modify_lock(amount, 0, sender=alice) # lock some more
+    assert ve_yfi.balanceOf(alice) == amount * 2
+    chain.pending_timestamp += 3600 * 24 * 7
+    chain.mine()
+    assert ve_yfi.balanceOf(alice) < amount * 2
 
 def test_voting_powers(chain, accounts, yfi, ve_yfi):
     """
