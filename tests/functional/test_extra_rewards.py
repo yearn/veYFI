@@ -3,6 +3,9 @@ from ape import chain, project
 import ape
 
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+DAY = 86400
+WEEK = 7 * DAY
+MAXTIME = 126144000 // WEEK * WEEK
 
 
 def test_extra_rewards_full_boost(
@@ -17,9 +20,7 @@ def test_extra_rewards_full_boost(
     gov,
 ):
     yfi.approve(ve_yfi, whale_amount, sender=whale)
-    ve_yfi.modify_lock(
-        whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
-    )
+    ve_yfi.modify_lock(whale_amount, chain.pending_timestamp + MAXTIME, sender=whale)
     assert yfi.balanceOf(whale) == 0
 
     lp_amount = 10**18
@@ -58,9 +59,7 @@ def test_extra_rewards_no_boost(
     gov,
 ):
     yfi.approve(ve_yfi, whale_amount, sender=whale)
-    ve_yfi.modify_lock(
-        whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
-    )
+    ve_yfi.modify_lock(whale_amount, chain.pending_timestamp + MAXTIME, sender=whale)
 
     lp_amount = 10**18
     vault = create_vault()
