@@ -107,6 +107,33 @@ def test_lock_over_limit_goes_to_zero(chain, accounts, yfi, ve_yfi, setup_time):
     assert ve_yfi.totalSupply() == 0
 
 
+def test_multiple_lock_decay(accounts, yfi, ve_yfi, setup_time):
+    DURATION = MAXTIME // len(accounts)
+    setup_time()
+    now = chain.blocks.head.timestamp
+    for i in range(len(accounts)):
+        account = accounts[i]
+        amount = 10**22
+        yfi.mint(account, amount, sender=account)
+        yfi.approve(ve_yfi.address, amount, sender=account)
+        ve_yfi.modify_lock(amount, (DURATION * (i + 1)) + now, sender=account)
+    balance_sum = 0
+    for i in range(len(accounts)):
+        balance_sum += ve_yfi.balanceOf(accounts[i])
+    assert pytest.approx(ve_yfi.totalSupply(), 10**14) == balance_sum
+    assert ve_yfi.totalSupply() >= balance_sum
+    # Test decay
+    for i in range(len(accounts)):
+        chain.pending_timestamp += DURATION
+        chain.mine()
+        balance_sum = 0
+        for i in range(len(accounts)):
+            balance_sum += ve_yfi.balanceOf(accounts[i])
+        assert pytest.approx(ve_yfi.totalSupply(), 10**14) == balance_sum
+        assert ve_yfi.totalSupply() >= balance_sum
+    assert ve_yfi.totalSupply() == 0
+
+
 def test_voting_powers(chain, accounts, yfi, ve_yfi):
     """
     Test voting power in the following scenario.
