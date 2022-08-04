@@ -125,6 +125,7 @@ def checkpoint_token():
 
 
 @internal
+@view
 def _find_timestamp_epoch(_timestamp: uint256) -> uint256:
     _min: uint256 = 0
     _max: uint256 = VEYFI.epoch(VEYFI.address)
