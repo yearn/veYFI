@@ -477,6 +477,8 @@ def totalSupply(ts: uint256 = block.timestamp) -> uint256:
     @return Total voting power
     """
     epoch: uint256 = self.epoch[self]
+    if ts != block.timestamp:
+        epoch = self.find_epoch_by_timestamp(self, ts, epoch)
     last_point: Point = self.point_history[self][epoch]
     last_point = self.replay_slope_changes(self, last_point, ts)
     return convert(last_point.bias, uint256)

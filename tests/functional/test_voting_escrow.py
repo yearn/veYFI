@@ -434,3 +434,22 @@ def test_early_exit(chain, accounts, yfi, ve_yfi):
     assert point_history_4["ts"] == chain.blocks.head.timestamp
     assert point_history_4["bias"] == 0
     assert point_history_4["slope"] == 0
+
+
+def test_total_supply_in_the_past(chain, accounts, yfi, ve_yfi, setup_time):
+    setup_time()
+
+    alice = accounts[0]
+    amount = 1000 * 10**18
+    yfi.mint(alice, amount * 20, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 20, sender=alice)
+
+    now = chain.blocks.head.timestamp
+    unlock_time = now + MAXTIME
+    ve_yfi.modify_lock(amount, unlock_time, sender=alice)
+    checkpoint = chain.blocks.head.timestamp
+    checkpoint_total_supply = ve_yfi.totalSupply()
+
+    chain.pending_timestamp += WEEK
+    ve_yfi.modify_lock(amount, 0, sender=alice)  # lock some more
+    assert checkpoint_total_supply == ve_yfi.totalSupply(checkpoint)
