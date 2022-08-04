@@ -1,11 +1,137 @@
 from pytest import approx
+import pytest
 import ape
+from ape import chain
 
 H = 3600
 DAY = 86400
 WEEK = 7 * DAY
-MAXTIME = 126144000
+MAXTIME = 4 * 365 * 86400 // WEEK * WEEK
 TOL = 120 / WEEK
+
+
+@pytest.fixture()
+def setup_time(chain):
+    def setup_time():
+        chain.pending_timestamp += WEEK - (
+            chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
+        )
+        chain.mine()
+
+    yield setup_time
+
+
+def test_over_four_years(chain, accounts, yfi, ve_yfi, setup_time):
+    setup_time()
+    alice = accounts[0]
+    amount = 1000 * 10**18
+    yfi.mint(alice, amount * 20, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 20, sender=alice)
+
+    now = chain.blocks.head.timestamp
+    unlock_time = now + MAXTIME + 8 * WEEK + 3600
+    ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years and one month lock
+    point = ve_yfi.point_history(alice.address, 1)
+    assert point.bias == amount
+    assert point.slope == 0
+    assert ve_yfi.totalSupply() == amount
+    chain.pending_timestamp += WEEK
+    chain.mine()
+    assert ve_yfi.totalSupply() == amount
+    chain.pending_timestamp += 8 * WEEK
+    chain.mine()
+    assert ve_yfi.totalSupply() < amount
+    assert ve_yfi.totalSupply() == ve_yfi.balanceOf(alice)
+
+    ve_yfi.checkpoint(sender=alice)
+    assert ve_yfi.totalSupply() == ve_yfi.balanceOf(alice)
+
+    ve_yfi.modify_lock(amount, 0, sender=alice)
+    chain.pending_timestamp += WEEK
+
+    assert approx(ve_yfi.totalSupply(), rel=10e-14) == ve_yfi.balanceOf(alice)
+    assert ve_yfi.totalSupply() >= ve_yfi.balanceOf(alice)
+
+
+def test_lock_slightly_over_limit_is_rounded_down(
+    chain, accounts, yfi, ve_yfi, setup_time
+):
+    setup_time()
+
+    alice = accounts[0]
+    amount = 1000 * 10**18
+    yfi.mint(alice, amount * 20, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 20, sender=alice)
+
+    now = chain.blocks.head.timestamp
+    unlock_time = now + MAXTIME + WEEK + 10
+    ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years ++
+    assert ve_yfi.point_history(alice.address, 1).slope == 0
+    assert ve_yfi.balanceOf(alice) == amount
+    assert (
+        ve_yfi.slope_changes(ve_yfi, (chain.blocks.head.timestamp // WEEK + 1) * WEEK)
+        != 0
+    )
+    assert ve_yfi.slope_changes(
+        ve_yfi, (chain.blocks.head.timestamp // WEEK + 1) * WEEK
+    ) == ve_yfi.slope_changes(alice, (chain.blocks.head.timestamp // WEEK + 1) * WEEK)
+    chain.pending_timestamp += 2 * DAY
+    chain.mine()
+    ve_yfi.modify_lock(amount, 0, sender=alice)  # lock some more
+    assert ve_yfi.balanceOf(alice) == amount * 2
+    chain.pending_timestamp += WEEK
+    chain.mine()
+    assert ve_yfi.balanceOf(alice) < amount * 2
+
+
+def test_lock_over_limit_goes_to_zero(chain, accounts, yfi, ve_yfi, setup_time):
+    setup_time()
+
+    alice = accounts[0]
+    amount = 1000 * 10**18
+    yfi.mint(alice, amount * 20, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 20, sender=alice)
+
+    now = chain.blocks.head.timestamp
+    unlock_time = now + MAXTIME + WEEK + 10
+    ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years ++
+    assert ve_yfi.point_history(alice.address, 1).slope == 0
+    assert ve_yfi.balanceOf(alice) == amount
+    assert (
+        ve_yfi.slope_changes(ve_yfi, (chain.blocks.head.timestamp // WEEK + 1) * WEEK)
+        != 0
+    )
+    chain.pending_timestamp += MAXTIME + WEEK
+    chain.mine()
+    assert ve_yfi.balanceOf(alice) == 0
+    assert ve_yfi.totalSupply() == 0
+
+
+def test_multiple_lock_decay(accounts, yfi, ve_yfi, setup_time):
+    DURATION = MAXTIME // len(accounts)
+    setup_time()
+    now = chain.blocks.head.timestamp
+    for i in range(len(accounts)):
+        account = accounts[i]
+        amount = 10**22
+        yfi.mint(account, amount, sender=account)
+        yfi.approve(ve_yfi.address, amount, sender=account)
+        ve_yfi.modify_lock(amount, (DURATION * (i + 1)) + now, sender=account)
+    balance_sum = 0
+    for i in range(len(accounts)):
+        balance_sum += ve_yfi.balanceOf(accounts[i])
+    assert pytest.approx(ve_yfi.totalSupply(), 10**14) == balance_sum
+    assert ve_yfi.totalSupply() >= balance_sum
+    # Test decay
+    for i in range(len(accounts)):
+        chain.pending_timestamp += DURATION
+        chain.mine()
+        balance_sum = 0
+        for i in range(len(accounts)):
+            balance_sum += ve_yfi.balanceOf(accounts[i])
+        assert pytest.approx(ve_yfi.totalSupply(), 10**14) == balance_sum
+        assert ve_yfi.totalSupply() >= balance_sum
+    assert ve_yfi.totalSupply() == 0
 
 
 def test_voting_powers(chain, accounts, yfi, ve_yfi):
