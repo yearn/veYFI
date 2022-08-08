@@ -116,9 +116,7 @@ def checkpoint_token():
     """
     @notice Update the token checkpoint
     @dev Calculates the total number of tokens to be distributed in a given week.
-         During setup for the initial distribution this function is only callable
-         by the contract owner. Beyond initial distro, it can be enabled for anyone
-         to call.
+        During setup for the initial distribution this function is only callable.
     """
     assert block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE
     self._checkpoint_token()
