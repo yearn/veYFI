@@ -345,7 +345,7 @@ def withdraw() -> Withdrawn:
 @internal
 def find_epoch_by_block(user: address, height: uint256, max_epoch: uint256) -> uint256:
     """
-    @notice Binary search to estimate timestamp for height number
+    @notice Binary search to estimate epoch height number
     @param height Block to find
     @param max_epoch Don't go beyond this epoch
     @return Epoch the block is in
@@ -367,7 +367,7 @@ def find_epoch_by_block(user: address, height: uint256, max_epoch: uint256) -> u
 @internal
 def find_epoch_by_timestamp(user: address, ts: uint256, max_epoch: uint256) -> uint256:
     """
-    @notice Binary search to estimate timestamp for height number
+    @notice Binary search to estimate epoch timestamp
     @param ts Timestamp to find
     @param max_epoch Don't go beyond this epoch
     @return Epoch the timestamp is in
@@ -412,7 +412,7 @@ def replay_slope_changes(user: address, point: Point, ts: uint256) -> Point:
 @external
 def balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
     """
-    @notice Get the current voting power for `msg.sender`
+    @notice Get the current voting power for a given user
     @param user User wallet address
     @param ts Epoch time to return voting power at
     @return User voting power
