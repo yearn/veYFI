@@ -388,6 +388,12 @@ def find_epoch_by_timestamp(user: address, ts: uint256, max_epoch: uint256) -> u
 @view
 @internal
 def replay_slope_changes(user: address, point: Point, ts: uint256) -> Point:
+    """
+    @dev
+        If the `ts` is higher than 500 weeks ago, this function will return the 
+        balance at exactly 500 weeks instead of `ts`. 
+        500 weeks is considered sufficient to cover the `MAX_LOCK_DURATION` period.
+    """
     upoint: Point = point
     t_i: uint256 = self.round_to_week(upoint.ts)
 
@@ -412,7 +418,7 @@ def replay_slope_changes(user: address, point: Point, ts: uint256) -> Point:
 @external
 def balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
     """
-    @notice Get the current voting power for a given user
+    @notice Get the current voting power for `user`
     @param user User wallet address
     @param ts Epoch time to return voting power at
     @return User voting power
