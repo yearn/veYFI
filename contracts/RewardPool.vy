@@ -92,7 +92,7 @@ def _checkpoint_token():
     this_week: uint256 = t / WEEK * WEEK
     next_week: uint256 = 0
 
-    for i in range(20):
+    for i in range(40):
         next_week = this_week + WEEK
         if block.timestamp < next_week:
             if since_last == 0 and block.timestamp == t:
