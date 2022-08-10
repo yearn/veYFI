@@ -7,11 +7,7 @@ from eth_utils import to_checksum_address, to_canonical_address
 @pytest.fixture(scope="session")
 def yfi(accounts, project):
     dev = accounts[0]
-    token = project.Token.deploy("YFI", sender=dev)
-    supply = convert("36_666 ether", int)
-    token.mint(dev, supply, sender=dev)
-    assert token.balanceOf(dev) == supply
-    return token
+    yield project.Token.deploy("YFI", sender=dev)
 
 
 @pytest.fixture(scope="session")
@@ -28,14 +24,26 @@ def veyfi_and_reward_pool(accounts, project, yfi):
     )  # MUST offset by a week otherwise token distributed are lost since no lock has been made yet.
     reward_pool = project.RewardPool.deploy(veyfi, start_time, sender=accounts[0])
     assert str(reward_pool) == reward_pool_address, "broken setup"
-    return veyfi, reward_pool
+    yield veyfi, reward_pool
 
 
 @pytest.fixture(scope="session")
 def veyfi(veyfi_and_reward_pool):
-    return veyfi_and_reward_pool[0]
+    yield veyfi_and_reward_pool[0]
 
 
 @pytest.fixture(scope="session")
 def reward_pool(veyfi_and_reward_pool):
-    return veyfi_and_reward_pool[1]
+    yield veyfi_and_reward_pool[1]
+
+
+DAY = 86400
+WEEK = 7 * DAY
+
+
+@pytest.fixture(autouse=True, scope="session")
+def setup_time(chain):
+    chain.pending_timestamp += WEEK - (
+        chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
+    )
+    chain.mine()
