@@ -84,8 +84,13 @@ def __init__(veyfi: VotingYFI, start_time: uint256):
 def _checkpoint_token():
     token_balance: uint256 = YFI.balanceOf(self)
     to_distribute: uint256 = token_balance - self.token_last_balance
+    # @dev gas optimization
+    if to_distribute == 0:
+        self.last_token_time = block.timestamp
+        log CheckpointToken(block.timestamp, 0)
+        return
+    
     self.token_last_balance = token_balance
-
     t: uint256 = self.last_token_time
     since_last: uint256 = block.timestamp - t
     self.last_token_time = block.timestamp
