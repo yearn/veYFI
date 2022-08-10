@@ -10,19 +10,7 @@ MAXTIME = 4 * 365 * 86400 // WEEK * WEEK
 TOL = 120 / WEEK
 
 
-@pytest.fixture()
-def setup_time(chain):
-    def setup_time():
-        chain.pending_timestamp += WEEK - (
-            chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
-        )
-        chain.mine()
-
-    yield setup_time
-
-
-def test_over_four_years(chain, accounts, yfi, ve_yfi, setup_time):
-    setup_time()
+def test_over_four_years(chain, accounts, yfi, ve_yfi):
     alice = accounts[0]
     amount = 1000 * 10**18
     yfi.mint(alice, amount * 20, sender=alice)
@@ -53,18 +41,14 @@ def test_over_four_years(chain, accounts, yfi, ve_yfi, setup_time):
     assert ve_yfi.totalSupply() >= ve_yfi.balanceOf(alice)
 
 
-def test_lock_slightly_over_limit_is_rounded_down(
-    chain, accounts, yfi, ve_yfi, setup_time
-):
-    setup_time()
-
+def test_lock_slightly_over_limit_is_rounded_down(chain, accounts, yfi, ve_yfi):
     alice = accounts[0]
     amount = 1000 * 10**18
     yfi.mint(alice, amount * 20, sender=alice)
     yfi.approve(ve_yfi.address, amount * 20, sender=alice)
 
     now = chain.blocks.head.timestamp
-    unlock_time = now + MAXTIME + WEEK + 10
+    unlock_time = now + MAXTIME + WEEK + 3600
     ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years ++
     assert ve_yfi.point_history(alice.address, 1).slope == 0
     assert ve_yfi.balanceOf(alice) == amount
@@ -84,9 +68,7 @@ def test_lock_slightly_over_limit_is_rounded_down(
     assert ve_yfi.balanceOf(alice) < amount * 2
 
 
-def test_lock_over_limit_goes_to_zero(chain, accounts, yfi, ve_yfi, setup_time):
-    setup_time()
-
+def test_lock_over_limit_goes_to_zero(chain, accounts, yfi, ve_yfi):
     alice = accounts[0]
     amount = 1000 * 10**18
     yfi.mint(alice, amount * 20, sender=alice)
@@ -107,9 +89,9 @@ def test_lock_over_limit_goes_to_zero(chain, accounts, yfi, ve_yfi, setup_time):
     assert ve_yfi.totalSupply() == 0
 
 
-def test_multiple_lock_decay(accounts, yfi, ve_yfi, setup_time):
+def test_multiple_lock_decay(accounts, yfi, ve_yfi):
     DURATION = MAXTIME // len(accounts)
-    setup_time()
+
     now = chain.blocks.head.timestamp
     for i in range(len(accounts)):
         account = accounts[i]
@@ -436,9 +418,7 @@ def test_early_exit(chain, accounts, yfi, ve_yfi):
     assert point_history_4["slope"] == 0
 
 
-def test_total_supply_in_the_past(chain, accounts, yfi, ve_yfi, setup_time):
-    setup_time()
-
+def test_total_supply_in_the_past(chain, accounts, yfi, ve_yfi):
     alice = accounts[0]
     amount = 1000 * 10**18
     yfi.mint(alice, amount * 20, sender=alice)
