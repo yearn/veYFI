@@ -413,10 +413,9 @@ def replay_slope_changes(user: address, point: Point, ts: uint256) -> Point:
     upoint.bias = max(0, upoint.bias)
     return upoint
 
-
 @view
-@external
-def balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
+@internal
+def _balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
     """
     @notice Get the current voting power for `user`
     @param user User wallet address
@@ -437,10 +436,24 @@ def balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
 
 @view
 @external
+def balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
+    """
+    @notice Get the current voting power for `msg.sender`
+    @param user User wallet address
+    @param ts Epoch time to return voting power at
+    @return User voting power
+    """
+    return self._balanceOf(user, ts)
+
+
+@view
+@external
 def getPriorVotes(user: address, height: uint256) -> uint256:
     """
     @notice Measure voting power of `user` at block height `height`
-    @dev Compatible with GovernorAlpha
+    @dev 
+        Compatible with GovernorAlpha. 
+        `user`can be self to get total supply at height.
     @param user User's wallet address
     @param height Block to calculate the voting power at
     @return Voting power
@@ -482,12 +495,7 @@ def totalSupply(ts: uint256 = block.timestamp) -> uint256:
     @dev Adheres to the ERC20 `totalSupply` interface for Aragon compatibility
     @return Total voting power
     """
-    epoch: uint256 = self.epoch[self]
-    if ts != block.timestamp:
-        epoch = self.find_epoch_by_timestamp(self, ts, epoch)
-    last_point: Point = self.point_history[self][epoch]
-    last_point = self.replay_slope_changes(self, last_point, ts)
-    return convert(last_point.bias, uint256)
+    return self._balanceOf(self, ts)
 
 
 @view
