@@ -857,7 +857,8 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     @param _accounts Addresses to kick
     */
     function kick(address[] calldata _accounts) public {
-        for (uint256 i = 0; i < _accounts.length;) {
+        uint256 length = _accounts.length;
+        for (uint256 i = 0; i < length;) {
             _kick(_accounts[i]);
             unchecked {
                 ++i;
