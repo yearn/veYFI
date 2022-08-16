@@ -219,7 +219,8 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     function addExtraReward(address _extraReward) external returns (bool) {
         require(msg.sender == rewardManager, "!authorized");
         require(_extraReward != address(0), "!reward setting");
-        for (uint256 i = 0; i < extraRewards.length;) {
+        uint256 length = extraRewards.length;
+        for (uint256 i = 0; i < length;) {
             require(extraRewards[i] != _extraReward, "exists");
             unchecked {
                 ++i;
