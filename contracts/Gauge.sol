@@ -32,7 +32,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     }
 
     uint256 public boostingFactor = 100;
-    uint256 private constant BOOST_DENOMINATOR = 1000;
+    uint256 private constant BOOST_DENOMINATOR = 1_000;
 
     IERC20 public asset;
     //// @notice veYFI
@@ -40,8 +40,8 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     //// @notice the veYFI YFI reward pool, penalty are sent to this contract.
     address public veYfiRewardPool;
     //// @notice a copy of the veYFI max lock duration
-    uint256 public constant MAX_LOCK = 4 * 365 * 86400;
-    uint256 public constant PRECISON_FACTOR = 10**6;
+    uint256 public constant MAX_LOCK = 126_144_000 seconds; // 4 years
+    uint256 public constant PRECISON_FACTOR = 10_000;
     //// @notice Penalty does not apply for locks expiring after 3y11m
 
     //// @notice rewardManager is in charge of adding/removing additional rewards

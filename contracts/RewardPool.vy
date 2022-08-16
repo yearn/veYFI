@@ -44,7 +44,7 @@ struct LockedBalance:
     end: uint256
 
 
-WEEK: constant(uint256) = 7 * 86400
+WEEK: constant(uint256) = 604800
 TOKEN_CHECKPOINT_DEADLINE: constant(uint256) = 86400
 
 YFI: immutable(ERC20)

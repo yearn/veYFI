@@ -64,8 +64,8 @@ YFI: immutable(ERC20)
 REWARD_POOL: immutable(RewardPool)
 
 DAY: constant(uint256) = 86400
-WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
-MAX_LOCK_DURATION: constant(uint256) = 4 * 365 * 86400 / WEEK * WEEK  # 4 years
+WEEK: constant(uint256) = 604800  # all future times are rounded by week
+MAX_LOCK_DURATION: constant(uint256) = 126144000  # 4 years
 SCALE: constant(uint256) = 10 ** 18
 MAX_PENALTY_RATIO: constant(uint256) = SCALE * 3 / 4  # 75% for early exit of max lock
 
