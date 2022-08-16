@@ -135,7 +135,7 @@ def _find_timestamp_epoch(_timestamp: uint256) -> uint256:
     for i in range(128):
         if _min >= _max:
             break
-        _mid: uint256 = (_min + _max + 2) / 2
+        _mid: uint256 = shift((_min + _max + 2), -1)
         pt: Point = VEYFI.point_history(VEYFI.address, _mid)
         if pt.ts <= _timestamp:
             _min = _mid

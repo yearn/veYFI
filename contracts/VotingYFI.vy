@@ -355,7 +355,7 @@ def find_epoch_by_block(user: address, height: uint256, max_epoch: uint256) -> u
     for i in range(128):  # Will be always enough for 128-bit numbers
         if _min >= _max:
             break
-        _mid: uint256 = (_min + _max + 1) / 2
+        _mid: uint256 = shift((_min + _max + 1), -1)
         if self.point_history[user][_mid].blk <= height:
             _min = _mid
         else:
@@ -377,7 +377,7 @@ def find_epoch_by_timestamp(user: address, ts: uint256, max_epoch: uint256) -> u
     for i in range(128):  # Will be always enough for 128-bit numbers
         if _min >= _max:
             break
-        _mid: uint256 = (_min + _max + 1) / 2
+        _mid: uint256 = shift((_min + _max + 1), -1)
         if self.point_history[user][_mid].ts <= ts:
             _min = _mid
         else:

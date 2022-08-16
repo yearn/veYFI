@@ -139,7 +139,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     @param _boostingFactor the value should be between 20 and 500
     */
     function setBoostingFactor(uint256 _boostingFactor) external onlyOwner {
-        require(_boostingFactor <= BOOST_DENOMINATOR / 2, "value too high");
+        require(_boostingFactor <= BOOST_DENOMINATOR >> 1, "value too high");
         require(_boostingFactor >= BOOST_DENOMINATOR / 50, "value too low");
 
         boostingFactor = _boostingFactor;
