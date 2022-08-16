@@ -219,8 +219,11 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     function addExtraReward(address _extraReward) external returns (bool) {
         require(msg.sender == rewardManager, "!authorized");
         require(_extraReward != address(0), "!reward setting");
-        for (uint256 i = 0; i < extraRewards.length; ++i) {
+        for (uint256 i = 0; i < extraRewards.length;) {
             require(extraRewards[i] != _extraReward, "exists");
+            unchecked {
+                ++i;
+            }
         }
         emit AddedExtraReward(_extraReward);
         extraRewards.push(_extraReward);
@@ -235,10 +238,13 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         require(msg.sender == rewardManager, "!authorized");
         uint256 index = type(uint256).max;
         uint256 length = extraRewards.length;
-        for (uint256 i = 0; i < length; ++i) {
+        for (uint256 i = 0; i < length;) {
             if (extraRewards[i] == _extraReward) {
                 index = i;
                 break;
+            }
+            unchecked {
+                ++i;
             }
         }
         require(index != type(uint256).max, "extra reward not found");
@@ -300,16 +306,22 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
             _updateReward(_from);
             //also deposit to linked rewards
             uint256 length = extraRewards.length;
-            for (uint256 i = 0; i < length; ++i) {
+            for (uint256 i = 0; i < length;) {
                 IExtraReward(extraRewards[i]).rewardCheckpoint(_from);
+                unchecked {
+                    ++i;
+                }
             }
         }
         if (_to != address(0)) {
             _updateReward(_to);
             //also deposit to linked rewards
             uint256 length = extraRewards.length;
-            for (uint256 i = 0; i < length; ++i) {
+            for (uint256 i = 0; i < length;) {
                 IExtraReward(extraRewards[i]).rewardCheckpoint(_to);
+                unchecked {
+                    ++i;
+                }
             }
         }
     }
@@ -786,8 +798,11 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         //also get rewards from linked rewards
         if (_claimExtras) {
             uint256 length = extraRewards.length;
-            for (uint256 i = 0; i < length; ++i) {
+            for (uint256 i = 0; i < length;) {
                 IExtraReward(extraRewards[i]).getRewardFor(_account);
+                unchecked {
+                    ++i;
+                }
             }
         }
     }
@@ -841,8 +856,11 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     @param _accounts Addresses to kick
     */
     function kick(address[] calldata _accounts) public {
-        for (uint256 i = 0; i < _accounts.length; ++i) {
+        for (uint256 i = 0; i < _accounts.length;) {
             _kick(_accounts[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 

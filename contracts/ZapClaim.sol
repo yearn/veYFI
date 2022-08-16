@@ -44,8 +44,11 @@ contract ZapClaim {
     ) external {
         uint256 balance = IERC20(YFI).balanceOf(msg.sender);
 
-        for (uint256 i = 0; i < _gauges.length; ++i) {
+        for (uint256 i = 0; i < _gauges.length;) {
             IGauge(_gauges[i]).getRewardFor(msg.sender, false, true);
+            unchecked {
+                ++i;
+            }
         }
 
         if (_claimVeYfi) {
