@@ -67,6 +67,7 @@ def test_gauge_yfi_distribution_no_boost(
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
     assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
+    chain.mine()
     gauge.getReward(sender=panda)
 
     assert (
@@ -202,7 +203,7 @@ def test_deposit_for(
     gauge.addExtraReward(extra_reward, sender=gov)
     assert gauge.totalSupply() == 0
 
-    with ape.reverts("RewardPool : Cannot deposit 0"):
+    with ape.reverts("Cannot deposit 0"):
         gauge.deposit(0, whale, sender=shark)
 
     vault.mint(shark, lp_amount, sender=gov)
@@ -212,7 +213,7 @@ def test_deposit_for(
     assert gauge.totalSupply() == 10**18
     assert gauge.balanceOf(whale) == 10**18
 
-    with ape.reverts("RewardPool : Cannot deposit 0"):
+    with ape.reverts("Cannot deposit 0"):
         gauge.deposit(0, sender=whale)
 
     vault.mint(whale, lp_amount, sender=gov)
@@ -228,6 +229,7 @@ def test_deposit_for(
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
     assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
+    chain.mine()
     gauge.getReward(sender=whale)
 
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
@@ -259,6 +261,7 @@ def test_withdraw(yfi, ve_yfi, whale, whale_amount, create_vault, create_gauge, 
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
     assert pytest.approx(gauge.rewardRate()) == yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
+    chain.mine()
     gauge.withdraw(True, sender=whale)
 
     assert pytest.approx(yfi.balanceOf(whale), rel=5 * 10e-4) == yfi_to_distribute / (
@@ -291,6 +294,7 @@ def test_claim_and_lock_rewards(
 
     gauge.queueNewRewards(yfi_to_distribute, sender=gov)
     chain.pending_timestamp += 3600
+    chain.mine()
     tx = gauge.getReward(True, False, sender=whale)
     assert (
         ve_yfi.locked(whale)[0]

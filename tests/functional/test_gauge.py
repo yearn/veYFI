@@ -23,9 +23,9 @@ def test_set_reward_manager(create_vault, create_gauge, panda, gov):
 def test_set_gov(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     gauge = create_gauge(vault)
-    with ape.reverts("Ownable: new owner is the zero address"):
+    with ape.reverts("new owner is the zero address"):
         gauge.transferOwnership(ZERO_ADDRESS, sender=gov)
-    with ape.reverts("Ownable: caller is not the owner"):
+    with ape.reverts("caller is not the owner"):
         gauge.transferOwnership(panda, sender=panda)
 
     gauge.transferOwnership(panda, sender=gov)
@@ -44,7 +44,7 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     gauge = create_gauge(vault)
     yfo = create_token("YFO")
     yfo.mint(gauge, 10**18, sender=gov)
-    with ape.reverts("Ownable: caller is not the owner"):
+    with ape.reverts("caller is not the owner"):
         gauge.sweep(yfo, sender=whale)
     with ape.reverts("protected token"):
         gauge.sweep(yfi, sender=gov)
@@ -148,6 +148,7 @@ def test_set_duration(create_vault, create_gauge, yfi, gov):
 
     finish = gauge.periodFinish()
     rate = gauge.rewardRate()
+    chain.mine()
     time = chain.blocks.head.timestamp
     gauge.setDuration(28 * 3600 * 24, sender=gov)
 
@@ -181,7 +182,7 @@ def test_set_boosting_factor(
 
     gauge.deposit(sender=whale)
 
-    with ape.reverts("Ownable: caller is not the owner"):
+    with ape.reverts("caller is not the owner"):
         gauge.setBoostingFactor(200, sender=panda)
 
     with ape.reverts("value too low"):

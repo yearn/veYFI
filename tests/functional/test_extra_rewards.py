@@ -39,10 +39,12 @@ def test_extra_rewards_full_boost(
     vault.approve(gauge, lp_amount, sender=whale)
     gauge.deposit(sender=whale)
     chain.pending_timestamp += 3600
+    chain.mine()
     extra_reward.getReward(sender=whale)
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 24
 
     chain.pending_timestamp += 3600
+    chain.mine()
     gauge.getReward(sender=whale)
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 12
 
@@ -86,6 +88,7 @@ def test_extra_rewards_no_boost(
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 24
 
     chain.pending_timestamp += 3600
+    chain.mine()
     gauge.getReward(sender=whale)
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 12
 
@@ -109,10 +112,12 @@ def test_withdraw_from_gauge_claim_extra_rewards(
     vault.approve(gauge, lp_amount, sender=whale)
     gauge.deposit(sender=whale)
     chain.pending_timestamp += 3600
+    chain.mine()
     extra_reward.getReward(sender=whale)
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 24
 
     chain.pending_timestamp += 3600
+    chain.mine()
     gauge.withdraw(True, sender=whale)
     assert pytest.approx(yfo.balanceOf(whale), rel=10e-4) == 10**18 / 14 / 12
 
@@ -135,7 +140,7 @@ def test_small_queued_rewards_duration_extension(
     # distribution started, do not extend the duration unless rewards are 120% of what has been distributed.
     chain.pending_timestamp += 24 * 3600
     # Should have distributed 1/14, adding 1% will not trigger an update.
-
+    chain.mine()
     extra_reward.queueNewRewards(10**18, sender=gov)
 
     assert extra_reward.queuedRewards() == 10**18
@@ -156,9 +161,9 @@ def test_set_gov(
     yfo = create_token("YFO")
     extra_reward = create_extra_reward(gauge, yfo)
 
-    with ape.reverts("Ownable: new owner is the zero address"):
+    with ape.reverts("new owner is the zero address"):
         extra_reward.transferOwnership(ZERO_ADDRESS, sender=gov)
-    with ape.reverts("Ownable: caller is not the owner"):
+    with ape.reverts("caller is not the owner"):
         extra_reward.transferOwnership(panda, sender=panda)
 
     extra_reward.transferOwnership(panda, sender=gov)
@@ -175,7 +180,7 @@ def test_sweep(
 
     yfx = create_token("YFX")
     yfx.mint(extra_reward, 10**18, sender=gov)
-    with ape.reverts("Ownable: caller is not the owner"):
+    with ape.reverts("caller is not the owner"):
         extra_reward.sweep(yfo, sender=whale)
     with ape.reverts("protected token"):
         extra_reward.sweep(yfo, sender=gov)

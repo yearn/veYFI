@@ -507,7 +507,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     }
 
     function _deposit(uint256 _assets, address _receiver) internal {
-        require(_assets != 0, "RewardPool : Cannot deposit 0");
+        require(_assets != 0, "Cannot deposit 0");
 
         //take away from sender
         asset.safeTransferFrom(msg.sender, address(this), _assets);
@@ -635,7 +635,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         bool _claim,
         bool _lock
     ) internal returns (uint256) {
-        require(_assets != 0, "RewardPool : Cannot withdraw 0");
+        require(_assets != 0, "Cannot withdraw 0");
 
         if (msg.sender != _owner) {
             _spendAllowance(_owner, msg.sender, _assets);

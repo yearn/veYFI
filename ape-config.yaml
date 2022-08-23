@@ -1,7 +1,7 @@
 plugins:
   - name: solidity
   - name: vyper
-  - name: hardhat
+  - name: foundry
   - name: infura
   - name: tokens
   - name: etherscan
@@ -35,4 +35,7 @@ hardhat:
 ethereum:
   default_network: local
   local:
-    default_provider: hardhat
+    default_provider: foundry
+
+foundry:
+  port: 8555
