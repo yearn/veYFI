@@ -209,10 +209,9 @@ def _claim(addr: address, last_token_time: uint256) -> uint256:
         balance_of: uint256 = VEYFI.balanceOf(addr, week_cursor)
         if balance_of == 0:
                 break
-        if balance_of > 0:
-            to_distribute += balance_of * self.tokens_per_week[week_cursor] / self.ve_supply[week_cursor]
+        to_distribute += balance_of * self.tokens_per_week[week_cursor] / self.ve_supply[week_cursor]
+        week_cursor += WEEK
 
-            week_cursor += WEEK
     self.time_cursor_of[addr] = week_cursor
 
     log Claimed(addr, to_distribute, week_cursor, max_user_epoch)
