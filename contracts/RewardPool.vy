@@ -150,7 +150,7 @@ def _checkpoint_total_supply():
     rounded_timestamp: uint256 = block.timestamp / WEEK * WEEK
     VEYFI.checkpoint()
 
-    for i in range(20):
+    for i in range(40):
         if t > rounded_timestamp:
             break
         else:
