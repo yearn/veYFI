@@ -208,7 +208,7 @@ def _claim(addr: address, last_token_time: uint256) -> uint256:
             break
         balance_of: uint256 = VEYFI.balanceOf(addr, week_cursor)
         if balance_of == 0:
-                break
+            break
         to_distribute += balance_of * self.tokens_per_week[week_cursor] / self.ve_supply[week_cursor]
         week_cursor += WEEK
 
