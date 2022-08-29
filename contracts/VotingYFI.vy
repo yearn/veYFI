@@ -116,14 +116,14 @@ def lock_to_point(lock: LockedBalance) -> Point:
     point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
     if lock.amount > 0:
         # the lock is longer than the max duration
+        slope: int128 = convert(lock.amount / MAX_LOCK_DURATION, int128)
         if lock.end > block.timestamp + MAX_LOCK_DURATION:
             point.slope = 0
-            point.bias = convert(lock.amount, int128)
+            point.bias = slope * convert(MAX_LOCK_DURATION, int128)
         # the lock ends in the future but shorter than max duration
         elif lock.end > block.timestamp:
-            point.slope = convert(lock.amount / MAX_LOCK_DURATION, int128)
-            point.bias = point.slope * convert(lock.end - block.timestamp, int128)
-
+            point.slope = slope
+            point.bias = slope * convert(lock.end - block.timestamp, int128)
     return point
 
 

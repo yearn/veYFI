@@ -7,6 +7,7 @@ WEEK = 7 * DAY
 MAXTIME = 4 * 365 * 86400 // WEEK * WEEK
 TOL = 120 / WEEK
 AMOUNT = 10**18
+POWER = AMOUNT // MAXTIME * MAXTIME
 
 
 @pytest.fixture()
@@ -30,7 +31,7 @@ def alice(accounts, yfi, ve_yfi):
 
 
 def test_new_lock_less_than_max(alice, bob, ve_yfi):
-    assert ve_yfi.totalSupply() == AMOUNT
+    assert ve_yfi.totalSupply() == POWER
     now = chain.blocks.head.timestamp
     unlock_time = now + MAXTIME // 20
     ve_yfi.modify_lock(AMOUNT, unlock_time, sender=alice)
@@ -45,16 +46,16 @@ def test_new_lock_less_than_max(alice, bob, ve_yfi):
     chain.mine()
 
     assert ve_yfi.balanceOf(alice) == 0
-    assert ve_yfi.totalSupply() == AMOUNT
-    assert ve_yfi.balanceOf(bob) == AMOUNT
+    assert ve_yfi.totalSupply() == POWER
+    assert ve_yfi.balanceOf(bob) == POWER
 
 
 def test_new_lock_over_max(alice, bob, ve_yfi):
-    assert ve_yfi.totalSupply() == AMOUNT
+    assert ve_yfi.totalSupply() == POWER
     now = chain.blocks.head.timestamp
     unlock_time = now + MAXTIME + 4 * WEEK
     ve_yfi.modify_lock(AMOUNT, unlock_time, sender=alice)
-    assert ve_yfi.balanceOf(alice) == AMOUNT
+    assert ve_yfi.balanceOf(alice) == POWER
 
     point = ve_yfi.point_history(alice, 1)
     lock = ve_yfi.locked(alice)
@@ -66,14 +67,13 @@ def test_new_lock_over_max(alice, bob, ve_yfi):
 
     chain.pending_timestamp += MAXTIME + 4 * WEEK
     chain.mine()
-    residual_balance = ve_yfi.balanceOf(alice)
-    assert pytest.approx(residual_balance, abs=10**8) == 0
-    assert ve_yfi.totalSupply() == AMOUNT + residual_balance
-    assert ve_yfi.balanceOf(bob) == AMOUNT
+    assert ve_yfi.balanceOf(alice) == 0
+    assert ve_yfi.totalSupply() == POWER
+    assert ve_yfi.balanceOf(bob) == POWER
 
 
 def test_change_lock_from_above_max_to_max(alice, bob, ve_yfi):
-    assert ve_yfi.totalSupply() == AMOUNT
+    assert ve_yfi.totalSupply() == POWER
     now = chain.blocks.head.timestamp
     unlock_time = now + MAXTIME + 4 * WEEK
     ve_yfi.modify_lock(AMOUNT, unlock_time, sender=alice)
@@ -99,7 +99,7 @@ def test_change_lock_from_above_max_to_max(alice, bob, ve_yfi):
 
 
 def test_checkpoint_after_kink_starts(alice, bob, ve_yfi):
-    assert ve_yfi.totalSupply() == AMOUNT
+    assert ve_yfi.totalSupply() == POWER
     now = chain.blocks.head.timestamp
     unlock_time = now + MAXTIME + 4 * WEEK
     ve_yfi.modify_lock(AMOUNT, unlock_time, sender=alice)
@@ -113,7 +113,7 @@ def test_checkpoint_after_kink_starts(alice, bob, ve_yfi):
 
     chain.pending_timestamp += 5 * WEEK
     chain.mine()
-    assert ve_yfi.balanceOf(alice) < AMOUNT
+    assert ve_yfi.balanceOf(alice) < POWER
     ve_yfi.modify_lock(10**6, 0, sender=alice)  # trigger checkpoint.
     new_point = ve_yfi.point_history(alice, 2)
     assert new_point.slope == (AMOUNT + 10**6) // MAXTIME

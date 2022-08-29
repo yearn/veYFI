@@ -13,6 +13,7 @@ TOL = 120 / WEEK
 def test_over_four_years(chain, accounts, yfi, ve_yfi):
     alice = accounts[0]
     amount = 1000 * 10**18
+    power = amount // MAXTIME * MAXTIME
     yfi.mint(alice, amount * 20, sender=alice)
     yfi.approve(ve_yfi.address, amount * 20, sender=alice)
 
@@ -20,15 +21,15 @@ def test_over_four_years(chain, accounts, yfi, ve_yfi):
     unlock_time = now + MAXTIME + 8 * WEEK + 3600
     ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years and one month lock
     point = ve_yfi.point_history(alice.address, 1)
-    assert point.bias == amount
+    assert point.bias == power
     assert point.slope == 0
-    assert ve_yfi.totalSupply() == amount
+    assert ve_yfi.totalSupply() == power
     chain.pending_timestamp += WEEK
     chain.mine()
-    assert ve_yfi.totalSupply() == amount
+    assert ve_yfi.totalSupply() == power
     chain.pending_timestamp += 8 * WEEK
     chain.mine()
-    assert ve_yfi.totalSupply() < amount
+    assert ve_yfi.totalSupply() < power
     assert ve_yfi.totalSupply() == ve_yfi.balanceOf(alice)
 
     ve_yfi.checkpoint(sender=alice)
@@ -44,6 +45,8 @@ def test_over_four_years(chain, accounts, yfi, ve_yfi):
 def test_lock_slightly_over_limit_is_rounded_down(chain, accounts, yfi, ve_yfi):
     alice = accounts[0]
     amount = 1000 * 10**18
+    power = amount // MAXTIME * MAXTIME
+
     yfi.mint(alice, amount * 20, sender=alice)
     yfi.approve(ve_yfi.address, amount * 20, sender=alice)
 
@@ -51,7 +54,7 @@ def test_lock_slightly_over_limit_is_rounded_down(chain, accounts, yfi, ve_yfi):
     unlock_time = now + MAXTIME + WEEK + 3600
     ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years ++
     assert ve_yfi.point_history(alice.address, 1).slope == 0
-    assert ve_yfi.balanceOf(alice) == amount
+    assert ve_yfi.balanceOf(alice) == power
     assert (
         ve_yfi.slope_changes(ve_yfi, (chain.blocks.head.timestamp // WEEK + 1) * WEEK)
         != 0
@@ -62,15 +65,16 @@ def test_lock_slightly_over_limit_is_rounded_down(chain, accounts, yfi, ve_yfi):
     chain.pending_timestamp += 2 * DAY
     chain.mine()
     ve_yfi.modify_lock(amount, 0, sender=alice)  # lock some more
-    assert ve_yfi.balanceOf(alice) == amount * 2
+    assert ve_yfi.balanceOf(alice) == (amount * 2) // MAXTIME * MAXTIME
     chain.pending_timestamp += WEEK
     chain.mine()
-    assert ve_yfi.balanceOf(alice) < amount * 2
+    assert ve_yfi.balanceOf(alice) < (amount * 2) // MAXTIME * MAXTIME
 
 
-def test_lock_over_limit_goes_to_close_to_zero(chain, accounts, yfi, ve_yfi):
+def test_lock_over_limit_goes_to_zero(chain, accounts, yfi, ve_yfi):
     alice = accounts[0]
     amount = 1000 * 10**18
+    power = amount // MAXTIME * MAXTIME
     yfi.mint(alice, amount * 20, sender=alice)
     yfi.approve(ve_yfi.address, amount * 20, sender=alice)
 
@@ -78,14 +82,14 @@ def test_lock_over_limit_goes_to_close_to_zero(chain, accounts, yfi, ve_yfi):
     unlock_time = now + MAXTIME + WEEK + 10
     ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years ++
     assert ve_yfi.point_history(alice.address, 1).slope == 0
-    assert ve_yfi.balanceOf(alice) == amount
+    assert ve_yfi.balanceOf(alice) == power
     assert (
         ve_yfi.slope_changes(ve_yfi, (chain.blocks.head.timestamp // WEEK + 1) * WEEK)
         != 0
     )
     chain.pending_timestamp += MAXTIME + WEEK
     chain.mine()
-    assert pytest.approx(ve_yfi.balanceOf(alice), abs=10**8) == 0
+    assert ve_yfi.balanceOf(alice) == 0
     assert pytest.approx(ve_yfi.totalSupply(), abs=10**8) == 0
 
 
