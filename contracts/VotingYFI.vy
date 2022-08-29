@@ -478,13 +478,8 @@ def getPriorVotes(user: address, height: uint256) -> uint256:
     if d_block != 0:
         block_time += d_t * (height - point_0.blk) / d_block
 
-    upoint.bias -= upoint.slope * convert(block_time - upoint.ts, int128)
-    if upoint.bias >= 0:
-        return convert(upoint.bias, uint256)
-    else:
-        return 0
-
-
+    upoint = self.replay_slope_changes(user, upoint, block_time)
+    return convert(upoint.bias, uint256)
 @view
 @external
 def totalSupply(ts: uint256 = block.timestamp) -> uint256:
