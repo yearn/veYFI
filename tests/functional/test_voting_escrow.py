@@ -68,7 +68,7 @@ def test_lock_slightly_over_limit_is_rounded_down(chain, accounts, yfi, ve_yfi):
     assert ve_yfi.balanceOf(alice) < amount * 2
 
 
-def test_lock_over_limit_goes_to_zero(chain, accounts, yfi, ve_yfi):
+def test_lock_over_limit_goes_to_close_to_zero(chain, accounts, yfi, ve_yfi):
     alice = accounts[0]
     amount = 1000 * 10**18
     yfi.mint(alice, amount * 20, sender=alice)
@@ -85,8 +85,8 @@ def test_lock_over_limit_goes_to_zero(chain, accounts, yfi, ve_yfi):
     )
     chain.pending_timestamp += MAXTIME + WEEK
     chain.mine()
-    assert ve_yfi.balanceOf(alice) == 0
-    assert ve_yfi.totalSupply() == 0
+    assert pytest.approx(ve_yfi.balanceOf(alice), abs=10**8) == 0
+    assert pytest.approx(ve_yfi.totalSupply(), abs=10**8) == 0
 
 
 def test_multiple_lock_decay(accounts, yfi, ve_yfi):
