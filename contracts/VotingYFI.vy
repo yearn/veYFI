@@ -141,12 +141,6 @@ def lock_to_kink(lock: LockedBalance) -> Kink:
 
 @internal
 def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBalance) -> Point[2]:
-    previous_point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
-
-    if old_lock.amount != 0:
-        epoch: uint256 = self.epoch[user]
-        previous_point = self.point_history[user][epoch]
-    
     old_point: Point = self.lock_to_point(old_lock)
     new_point: Point = self.lock_to_point(new_lock)
 
@@ -154,7 +148,7 @@ def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBal
     new_kink: Kink = self.lock_to_kink(new_lock)
 
     # schedule slope changes for the lock end
-    if previous_point.slope != 0 and old_lock.end > block.timestamp:
+    if old_point.slope != 0 and old_lock.end > block.timestamp:
         self.slope_changes[self][old_lock.end] += old_point.slope
         self.slope_changes[user][old_lock.end] += old_point.slope
     if new_point.slope != 0 and new_lock.end > block.timestamp:
@@ -165,9 +159,13 @@ def _checkpoint_user(user: address, old_lock: LockedBalance, new_lock: LockedBal
     if old_kink.slope != 0:
         self.slope_changes[self][old_kink.ts] -= old_kink.slope
         self.slope_changes[user][old_kink.ts] -= old_kink.slope
+        self.slope_changes[self][old_lock.end] += old_kink.slope
+        self.slope_changes[user][old_lock.end] += old_kink.slope
     if new_kink.slope != 0:
         self.slope_changes[self][new_kink.ts] += new_kink.slope
         self.slope_changes[user][new_kink.ts] += new_kink.slope
+        self.slope_changes[self][new_lock.end] -= new_kink.slope
+        self.slope_changes[user][new_lock.end] -= new_kink.slope
 
     self.epoch[user] += 1
     self.point_history[user][self.epoch[user]] = new_point
