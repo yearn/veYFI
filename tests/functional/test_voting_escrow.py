@@ -39,7 +39,7 @@ def test_over_four_years(chain, accounts, yfi, ve_yfi):
     chain.pending_timestamp += WEEK
 
     assert approx(ve_yfi.totalSupply(), rel=10e-14) == ve_yfi.balanceOf(alice)
-    assert ve_yfi.totalSupply() >= ve_yfi.balanceOf(alice)
+    assert ve_yfi.totalSupply() == ve_yfi.balanceOf(alice)
 
 
 def test_lock_slightly_over_limit_is_rounded_down(chain, accounts, yfi, ve_yfi):
@@ -107,7 +107,7 @@ def test_multiple_lock_decay(accounts, yfi, ve_yfi):
     for i in range(len(accounts)):
         balance_sum += ve_yfi.balanceOf(accounts[i])
     assert pytest.approx(ve_yfi.totalSupply(), 10**14) == balance_sum
-    assert ve_yfi.totalSupply() >= balance_sum
+    assert ve_yfi.totalSupply() == balance_sum
     # Test decay
     for i in range(len(accounts)):
         chain.pending_timestamp += DURATION
@@ -116,7 +116,7 @@ def test_multiple_lock_decay(accounts, yfi, ve_yfi):
         for i in range(len(accounts)):
             balance_sum += ve_yfi.balanceOf(accounts[i])
         assert pytest.approx(ve_yfi.totalSupply(), 10**14) == balance_sum
-        assert ve_yfi.totalSupply() >= balance_sum
+        assert ve_yfi.totalSupply() == balance_sum
     assert ve_yfi.totalSupply() == 0
 
 
