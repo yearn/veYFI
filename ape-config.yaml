@@ -14,8 +14,8 @@ dependencies:
     github: OpenZeppelin/openzeppelin-contracts-upgradeable
     version: 4.7.1
   - name: vault
-    github: yearn/yearn-vaults
-    version: 0.4.3
+    github: pandadefi/yearn-vaults
+    branch: release_0.4.4
 
 solidity:
   import_remapping:
