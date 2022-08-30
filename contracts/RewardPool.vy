@@ -13,6 +13,7 @@ interface VotingYFI:
     def token() -> ERC20: view
     def modify_lock(amount: uint256, unlock_time: uint256, user: address) -> LockedBalance: nonpayable
     def balanceOf(addr: address, epoch: uint256) -> uint256: view
+    def find_epoch_by_timestamp(user: address, ts: uint256) -> uint256: view 
 
 event Initialized:
     veyfi: VotingYFI
@@ -121,28 +122,9 @@ def checkpoint_token():
     """
     @notice Update the token checkpoint
     @dev Calculates the total number of tokens to be distributed in a given week.
-        During setup for the initial distribution this function is only callable.
     """
     assert block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE
     self._checkpoint_token()
-
-
-@internal
-@view
-def _find_timestamp_epoch(_timestamp: uint256) -> uint256:
-    _min: uint256 = 0
-    _max: uint256 = VEYFI.epoch(VEYFI.address)
-    for i in range(128):
-        if _min >= _max:
-            break
-        _mid: uint256 = (_min + _max + 2) / 2
-        pt: Point = VEYFI.point_history(VEYFI.address, _mid)
-        if pt.ts <= _timestamp:
-            _min = _mid
-        else:
-            _max = _mid - 1
-    return _min
-
 
 @internal
 def _checkpoint_total_supply():
@@ -154,7 +136,7 @@ def _checkpoint_total_supply():
         if t > rounded_timestamp:
             break
         else:
-            epoch: uint256 = self._find_timestamp_epoch(t)
+            epoch: uint256 = VEYFI.find_epoch_by_timestamp(VEYFI.address, t)
             pt: Point = VEYFI.point_history(VEYFI.address, epoch)
             dt: int128 = 0
             if t > pt.ts:

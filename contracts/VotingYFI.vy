@@ -364,8 +364,13 @@ def find_epoch_by_block(user: address, height: uint256, max_epoch: uint256) -> u
 
 
 @view
+@external
+def find_epoch_by_timestamp(user: address, ts: uint256) -> uint256:
+    return self._find_epoch_by_timestamp(user, ts, self.epoch[user])
+
+@view
 @internal
-def find_epoch_by_timestamp(user: address, ts: uint256, max_epoch: uint256) -> uint256:
+def _find_epoch_by_timestamp(user: address, ts: uint256, max_epoch: uint256) -> uint256:
     """
     @notice Binary search to estimate epoch timestamp
     @param ts Timestamp to find
@@ -426,7 +431,7 @@ def _balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
     if epoch == 0:
         return 0
     if ts != block.timestamp:
-        epoch = self.find_epoch_by_timestamp(user, ts, epoch)
+        epoch = self._find_epoch_by_timestamp(user, ts, epoch)
     upoint: Point = self.point_history[user][epoch]
     
     upoint = self.replay_slope_changes(user, upoint, ts)
@@ -438,7 +443,7 @@ def _balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
 @external
 def balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
     """
-    @notice Get the current voting power for `msg.sender`
+    @notice Get the current voting power for `user`
     @param user User wallet address
     @param ts Epoch time to return voting power at
     @return User voting power
@@ -488,6 +493,7 @@ def totalSupply(ts: uint256 = block.timestamp) -> uint256:
     """
     @notice Calculate total voting power
     @dev Adheres to the ERC20 `totalSupply` interface for Aragon compatibility
+    @param ts Epoch time to return voting power at
     @return Total voting power
     """
     return self._balanceOf(self, ts)
