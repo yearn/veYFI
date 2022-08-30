@@ -161,8 +161,7 @@ def _checkpoint_total_supply():
                 # If the point is at 0 epoch, it can actually be earlier than the first deposit
                 # Then make dt 0
                 dt = convert(t - pt.ts, int128)
-            zero: int128 = 0
-            self.ve_supply[t] = convert(max(pt.bias - pt.slope * dt, zero), uint256)
+            self.ve_supply[t] = convert(max(pt.bias - pt.slope * dt, 0), uint256)
         t += WEEK
 
     self.time_cursor = t
