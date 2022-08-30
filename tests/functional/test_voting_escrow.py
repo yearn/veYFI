@@ -164,14 +164,17 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     ) * WEEK - chain.blocks.head.timestamp
     chain.mine()
 
-    chain.pending_timestamp += H
+    chain.pending_timestamp += (
+        H - 1
+    )  # substract one second because `chain.mine`` in hardhat moves time by one second.
+    chain.mine()
 
     stages["before_deposits"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
     ve_yfi.modify_lock(amount, chain.blocks.head.timestamp + WEEK, sender=alice)
     stages["alice_deposit"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
-    chain.pending_timestamp += H
+    chain.pending_timestamp += H - 1
     chain.mine()
 
     assert approx(ve_yfi.totalSupply(), rel=TOL) == amount // MAXTIME * (WEEK - 2 * H)
@@ -185,7 +188,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     stages["alice_in_0"].append((chain.blocks.head.number, chain.blocks.head.timestamp))
     for i in range(7):
         for _ in range(24):
-            chain.pending_timestamp += H
+            chain.pending_timestamp += H - 1
             chain.mine()
         dt = chain.blocks.head.timestamp - t0
         assert approx(ve_yfi.totalSupply(), rel=TOL) == amount // MAXTIME * max(
@@ -201,7 +204,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
             (chain.blocks.head.number, chain.blocks.head.timestamp)
         )
 
-    chain.pending_timestamp += H
+    chain.pending_timestamp += H - 1
 
     assert ve_yfi.balanceOf(alice) == 0
     ve_yfi.withdraw(sender=alice)
@@ -210,7 +213,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     assert ve_yfi.balanceOf(alice) == 0
     assert ve_yfi.balanceOf(bob) == 0
 
-    chain.pending_timestamp += H
+    chain.pending_timestamp += H - 1
     chain.mine()
 
     # Next week (for round counting)
@@ -234,7 +237,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     assert approx(ve_yfi.balanceOf(bob), rel=TOL) == amount // MAXTIME * WEEK
 
     t0 = chain.blocks.head.timestamp
-    chain.pending_timestamp += H
+    chain.pending_timestamp += H - 1
     chain.mine()
 
     stages["alice_bob_in_2"] = []
@@ -242,7 +245,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     # End of week: weight 1
     for i in range(7):
         for _ in range(24):
-            chain.pending_timestamp += H
+            chain.pending_timestamp += H - 1
             chain.mine()
         dt = chain.blocks.head.timestamp - t0
         w_total = ve_yfi.totalSupply()
@@ -255,7 +258,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
             (chain.blocks.head.number, chain.blocks.head.timestamp)
         )
 
-    chain.pending_timestamp += H
+    chain.pending_timestamp += H - 1
     chain.mine()
 
     ve_yfi.withdraw(sender=bob)
@@ -267,13 +270,13 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     assert approx(w_total, rel=TOL) == amount // MAXTIME * (WEEK - 2 * H)
     assert ve_yfi.balanceOf(bob) == 0
 
-    chain.pending_timestamp += H
+    chain.pending_timestamp += H - 1
     chain.mine()
 
     stages["alice_in_2"] = []
     for i in range(7):
         for _ in range(24):
-            chain.pending_timestamp += H
+            chain.pending_timestamp += H - 1
             chain.mine()
         dt = chain.blocks.head.timestamp - t0
         w_total = ve_yfi.totalSupply()
@@ -288,8 +291,9 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     ve_yfi.withdraw(sender=alice)
     stages["alice_withdraw_2"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
-    chain.pending_timestamp += H
+    chain.pending_timestamp += H - 1
     chain.mine()
+
     stages["bob_withdraw_2"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
     assert ve_yfi.totalSupply() == 0
