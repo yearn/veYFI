@@ -181,8 +181,8 @@ def _checkpoint_global() -> Point:
     # initial_last_point is used for extrapolation to calculate block number
     initial_last_point: Point = last_point
     block_slope: uint256 = 0  # dblock/dt
-    if block.timestamp > last_point.ts:
-        block_slope = SCALE * (block.number - last_point.blk) / (block.timestamp - last_point.ts)
+    if block.timestamp > last_checkpoint:
+        block_slope = SCALE * (block.number - last_point.blk) / (block.timestamp - last_checkpoint)
     
     # apply weekly slope changes and record weekly global snapshots
     t_i: uint256 = self.round_to_week(last_checkpoint)
