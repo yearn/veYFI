@@ -436,7 +436,7 @@ def _balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
 @external
 def balanceOf(user: address, ts: uint256 = block.timestamp) -> uint256:
     """
-    @notice Get the current voting power for `msg.sender`
+    @notice Get the current voting power for `user`
     @param user User wallet address
     @param ts Epoch time to return voting power at
     @return User voting power
@@ -491,6 +491,7 @@ def totalSupply(ts: uint256 = block.timestamp) -> uint256:
     """
     @notice Calculate total voting power
     @dev Adheres to the ERC20 `totalSupply` interface for Aragon compatibility
+    @param ts Epoch time to return voting power at
     @return Total voting power
     """
     return self._balanceOf(self, ts)
