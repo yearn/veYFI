@@ -59,7 +59,6 @@ allowed_to_relock: public(HashMap[address, HashMap[address, bool]])  # user -> r
 last_token_time: public(uint256)
 tokens_per_week: public(HashMap[uint256, uint256])
 
-total_received: public(uint256)
 token_last_balance: public(uint256)
 ve_supply: public(HashMap[uint256, uint256])
 
