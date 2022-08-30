@@ -68,6 +68,7 @@ WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAX_LOCK_DURATION: constant(uint256) = 4 * 365 * 86400 / WEEK * WEEK  # 4 years
 SCALE: constant(uint256) = 10 ** 18
 MAX_PENALTY_RATIO: constant(uint256) = SCALE * 3 / 4  # 75% for early exit of max lock
+MAX_N_WEEKS: constant(uint256) = 522
 
 supply: public(uint256)
 locked: public(HashMap[address, LockedBalance])
@@ -267,6 +268,7 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
     if msg.sender == user:
         if unlock_time != 0:
             unlock_week = self.round_to_week(unlock_time)  # locktime is rounded down to weeks
+            assert ((unlock_week - self.round_to_week(block.timestamp)) / WEEK) < MAX_N_WEEKS # lock can't exceed 10 years
             assert unlock_week > block.timestamp  #  dev: unlock time must be in the future
             if unlock_week - block.timestamp < MAX_LOCK_DURATION:
                 assert unlock_week > old_lock.end  # dev: can only increase lock duration
@@ -388,14 +390,14 @@ def find_epoch_by_timestamp(user: address, ts: uint256, max_epoch: uint256) -> u
 def replay_slope_changes(user: address, point: Point, ts: uint256) -> Point:
     """
     @dev
-        If the `ts` is higher than 500 weeks ago, this function will return the 
-        balance at exactly 500 weeks instead of `ts`. 
-        500 weeks is considered sufficient to cover the `MAX_LOCK_DURATION` period.
+        If the `ts` is higher than MAX_N_WEEKS weeks ago, this function will return the 
+        balance at exactly MAX_N_WEEKS weeks instead of `ts`. 
+        MAX_N_WEEKS weeks is considered sufficient to cover the `MAX_LOCK_DURATION` period.
     """
     upoint: Point = point
     t_i: uint256 = self.round_to_week(upoint.ts)
 
-    for i in range(500):
+    for i in range(MAX_N_WEEKS):
         t_i += WEEK
         d_slope: int128 = 0
         if t_i > ts:

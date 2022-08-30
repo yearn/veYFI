@@ -16,7 +16,7 @@ def bob(accounts, yfi, ve_yfi):
     yfi.mint(bob, AMOUNT * 20, sender=bob)
     yfi.approve(ve_yfi.address, AMOUNT * 20, sender=bob)
     now = chain.blocks.head.timestamp
-    unlock_time = now + MAXTIME * 3
+    unlock_time = now + WEEK * 520
     ve_yfi.modify_lock(AMOUNT, unlock_time, sender=bob)
     yield bob
 

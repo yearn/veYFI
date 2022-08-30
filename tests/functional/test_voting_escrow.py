@@ -441,3 +441,15 @@ def test_total_supply_in_the_past(chain, accounts, yfi, ve_yfi):
     chain.pending_timestamp += WEEK
     ve_yfi.modify_lock(amount, 0, sender=alice)  # lock some more
     assert checkpoint_total_supply == ve_yfi.totalSupply(checkpoint)
+
+
+def test_lock_cant_exceed_reply_range(chain, accounts, yfi, ve_yfi):
+    alice = accounts[0]
+    amount = 1000 * 10**18
+    power = amount // MAXTIME * MAXTIME
+    yfi.mint(alice, amount * 20, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 20, sender=alice)
+    now = chain.blocks.head.timestamp
+    unlock_time = now + 530 * WEEK
+    with ape.reverts():
+        ve_yfi.modify_lock(amount, unlock_time, sender=alice)
