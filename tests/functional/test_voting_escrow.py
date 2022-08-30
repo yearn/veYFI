@@ -71,6 +71,24 @@ def test_lock_slightly_over_limit_is_rounded_down(chain, accounts, yfi, ve_yfi):
     assert ve_yfi.balanceOf(alice) < (amount * 2) // MAXTIME * MAXTIME
 
 
+def test_get_prior_votes(chain, accounts, yfi, ve_yfi):
+    alice = accounts[0]
+    amount = 1000 * 10**18
+    power = amount // MAXTIME * MAXTIME
+    yfi.mint(alice, amount * 20, sender=alice)
+    yfi.approve(ve_yfi.address, amount * 20, sender=alice)
+
+    now = chain.blocks.head.timestamp
+    unlock_time = now + MAXTIME + WEEK + 4
+    ve_yfi.modify_lock(amount, unlock_time, sender=alice)  # 4 years ++
+
+    for _ in range(5 * 7 * 24):
+        chain.pending_timestamp += H - 1
+        chain.mine()
+
+    assert ve_yfi.getPriorVotes(alice, chain.blocks.head.number) < power
+
+
 def test_lock_over_limit_goes_to_zero(chain, accounts, yfi, ve_yfi):
     alice = accounts[0]
     amount = 1000 * 10**18
