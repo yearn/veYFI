@@ -1,7 +1,5 @@
 import pytest
 
-from eth_utils import to_checksum_address
-
 DAY = 86400
 WEEK = 7 * DAY
 
@@ -112,8 +110,7 @@ def create_gauge(registry, gauge_factory, gov, project):
     def create_gauge(vault):
         tx = registry.addVaultToRewards(vault, gov, gov, sender=gov)
         gauge_address = next(tx.decode_logs(gauge_factory.GaugeCreated)).gauge
-        # TODO: Remove `to_checksum_address` once log decoding returns correct format
-        return project.Gauge.at(to_checksum_address(gauge_address))
+        return project.Gauge.at(gauge_address)
 
     yield create_gauge
 
@@ -125,8 +122,7 @@ def create_extra_reward(gauge_factory, gov, project):
         reward_address = next(
             tx.decode_logs(gauge_factory.ExtraRewardCreated)
         ).extraReward
-        # TODO: Remove `to_checksum_address` once log decoding returns correct format
-        return project.ExtraReward.at(to_checksum_address(reward_address))
+        return project.ExtraReward.at(reward_address)
 
     yield create_extra_reward
 
