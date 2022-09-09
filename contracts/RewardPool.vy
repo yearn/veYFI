@@ -1,4 +1,4 @@
-# @version 0.3.4
+# @version 0.3.6
 """
 @title YFI Reward Pool
 @author Curve Finance, Yearn Finance
@@ -33,6 +33,9 @@ event AllowedToRelock:
     user: indexed(address)
     relocker: indexed(address)
     allowed: bool
+
+event RewardReceived:
+    amount: uint256
 
 struct Point:
     bias: int128
@@ -250,6 +253,7 @@ def burn(amount: uint256 = MAX_UINT256) -> bool:
         _amount = YFI.allowance(msg.sender, self)
     if _amount > 0:
         YFI.transferFrom(msg.sender, self, _amount)
+        log RewardReceived(_amount)
         if block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE:
             self._checkpoint_token()
 
