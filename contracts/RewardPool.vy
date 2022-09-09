@@ -35,6 +35,7 @@ event AllowedToRelock:
     allowed: bool
 
 event RewardReceived:
+    sender: indexed(address)
     amount: uint256
 
 struct Point:
@@ -253,7 +254,7 @@ def burn(amount: uint256 = MAX_UINT256) -> bool:
         _amount = YFI.allowance(msg.sender, self)
     if _amount > 0:
         YFI.transferFrom(msg.sender, self, _amount)
-        log RewardReceived(_amount)
+        log RewardReceived(msg.sender, _amount)
         if block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE:
             self._checkpoint_token()
 
