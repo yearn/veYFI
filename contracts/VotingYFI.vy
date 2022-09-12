@@ -252,7 +252,7 @@ def modify_lock(amount: uint256, unlock_time: uint256, user: address = msg.sende
     @notice Create or modify a lock for a user. Support deposits on behalf of a user.
     @dev
         Minimum deposit to create a lock is 1 YFI.
-        You can lock for longer than 4 years, but the max voting power is capped at 4 years.
+        You can lock for longer than 4 years, but less than 10 years, the max voting power is capped at 4 years.
         You can only increase lock duration if it has less than 4 years remaining.
         You can decrease lock duration if it has more than 4 years remaining.
     @param amount YFI amount to add to a lock. 0 to not modify.
