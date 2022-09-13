@@ -27,22 +27,22 @@ Gauges allow vault depositors to stake their vault tokens and earn YFI rewards a
 
 Gauge rewards are boosted with a max boost of 10x. The max boost is a variable that can be adjusted by the team.
 
-The boost mechanism will calculate your earning weight by taking the smaller amount of two values. The first value is simple, it's the amount of liquidity you are providing which in this example is 10,000 tokens. This amount is your maximum earning weight.
-
+The boost mechanism will calculate your earning weight by taking the smaller amount of two values:
+- The first value is the amount of liquidity you are providing. This amount is your maximum earning weight.
+- The second value is 10% of first value + 90% the amount deposited in gauge multiplied by the ratio of your `veYFI Balance/veYFI Total Supply`.
 ```
 min(AmountDeposited, (AmountDeposited /10) + (TotalDepositedInTheGauge * VeYFIBalance / VeYFITotalSupply * 0.9))
 ```
-When a user interact with the gauge, the boosted amount is snapshoted untill the next interaction.
-The rewards that are not distribbuted because the balance isn't fully boosted are distributed back to veYFI holders.
+When a user interacts with the gauge, the boosted amount is snapshotted until the next interaction.
+The rewards that are not distributed because the balance isn't fully boosted are distributed back to veYFI holders.
 
 ### Gauge YFI distribution
 
 Every two weeks veYFI holders can vote on YFI distribution to gauges.
 
-
 ## veYFIRewardPool
 
-Users who lock veFY can claim YFI from the veYFI exited early and the non distributed gauge rewards due to the lack of boost.
+Users who lock veYFI can claim YFI from the veYFI exited early and the non-distributed gauge rewards due to the lack of boost.
 You will be able to start claiming from the veFYI reward pool two or three weeks from the Thursday after which you lock before you can claim.
 
 ## Setup
