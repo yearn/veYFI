@@ -56,6 +56,11 @@ npm install
 
 ## Compile
 
+Install ape plugins
+```bash
+ape plugins install .
+```
+
 ```bash
 ape compile
 ```
