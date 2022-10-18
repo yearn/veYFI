@@ -4,6 +4,7 @@ plugins:
   - name: hardhat
   - name: infura
   - name: tokens
+  - name: etherscan
 
 # require OpenZepplin Contracts
 dependencies:
