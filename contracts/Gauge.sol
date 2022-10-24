@@ -31,8 +31,8 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         bool lock;
     }
 
-    uint256 public constant BOOSTING_FACTOR = 100;
-    uint256 private constant BOOST_DENOMINATOR = 1000;
+    uint256 public constant BOOSTING_FACTOR = 1;
+    uint256 private constant BOOST_DENOMINATOR = 10;
 
     IERC20 public asset;
     //// @notice veYFI
