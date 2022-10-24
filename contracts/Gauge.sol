@@ -31,7 +31,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         bool lock;
     }
 
-    uint256 public boostingFactor = 100;
+    uint256 public constant BOOSTING_FACTOR = 100;
     uint256 private constant BOOST_DENOMINATOR = 1000;
 
     IERC20 public asset;
@@ -40,7 +40,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     //// @notice the veYFI YFI reward pool, penalty are sent to this contract.
     address public veYfiRewardPool;
     //// @notice a copy of the veYFI max lock duration
-    uint256 public constant MAX_LOCK = 4 * 365 * 86400;
     uint256 public constant PRECISON_FACTOR = 10**6;
     //// @notice Penalty does not apply for locks expiring after 3y11m
 
@@ -61,9 +60,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     event AddedExtraReward(address indexed reward);
     event DeletedExtraRewards(address[] rewards);
     event UpdatedRewardManager(address indexed rewardManager);
-    event UpdatedVeToken(address indexed ve);
     event TransferedQueuedPenalty(uint256 transfered);
-    event UpdatedBoostingFactor(uint256 boostingFactor);
     event BoostedBalanceUpdated(address account, uint256 amount);
 
     event Initialize(
@@ -120,30 +117,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
             _ve,
             _veYfiRewardPool
         );
-        boostingFactor = 100;
-    }
-
-    /**
-    @notice Set the veYFI token address.
-    @param _veToken the new address of the veYFI token
-    */
-    function setVe(address _veToken) external onlyOwner {
-        require(address(_veToken) != address(0x0), "_veToken 0x0 address");
-        veToken = _veToken;
-        emit UpdatedVeToken(_veToken);
-    }
-
-    /**
-    @notice Set the boosting factor.
-    @dev the boosting factor is used to calculate your boosting balance using the curve boosting formula adjusted with the boostingFactor
-    @param _boostingFactor the value should be between 20 and 500
-    */
-    function setBoostingFactor(uint256 _boostingFactor) external onlyOwner {
-        require(_boostingFactor <= BOOST_DENOMINATOR / 2, "value too high");
-        require(_boostingFactor >= BOOST_DENOMINATOR / 50, "value too low");
-
-        boostingFactor = _boostingFactor;
-        emit UpdatedBoostingFactor(_boostingFactor);
     }
 
     /** @return total of the staked vault token
@@ -439,11 +412,11 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         }
         return
             Math.min(
-                ((_realBalance * boostingFactor) +
+                ((_realBalance * BOOSTING_FACTOR) +
                     (((totalSupply() *
                         IVotingYFI(veToken).balanceOf(_account)) /
                         veTotalSupply) *
-                        (BOOST_DENOMINATOR - boostingFactor))) /
+                        (BOOST_DENOMINATOR - BOOSTING_FACTOR))) /
                     BOOST_DENOMINATOR,
                 _realBalance
             );
@@ -850,7 +823,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         uint256 balance = balanceOf(_account);
         require(
             _boostedBalances[_account] >
-                (balance * boostingFactor) / BOOST_DENOMINATOR,
+                (balance * BOOSTING_FACTOR) / BOOST_DENOMINATOR,
             "min boosted balance"
         );
         uint256 boostedBalance = _boostedBalanceOf(_account, balance);
