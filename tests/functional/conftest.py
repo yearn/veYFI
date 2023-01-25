@@ -74,22 +74,15 @@ def create_token(project, gov):
 
 
 @pytest.fixture(scope="session")
-def ve_yfi(project, veyfi_and_reward_pool):
-    (veyfi, _) = veyfi_and_reward_pool
-    yield veyfi
-
-
-@pytest.fixture(scope="session")
-def ve_yfi_rewards(veyfi_and_reward_pool):
-    (_, ve_yfi_rewards) = veyfi_and_reward_pool
+def ve_yfi_rewards(ve_yfi_and_reward_pool):
+    (_, ve_yfi_rewards) = ve_yfi_and_reward_pool
     yield ve_yfi_rewards
 
 
 @pytest.fixture(scope="session")
-def gauge_factory(project, gov):
-    gauge = gov.deploy(project.Gauge)
-    extra_reward = gov.deploy(project.ExtraReward)
-    yield gov.deploy(project.GaugeFactory, gauge, extra_reward)
+def gauge_factory(project, gov, ve_yfi, o_yfi, ve_yfi_o_yfi_pool):
+    gauge = gov.deploy(project.Gauge, ve_yfi, o_yfi, ve_yfi_o_yfi_pool)
+    yield gov.deploy(project.GaugeFactory, gauge)
 
 
 @pytest.fixture(scope="session")
@@ -108,25 +101,8 @@ def create_vault(project, gov):
 @pytest.fixture(scope="session")
 def create_gauge(registry, gauge_factory, gov, project):
     def create_gauge(vault):
-        tx = registry.addVaultToRewards(vault, gov, gov, sender=gov)
+        tx = registry.addVaultToRewards(vault, gov, sender=gov)
         gauge_address = next(tx.decode_logs(gauge_factory.GaugeCreated)).gauge
         return project.Gauge.at(gauge_address)
 
     yield create_gauge
-
-
-@pytest.fixture(scope="session")
-def create_extra_reward(gauge_factory, gov, project):
-    def create_extra_reward(gauge, token):
-        tx = gauge_factory.createExtraReward(gauge, token, gov, sender=gov)
-        reward_address = next(
-            tx.decode_logs(gauge_factory.ExtraRewardCreated)
-        ).extraReward
-        return project.ExtraReward.at(reward_address)
-
-    yield create_extra_reward
-
-
-@pytest.fixture(scope="session")
-def zap(gov, yfi, ve_yfi, ve_yfi_rewards, project):
-    yield gov.deploy(project.ZapClaim, yfi, ve_yfi, ve_yfi_rewards)

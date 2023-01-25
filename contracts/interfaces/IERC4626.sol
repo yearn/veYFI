@@ -77,10 +77,9 @@ interface IERC4626 is IERC20Upgradeable {
      * This calculation MAY NOT reflect the “per-user” price-per-share, and instead should reflect the
      * “average-user’s” price-per-share, meaning what the average user should expect to see when exchanging to and from.
      */
-    function convertToShares(uint256 _assets)
-        external
-        view
-        returns (uint256 shares);
+    function convertToShares(
+        uint256 _assets
+    ) external view returns (uint256 shares);
 
     /**
      *
@@ -102,10 +101,9 @@ interface IERC4626 is IERC20Upgradeable {
      * This calculation MAY NOT reflect the “per-user” price-per-share, and instead should reflect the
      * “average-user’s” price-per-share, meaning what the average user should expect to see when exchanging to and from.
      */
-    function convertToAssets(uint256 _shares)
-        external
-        view
-        returns (uint256 assets);
+    function convertToAssets(
+        uint256 _shares
+    ) external view returns (uint256 assets);
 
     /**
      *
@@ -126,10 +124,9 @@ interface IERC4626 is IERC20Upgradeable {
      *
      * MUST NOT revert.
      */
-    function maxDeposit(address _receiver)
-        external
-        view
-        returns (uint256 maxAssets);
+    function maxDeposit(
+        address _receiver
+    ) external view returns (uint256 maxAssets);
 
     /**
      * @notice Simulate the effects of a user's deposit at the current block, given current on-chain conditions
@@ -150,10 +147,9 @@ interface IERC4626 is IERC20Upgradeable {
      * Note that any unfavorable discrepancy between convertToShares and previewDeposit SHOULD be considered slippage
      * in share price or some other type of condition, meaning the depositor will lose assets by depositing.
      */
-    function previewDeposit(uint256 _assets)
-        external
-        view
-        returns (uint256 shares);
+    function previewDeposit(
+        uint256 _assets
+    ) external view returns (uint256 shares);
 
     /**
      * @notice Mints `shares` Vault shares to `receiver` by depositing exactly `amount` of underlying tokens
@@ -170,9 +166,10 @@ interface IERC4626 is IERC20Upgradeable {
      *
      * Note that most implementations will require pre-approval of the Vault with the Vault’s underlying asset token.
      */
-    function deposit(uint256 _assets, address _receiver)
-        external
-        returns (uint256 shares);
+    function deposit(
+        uint256 _assets,
+        address _receiver
+    ) external returns (uint256 shares);
 
     /**
      * @notice Returns the maximum amount of shares that can be minted from the vault for the `receiver``, via a `mint`
@@ -191,10 +188,9 @@ interface IERC4626 is IERC20Upgradeable {
      *
      * MUST NOT revert.
      */
-    function maxMint(address _receiver)
-        external
-        view
-        returns (uint256 maxShares);
+    function maxMint(
+        address _receiver
+    ) external view returns (uint256 maxShares);
 
     /**
      * @notice Simulate the effects of a user's mint at the current block, given current on-chain conditions
@@ -215,10 +211,9 @@ interface IERC4626 is IERC20Upgradeable {
      * Note that any unfavorable discrepancy between convertToAssets and previewMint SHOULD be considered slippage in
      * share price or some other type of condition, meaning the depositor will lose assets by minting.
      */
-    function previewMint(uint256 _shares)
-        external
-        view
-        returns (uint256 assets);
+    function previewMint(
+        uint256 _shares
+    ) external view returns (uint256 assets);
 
     /**
      * @notice Mints exactly `shares` vault shares to `receiver` by depositing `amount` of underlying tokens
@@ -236,9 +231,10 @@ interface IERC4626 is IERC20Upgradeable {
      *
      * Note that most implementations will require pre-approval of the Vault with the Vault’s underlying asset token.
      */
-    function mint(uint256 _shares, address _receiver)
-        external
-        returns (uint256 assets);
+    function mint(
+        uint256 _shares,
+        address _receiver
+    ) external returns (uint256 assets);
 
     /**
      * @notice Returns the maximum amount of the underlying asset that can be withdrawn from the `owner` balance in the
@@ -254,10 +250,9 @@ interface IERC4626 is IERC20Upgradeable {
      *
      * MUST NOT revert.
      */
-    function maxWithdraw(address _owner)
-        external
-        view
-        returns (uint256 maxAssets);
+    function maxWithdraw(
+        address _owner
+    ) external view returns (uint256 maxAssets);
 
     /**
      * @notice Simulate the effects of a user's withdrawal at the current block, given current on-chain conditions.
@@ -278,10 +273,9 @@ interface IERC4626 is IERC20Upgradeable {
      * Note that any unfavorable discrepancy between convertToShares and previewWithdraw SHOULD be considered slippage in
      * share price or some other type of condition, meaning the depositor will lose assets by depositing.
      */
-    function previewWithdraw(uint256 _assets)
-        external
-        view
-        returns (uint256 shares);
+    function previewWithdraw(
+        uint256 _assets
+    ) external view returns (uint256 shares);
 
     /**
      * @notice Burns `shares` from `owner` and sends exactly `assets` of underlying tokens to `receiver`
@@ -319,10 +313,9 @@ interface IERC4626 is IERC20Upgradeable {
      *
      * MUST NOT revert
      */
-    function maxRedeem(address _owner)
-        external
-        view
-        returns (uint256 maxShares);
+    function maxRedeem(
+        address _owner
+    ) external view returns (uint256 maxShares);
 
     /**
      * @notice Simulate the effects of a user's redemption at the current block, given current on-chain conditions
@@ -343,10 +336,9 @@ interface IERC4626 is IERC20Upgradeable {
      * Note that any unfavorable discrepancy between {convertToAssets} and {previewRedeem} SHOULD be considered
      * slippage in share price or some other type of condition, meaning the depositor will lose assets by redeeming.
      */
-    function previewRedeem(uint256 _shares)
-        external
-        view
-        returns (uint256 assets);
+    function previewRedeem(
+        uint256 _shares
+    ) external view returns (uint256 assets);
 
     /**
      * @notice Burns exactly `shares` from `owner` and sends `assets` of underlying tokens to `receiver`

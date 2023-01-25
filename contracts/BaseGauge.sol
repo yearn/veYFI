@@ -7,7 +7,7 @@ import "@openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import "./interfaces/IBaseGauge.sol";
 
 abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
-    IERC20 public override rewardToken;
+    IERC20 public immutable REWARDS;
     //// @notice rewards are distributed over `duration` seconds when queued.
     uint256 public duration;
     uint256 public periodFinish;
@@ -21,7 +21,6 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
     uint256 public queuedRewards;
     uint256 public currentRewards;
     uint256 public historicalRewards;
-    uint256 public constant PRECISION_FACTOR = 1e18;
 
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -63,13 +62,16 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
         _;
     }
 
-    function __initialize(address _rewardToken, address _owner) internal {
+    constructor(address _rewardsToken) {
         require(
-            address(_rewardToken) != address(0x0),
-            "_rewardToken 0x0 address"
+            address(_rewardsToken) != address(0x0),
+            "rewardsToken 0x0 address"
         );
+        REWARDS = IERC20(_rewardsToken);
+    }
+
+    function __initialize(address _owner) internal {
         require(_owner != address(0), "_owner 0x0 address");
-        rewardToken = IERC20(_rewardToken);
         duration = 14 days;
         _transferOwnership(_owner);
     }
@@ -78,11 +80,9 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
     @notice set the duration of the reward distribution.
     @param _newDuration duration in seconds. 
      */
-    function setDuration(uint256 _newDuration)
-        external
-        onlyOwner
-        updateReward(address(0))
-    {
+    function setDuration(
+        uint256 _newDuration
+    ) external onlyOwner updateReward(address(0)) {
         require(_newDuration != 0, "duration should be greater than zero");
         if (block.timestamp < periodFinish) {
             uint256 remaining = periodFinish - block.timestamp;
@@ -109,13 +109,10 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
         return _rewardPerToken();
     }
 
-    function _notProtectedTokens(address _token)
-        internal
-        view
-        virtual
-        returns (bool)
-    {
-        return _token != address(rewardToken);
+    function _protectedTokens(
+        address _token
+    ) internal view virtual returns (bool) {
+        return _token == address(REWARDS);
     }
 
     /** @notice sweep tokens that are airdropped/transferred into the gauge.
@@ -123,7 +120,7 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
      *  @return _token to sweep
      */
     function sweep(address _token) external onlyOwner returns (bool) {
-        require(_notProtectedTokens(_token), "protected token");
+        require(_protectedTokens(_token) == false, "protected token");
         uint256 amount = IERC20(_token).balanceOf(address(this));
 
         SafeERC20.safeTransfer(IERC20(_token), owner(), amount);
@@ -149,7 +146,7 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
     function queueNewRewards(uint256 _amount) external override returns (bool) {
         require(_amount != 0, "==0");
         SafeERC20.safeTransferFrom(
-            IERC20(rewardToken),
+            IERC20(REWARDS),
             msg.sender,
             address(this),
             _amount
@@ -176,10 +173,9 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
         return true;
     }
 
-    function _notifyRewardAmount(uint256 _reward)
-        internal
-        updateReward(address(0))
-    {
+    function _notifyRewardAmount(
+        uint256 _reward
+    ) internal updateReward(address(0)) {
         historicalRewards = historicalRewards + _reward;
 
         if (block.timestamp >= periodFinish) {

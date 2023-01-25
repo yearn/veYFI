@@ -5,21 +5,6 @@ import pytest
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 
-def test_set_reward_manager(create_vault, create_gauge, panda, gov):
-    vault = create_vault()
-    gauge = create_gauge(vault)
-    with ape.reverts("_rewardManager 0x0 address"):
-        gauge.setRewardManager(ZERO_ADDRESS, sender=gov)
-    with ape.reverts("!authorized"):
-        gauge.setRewardManager(panda, sender=panda)
-
-    gauge.setRewardManager(panda, sender=gov)
-    assert gauge.rewardManager() == panda
-
-    gauge.setRewardManager(gov, sender=panda)
-    assert gauge.rewardManager() == gov
-
-
 def test_set_gov(create_vault, create_gauge, panda, gov):
     vault = create_vault()
     gauge = create_gauge(vault)
@@ -39,7 +24,7 @@ def test_do_not_queue_zero_rewards(create_vault, create_gauge, panda):
         gauge.queueNewRewards(0, sender=panda)
 
 
-def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
+def test_sweep(create_vault, create_gauge, create_token, o_yfi, whale, gov):
     vault = create_vault()
     gauge = create_gauge(vault)
     yfo = create_token("YFO")
@@ -47,82 +32,23 @@ def test_sweep(create_vault, create_gauge, create_token, yfi, whale, gov):
     with ape.reverts("Ownable: caller is not the owner"):
         gauge.sweep(yfo, sender=whale)
     with ape.reverts("protected token"):
-        gauge.sweep(yfi, sender=gov)
+        gauge.sweep(o_yfi, sender=gov)
     with ape.reverts("protected token"):
         gauge.sweep(vault, sender=gov)
     gauge.sweep(yfo, sender=gov)
     assert yfo.balanceOf(gov) == 10**18
 
 
-def test_add_extra_reward(
-    create_vault, create_gauge, create_token, create_extra_reward, gov, panda
+def test_small_queued_rewards_duration_extension(
+    create_vault, create_gauge, o_yfi, gov
 ):
     vault = create_vault()
     gauge = create_gauge(vault)
-    yfo = create_token("YFO")
+    o_yfi_to_distribute = 10**20
+    o_yfi.mint(gov, o_yfi_to_distribute * 2, sender=gov)
+    o_yfi.approve(gauge, o_yfi_to_distribute * 2, sender=gov)
 
-    extra_reward = create_extra_reward(gauge, yfo)
-    with ape.reverts("!authorized"):
-        gauge.addExtraReward(extra_reward, sender=panda)
-    with ape.reverts("!reward setting"):
-        gauge.addExtraReward(ZERO_ADDRESS, sender=gov)
-
-    gauge.addExtraReward(extra_reward, sender=gov)
-    assert gauge.extraRewardsLength() == 1
-
-
-def test_remove_extra_reward(
-    create_vault, create_gauge, create_token, create_extra_reward, gov, panda
-):
-    vault = create_vault()
-    gauge = create_gauge(vault)
-    yfo = create_token("YFO")
-    yfp = create_token("YFP")
-
-    yfo_extra_reward = create_extra_reward(gauge, yfo)
-    with ape.reverts("extra reward not found"):
-        gauge.removeExtraReward(yfo_extra_reward, sender=gov)
-    gauge.addExtraReward(yfo_extra_reward, sender=gov)
-
-    yfp_extra_reward = create_extra_reward(gauge, yfp)
-    gauge.addExtraReward(yfp_extra_reward, sender=gov)
-    assert gauge.extraRewardsLength() == 2
-
-    with ape.reverts("!authorized"):
-        gauge.removeExtraReward(yfp_extra_reward, sender=panda)
-
-    gauge.removeExtraReward(yfp_extra_reward, sender=gov)
-    gauge.removeExtraReward(yfo_extra_reward, sender=gov)
-    assert gauge.extraRewardsLength() == 0
-
-
-def test_clear_extra_rewards(
-    create_vault, create_gauge, create_token, create_extra_reward, gov
-):
-    vault = create_vault()
-    gauge = create_gauge(vault)
-    yfo = create_token("YFO")
-    yfp = create_token("YFP")
-
-    yfo_extra_reward = create_extra_reward(gauge, yfo)
-    gauge.addExtraReward(yfo_extra_reward, sender=gov)
-
-    yfp_extra_reward = create_extra_reward(gauge, yfp)
-    gauge.addExtraReward(yfp_extra_reward, sender=gov)
-    assert gauge.extraRewardsLength() == 2
-
-    gauge.clearExtraRewards(sender=gov)
-    assert gauge.extraRewardsLength() == 0
-
-
-def test_small_queued_rewards_duration_extension(create_vault, create_gauge, yfi, gov):
-    vault = create_vault()
-    gauge = create_gauge(vault)
-    yfi_to_distribute = 10**20
-    yfi.mint(gov, yfi_to_distribute * 2, sender=gov)
-    yfi.approve(gauge, yfi_to_distribute * 2, sender=gov)
-
-    gauge.queueNewRewards(yfi_to_distribute, sender=gov)
+    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
     finish = gauge.periodFinish()
     # distribution started, do not extend the duration unless rewards are 120% of what has been distributed.
     chain.pending_timestamp += 24 * 3600
@@ -138,13 +64,13 @@ def test_small_queued_rewards_duration_extension(create_vault, create_gauge, yfi
     assert gauge.periodFinish() != finish
 
 
-def test_set_duration(create_vault, create_gauge, yfi, gov):
+def test_set_duration(create_vault, create_gauge, o_yfi, gov):
     vault = create_vault()
     gauge = create_gauge(vault)
-    yfi_to_distribute = 10**20
-    yfi.mint(gov, yfi_to_distribute * 2, sender=gov)
-    yfi.approve(gauge, yfi_to_distribute * 2, sender=gov)
-    gauge.queueNewRewards(yfi_to_distribute, sender=gov)
+    o_yfi_to_distribute = 10**20
+    o_yfi.mint(gov, o_yfi_to_distribute * 2, sender=gov)
+    o_yfi.approve(gauge, o_yfi_to_distribute * 2, sender=gov)
+    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
 
     finish = gauge.periodFinish()
     rate = gauge.rewardRate()

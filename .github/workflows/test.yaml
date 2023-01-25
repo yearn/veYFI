@@ -31,5 +31,7 @@ jobs:
       run: npm install hardhat
 
     - name: Run tests
+      env:
+          WEB3_INFURA_PROJECT_ID: b7821200399e4be2b4e5dbdf06fbe85b        
       run: ape test -s
       timeout-minutes: 10

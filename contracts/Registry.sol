@@ -66,22 +66,16 @@ contract Registry is Ownable {
     @notice Add a vault to the list of vaults that receives rewards.
     @param _vault vault address
     @param _owner owner.
-    @param _rewardManager address in charge of managing additional rewards
     */
     function addVaultToRewards(
         address _vault,
-        address _owner,
-        address _rewardManager
+        address _owner
     ) external onlyOwner returns (address) {
         require(gauges[_vault] == address(0x0), "exist");
 
         address _gauge = IGaugeFactory(gaugefactory).createGauge(
             _vault,
-            yfi,
-            _owner,
-            _rewardManager,
-            veToken,
-            veYfiRewardPool
+            _owner
         );
         gauges[_vault] = _gauge;
         vaultForGauge[_gauge] = _vault;
