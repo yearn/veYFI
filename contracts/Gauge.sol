@@ -519,16 +519,16 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
             rewards[_account] = 0;
             address recipient = recipients[_account];
             if (recipient != address(0x0)) {
-                REWARDS.safeTransfer(recipient, reward);
+                REWARD_TOKEN.safeTransfer(recipient, reward);
             } else {
-                REWARDS.safeTransfer(_account, reward);
+                REWARD_TOKEN.safeTransfer(_account, reward);
             }
             emit RewardPaid(_account, reward);
         }
     }
 
     function _transferVeYfiORewards(uint256 _penalty) internal {
-        IERC20(REWARDS).approve(VE_YFI_POOL, _penalty);
+        IERC20(REWARD_TOKEN).approve(VE_YFI_POOL, _penalty);
         IOYfiRewardPool(VE_YFI_POOL).burn(_penalty);
         emit TransferedPenalty(_penalty);
     }
@@ -536,7 +536,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     function _protectedTokens(
         address _token
     ) internal view override returns (bool) {
-        return _token == address(REWARDS) || _token == address(asset);
+        return _token == address(REWARD_TOKEN) || _token == address(asset);
     }
 
     /**

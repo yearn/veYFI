@@ -7,7 +7,7 @@ import "@openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import "./interfaces/IBaseGauge.sol";
 
 abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
-    IERC20 public immutable REWARDS;
+    IERC20 public immutable REWARD_TOKEN;
     //// @notice rewards are distributed over `duration` seconds when queued.
     uint256 public duration;
     uint256 public periodFinish;
@@ -67,7 +67,7 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
             address(_rewardsToken) != address(0x0),
             "rewardsToken 0x0 address"
         );
-        REWARDS = IERC20(_rewardsToken);
+        REWARD_TOKEN = IERC20(_rewardsToken);
     }
 
     function __initialize(address _owner) internal {
@@ -112,7 +112,7 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
     function _protectedTokens(
         address _token
     ) internal view virtual returns (bool) {
-        return _token == address(REWARDS);
+        return _token == address(REWARD_TOKEN);
     }
 
     /** @notice sweep tokens that are airdropped/transferred into the gauge.
@@ -146,7 +146,7 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
     function queueNewRewards(uint256 _amount) external override returns (bool) {
         require(_amount != 0, "==0");
         SafeERC20.safeTransferFrom(
-            IERC20(REWARDS),
+            IERC20(REWARD_TOKEN),
             msg.sender,
             address(this),
             _amount
