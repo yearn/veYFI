@@ -46,7 +46,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     mapping(address => uint256) private _boostedBalances;
     mapping(address => address) public recipients;
 
-    event TransferedPenalty(uint256 transfered);
+    event TransferredPenalty(address indexed account, uint256 transfered);
     event BoostedBalanceUpdated(address account, uint256 amount);
 
     event Initialize(address indexed asset, address indexed owner);
@@ -154,7 +154,9 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
                 uint256 maxEarning = _maxEarning(_account);
 
                 rewards[_account] += newEarning;
-                _transferVeYfiORewards(maxEarning - newEarning);
+                uint256 penalty = maxEarning - newEarning;
+                _transferVeYfiORewards(penalty);
+                emit TransferredPenalty(_account, penalty);
             }
             userRewardPerTokenPaid[_account] = rewardPerTokenStored;
             emit UpdatedRewards(
@@ -530,7 +532,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     function _transferVeYfiORewards(uint256 _penalty) internal {
         IERC20(REWARD_TOKEN).approve(VE_YFI_POOL, _penalty);
         IOYfiRewardPool(VE_YFI_POOL).burn(_penalty);
-        emit TransferedPenalty(_penalty);
     }
 
     function _protectedTokens(
