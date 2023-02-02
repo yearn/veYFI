@@ -11,63 +11,28 @@ import "./interfaces/IGaugeFactory.sol";
  */
 contract GaugeFactory is IGaugeFactory {
     address public immutable deployedGauge;
-    address public immutable deployedExtra;
 
     event GaugeCreated(address indexed gauge);
     event ExtraRewardCreated(address indexed extraReward);
 
-    constructor(address _deployedGauge, address _deployedExtra) {
+    constructor(address _deployedGauge) {
         deployedGauge = _deployedGauge;
-        deployedExtra = _deployedExtra;
     }
 
     /** @notice Create a new reward Gauge clone
         @param _vault the vault address.
-        @param _yfi the YFI token address.
         @param _owner owner
-        @param _manager manager
-        @param _ve veYFI
-        @param _veYfiRewardPool veYfi RewardPool
         @return gauge address
     */
     function createGauge(
         address _vault,
-        address _yfi,
-        address _owner,
-        address _manager,
-        address _ve,
-        address _veYfiRewardPool
+        address _owner
     ) external override returns (address) {
         address newGauge = _clone(deployedGauge);
         emit GaugeCreated(newGauge);
-        IGauge(newGauge).initialize(
-            _vault,
-            _yfi,
-            _owner,
-            _manager,
-            _ve,
-            _veYfiRewardPool
-        );
+        IGauge(newGauge).initialize(_vault, _owner);
 
         return newGauge;
-    }
-
-    /** @notice Create ExtraReward clone
-        @param _gauge the gauge associated.
-        @param _reward The token distributed as a rewards
-        @param _owner owner 
-        @return ExtraReward address
-    */
-    function createExtraReward(
-        address _gauge,
-        address _reward,
-        address _owner
-    ) external returns (address) {
-        address newExtraReward = _clone(deployedExtra);
-        emit ExtraRewardCreated(newExtraReward);
-        IExtraReward(newExtraReward).initialize(_gauge, _reward, _owner);
-
-        return newExtraReward;
     }
 
     function _clone(address _source) internal returns (address result) {

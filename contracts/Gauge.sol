@@ -9,8 +9,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IGauge.sol";
 import "./BaseGauge.sol";
-
 import "./interfaces/IVotingYFI.sol";
+import "./interfaces/IOYfiRewardPool.sol";
 
 /** @title  Gauge stake vault token get YFI rewards
     @notice Deposit your vault token (one gauge per vault).
@@ -32,91 +32,50 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     }
 
     uint256 public constant BOOSTING_FACTOR = 1;
-    uint256 private constant BOOST_DENOMINATOR = 10;
+    uint256 public constant BOOST_DENOMINATOR = 10;
 
     IERC20 public asset;
     //// @notice veYFI
-    address public veToken;
+    address public immutable VEYFI;
     //// @notice the veYFI YFI reward pool, penalty are sent to this contract.
-    address public veYfiRewardPool;
+    address public immutable VE_YFI_POOL;
     //// @notice a copy of the veYFI max lock duration
-    uint256 public constant PRECISON_FACTOR = 10**6;
+    uint256 public constant PRECISION_FACTOR = 10 ** 18;
     //// @notice Penalty does not apply for locks expiring after 3y11m
 
-    //// @notice rewardManager is in charge of adding/removing additional rewards
-    address public rewardManager;
-
-    /**
-    @notice penalty queued to be transferred later to veYfiRewardPool using `transferQueuedPenalty`
-    @dev rewards are queued when an account `_updateReward`.
-    */
-    uint256 public queuedVeYfiRewards;
     mapping(address => uint256) private _boostedBalances;
-    mapping(address => mapping(address => Approved)) public approvedTo;
+    mapping(address => address) public recipients;
 
-    //// @notice list of extraRewards pool.
-    address[] public extraRewards;
-
-    event AddedExtraReward(address indexed reward);
-    event DeletedExtraRewards(address[] rewards);
-    event UpdatedRewardManager(address indexed rewardManager);
-    event TransferedQueuedPenalty(uint256 transfered);
+    event TransferredPenalty(address indexed account, uint256 transfered);
     event BoostedBalanceUpdated(address account, uint256 amount);
 
-    event Initialize(
-        address indexed asset,
-        address indexed rewardToken,
-        address indexed owner,
-        address rewardManager,
-        address ve,
-        address veYfiRewardPool
-    );
+    event Initialize(address indexed asset, address indexed owner);
+
+    constructor(
+        address _veYfi,
+        address _oYfi,
+        address _veYfiOYfiPool
+    ) BaseGauge(_oYfi) {
+        require(_veYfi != address(0x0), "_asset 0x0 address");
+        require(_veYfiOYfiPool != address(0x0), "_asset 0x0 address");
+
+        VEYFI = _veYfi;
+        VE_YFI_POOL = _veYfiOYfiPool;
+    }
 
     /** @notice initialize the contract
      *  @dev Initialize called after contract is cloned.
      *  @param _asset The vault token to stake
-     *  @param _rewardToken the reward token YFI
      *  @param _owner owner address
-     *  @param _rewardManager reward manager address
-     *  @param _ve veYFI address
-     *  @param _veYfiRewardPool veYfiRewardPool address
      */
-    function initialize(
-        address _asset,
-        address _rewardToken,
-        address _owner,
-        address _rewardManager,
-        address _ve,
-        address _veYfiRewardPool
-    ) external initializer {
-        require(address(_asset) != address(0x0), "_asset 0x0 address");
-        require(address(_ve) != address(0x0), "_ve 0x0 address");
-        require(
-            address(_veYfiRewardPool) != address(0x0),
-            "_veYfiRewardPool 0x0 address"
-        );
-
-        require(_rewardManager != address(0), "_rewardManager 0x0 address");
-
-        __initialize(_rewardToken, _owner);
+    function initialize(address _asset, address _owner) external initializer {
+        __initialize(_owner);
         asset = IERC20(_asset);
         __ERC20_init(
-            string.concat("gauge ", IERC20Metadata(_asset).name()),
-            string.concat("G", IERC20Metadata(_asset).symbol())
+            string.concat("yGauge ", IERC20Metadata(_asset).name()),
+            string.concat("yG-", IERC20Metadata(_asset).symbol())
         );
-
-        veToken = _ve;
-        rewardManager = _rewardManager;
-        veYfiRewardPool = _veYfiRewardPool;
-
-        emit Initialize(
-            _asset,
-            _rewardToken,
-            _owner,
-            _rewardManager,
-            _ve,
-            _veYfiRewardPool
-        );
+        emit Initialize(_asset, _owner);
     }
 
     /** @return total of the staked vault token
@@ -142,7 +101,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     /**
     Maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
     */
-    function maxDeposit(address _receiver) public view returns (uint256) {
+    function maxDeposit(address) public view returns (uint256) {
         return type(uint256).max;
     }
 
@@ -156,7 +115,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     /**
     Maximum amount of shares that can be minted from the Vault for the receiver, through a mint call.
     */
-    function maxMint(address _receiver) public view returns (uint256) {
+    function maxMint(address) public view returns (uint256) {
         return type(uint256).max;
     }
 
@@ -170,66 +129,10 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     /** @param _account to look balance for
      *  @return amount of staked token for an account
      */
-    function boostedBalanceOf(address _account)
-        external
-        view
-        returns (uint256)
-    {
+    function boostedBalanceOf(
+        address _account
+    ) external view returns (uint256) {
         return _boostedBalances[_account];
-    }
-
-    /** @return the number of extra rewards pool
-     */
-    function extraRewardsLength() external view returns (uint256) {
-        return extraRewards.length;
-    }
-
-    /** @notice add extra rewards to the gauge
-     *  @dev can only be done by rewardManager
-     *  @param _extraReward the ExtraReward contract address
-     *  @return true
-     */
-    function addExtraReward(address _extraReward) external returns (bool) {
-        require(msg.sender == rewardManager, "!authorized");
-        require(_extraReward != address(0), "!reward setting");
-        for (uint256 i = 0; i < extraRewards.length; ++i) {
-            require(extraRewards[i] != _extraReward, "exists");
-        }
-        emit AddedExtraReward(_extraReward);
-        extraRewards.push(_extraReward);
-        return true;
-    }
-
-    /** @notice remove extra rewards from the gauge
-     *  @dev can only be done by rewardManager
-     *  @param _extraReward the ExtraReward contract address
-     */
-    function removeExtraReward(address _extraReward) external returns (bool) {
-        require(msg.sender == rewardManager, "!authorized");
-        uint256 index = type(uint256).max;
-        uint256 length = extraRewards.length;
-        for (uint256 i = 0; i < length; ++i) {
-            if (extraRewards[i] == _extraReward) {
-                index = i;
-                break;
-            }
-        }
-        require(index != type(uint256).max, "extra reward not found");
-        address[] memory toDelete = new address[](1);
-        toDelete[0] = _extraReward;
-        emit DeletedExtraRewards(toDelete);
-        extraRewards[index] = extraRewards[extraRewards.length - 1];
-        extraRewards.pop();
-        return true;
-    }
-
-    /** @notice remove extra rewards
-     *  @dev can only be done by rewardManager
-     */
-    function clearExtraRewards() external {
-        require(msg.sender == rewardManager, "!authorized");
-        emit DeletedExtraRewards(extraRewards);
-        delete extraRewards;
     }
 
     /** @notice
@@ -251,7 +154,9 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
                 uint256 maxEarning = _maxEarning(_account);
 
                 rewards[_account] += newEarning;
-                queuedVeYfiRewards += (maxEarning - newEarning);
+                uint256 penalty = maxEarning - newEarning;
+                _transferVeYfiORewards(penalty);
+                emit TransferredPenalty(_account, penalty);
             }
             userRewardPerTokenPaid[_account] = rewardPerTokenStored;
             emit UpdatedRewards(
@@ -271,19 +176,9 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     ) internal override {
         if (_from != address(0)) {
             _updateReward(_from);
-            //also deposit to linked rewards
-            uint256 length = extraRewards.length;
-            for (uint256 i = 0; i < length; ++i) {
-                IExtraReward(extraRewards[i]).rewardCheckpoint(_from);
-            }
         }
         if (_to != address(0)) {
             _updateReward(_to);
-            //also deposit to linked rewards
-            uint256 length = extraRewards.length;
-            for (uint256 i = 0; i < length; ++i) {
-                IExtraReward(extraRewards[i]).rewardCheckpoint(_to);
-            }
         }
     }
 
@@ -318,12 +213,9 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *  @return
      *   Amount of tokens the account has earned that have yet to be distributed.
      */
-    function earned(address _account)
-        external
-        view
-        override(BaseGauge, IBaseGauge)
-        returns (uint256)
-    {
+    function earned(
+        address _account
+    ) external view override(BaseGauge, IBaseGauge) returns (uint256) {
         uint256 newEarning = _newEarning(_account);
 
         return newEarning + rewards[_account];
@@ -333,12 +225,9 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *   This function only reflects the accounts earnings since the last time
      *   the account's rewards were calculated via _updateReward.
      */
-    function _newEarning(address _account)
-        internal
-        view
-        override
-        returns (uint256)
-    {
+    function _newEarning(
+        address _account
+    ) internal view override returns (uint256) {
         return
             (_boostedBalances[_account] *
                 (_rewardPerToken() - userRewardPerTokenPaid[_account])) /
@@ -365,11 +254,9 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *   The account's boosted balance. Always lower than or equal to the
      *   account's real balance.
      */
-    function nextBoostedBalanceOf(address _account)
-        external
-        view
-        returns (uint256)
-    {
+    function nextBoostedBalanceOf(
+        address _account
+    ) external view returns (uint256) {
         return _boostedBalanceOf(_account);
     }
 
@@ -383,11 +270,9 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *   The account's boosted balance. Always lower than or equal to the
      *   account's real balance.
      */
-    function _boostedBalanceOf(address _account)
-        internal
-        view
-        returns (uint256)
-    {
+    function _boostedBalanceOf(
+        address _account
+    ) internal view returns (uint256) {
         return _boostedBalanceOf(_account, balanceOf(_account));
     }
 
@@ -401,20 +286,18 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *   The account's boosted balance. Always lower than or equal to the
      *   account's real balance.
      */
-    function _boostedBalanceOf(address _account, uint256 _realBalance)
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 veTotalSupply = IVotingYFI(veToken).totalSupply();
+    function _boostedBalanceOf(
+        address _account,
+        uint256 _realBalance
+    ) internal view returns (uint256) {
+        uint256 veTotalSupply = IVotingYFI(VEYFI).totalSupply();
         if (veTotalSupply == 0) {
             return _realBalance;
         }
         return
             Math.min(
                 ((_realBalance * BOOSTING_FACTOR) +
-                    (((totalSupply() *
-                        IVotingYFI(veToken).balanceOf(_account)) /
+                    (((totalSupply() * IVotingYFI(VEYFI).balanceOf(_account)) /
                         veTotalSupply) *
                         (BOOST_DENOMINATOR - BOOSTING_FACTOR))) /
                     BOOST_DENOMINATOR,
@@ -455,10 +338,10 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *   @param _receiver the account to deposit to
      *   @return true
      */
-    function deposit(uint256 _assets, address _receiver)
-        external
-        returns (uint256)
-    {
+    function deposit(
+        uint256 _assets,
+        address _receiver
+    ) external returns (uint256) {
         _deposit(_assets, _receiver);
         return _assets;
     }
@@ -471,10 +354,10 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *   @param _receiver the account to deposit to
      *   @return amount of shares transfered
      */
-    function mint(uint256 _shares, address _receiver)
-        external
-        returns (uint256)
-    {
+    function mint(
+        uint256 _shares,
+        address _receiver
+    ) external returns (uint256) {
         _deposit(_shares, _receiver);
         return _shares;
     }
@@ -502,29 +385,11 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         return _assets;
     }
 
-    /** @notice allow an address to lock and claim on your behalf
-     * claim ermai
-     *  @param _addr address to change approval for
-     *  @param _canClaim can deposit
-     *  @return true
-     */
-    function setApprovals(
-        address _addr,
-        bool _canClaim,
-        bool _canLock
-    ) external returns (bool) {
-        approvedTo[_addr][msg.sender].claim = _canClaim;
-        approvedTo[_addr][msg.sender].lock = _canLock;
-
-        return true;
-    }
-
     /** @notice Burns shares from owner and sends exactly assets of underlying tokens to receiver.
      *  @dev This call updates claimable rewards
      *  @param _assets amount to withdraw
      *  @param _receiver account that will recieve the shares
      *  @param _owner shares will be taken from account
-     *  @param _lock should the claimed rewards be locked in veYFI for the user
      *  @param _claim claim veYFI and additional reward
      *  @return amount of shares withdrawn
      */
@@ -532,10 +397,9 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         uint256 _assets,
         address _receiver,
         address _owner,
-        bool _claim,
-        bool _lock
+        bool _claim
     ) external returns (uint256) {
-        return _withdraw(_assets, _receiver, _owner, _claim, _lock);
+        return _withdraw(_assets, _receiver, _owner, _claim);
     }
 
     /** @notice Burns shares from owner and sends exactly assets of underlying tokens to receiver.
@@ -550,40 +414,16 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         address _receiver,
         address _owner
     ) external returns (uint256) {
-        return _withdraw(_assets, _receiver, _owner, false, false);
+        return _withdraw(_assets, _receiver, _owner, false);
     }
 
     /** @notice withdraw all vault tokens from gauge
      *   @dev This call updates claimable rewards
      *   @param _claim claim veYFI and additional reward
-     *   @param _lock should the claimed rewards be locked in veYFI for the user
-     *  @return amount of shares withdrawn
-     */
-    function withdraw(bool _claim, bool _lock) external returns (uint256) {
-        return
-            _withdraw(
-                balanceOf(msg.sender),
-                msg.sender,
-                msg.sender,
-                _claim,
-                _lock
-            );
-    }
-
-    /** @notice withdraw all vault token from gauge
-     *  @dev This call update claimable rewards
-     *  @param _claim claim veYFI and additional reward
      *  @return amount of shares withdrawn
      */
     function withdraw(bool _claim) external returns (uint256) {
-        return
-            _withdraw(
-                balanceOf(msg.sender),
-                msg.sender,
-                msg.sender,
-                _claim,
-                false
-            );
+        return _withdraw(balanceOf(msg.sender), msg.sender, msg.sender, _claim);
     }
 
     /** @notice withdraw all vault token from gauge
@@ -591,22 +431,14 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *  @return amount of shares withdrawn
      */
     function withdraw() external returns (uint256) {
-        return
-            _withdraw(
-                balanceOf(msg.sender),
-                msg.sender,
-                msg.sender,
-                false,
-                false
-            );
+        return _withdraw(balanceOf(msg.sender), msg.sender, msg.sender, false);
     }
 
     function _withdraw(
         uint256 _assets,
         address _receiver,
         address _owner,
-        bool _claim,
-        bool _lock
+        bool _claim
     ) internal returns (uint256) {
         require(_assets != 0, "RewardPool : Cannot withdraw 0");
 
@@ -617,18 +449,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         _burn(_owner, _assets);
 
         if (_claim) {
-            if (_owner != msg.sender) {
-                require(
-                    approvedTo[msg.sender][_owner].claim,
-                    "not allowed to claim"
-                );
-                require(
-                    _lock == false || approvedTo[msg.sender][_owner].lock,
-                    "not allowed to lock"
-                );
-            }
-
-            _getReward(_owner, _lock, true);
+            _getReward(_owner);
         }
 
         asset.safeTransfer(_receiver, _assets);
@@ -657,47 +478,16 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         address _receiver,
         address _owner
     ) external override returns (uint256) {
-        return _withdraw(_assets, _receiver, _owner, true, false);
+        return _withdraw(_assets, _receiver, _owner, true);
     }
 
     /**
      * @notice
      *  Get rewards
-     * @param _lock should the yfi be locked in veYFI
-     * @param _claimExtras claim extra rewards
      * @return true
      */
-    function getReward(bool _lock, bool _claimExtras)
-        external
-        updateReward(msg.sender)
-        returns (bool)
-    {
-        _getReward(msg.sender, _lock, _claimExtras);
-        return true;
-    }
-
-    /**
-     * @notice
-     *  Get rewards and claim extra rewards
-     *  @param _lock should the yfi be locked in veYFI
-     *  @return true
-     */
-    function getReward(bool _lock)
-        external
-        updateReward(msg.sender)
-        returns (bool)
-    {
-        _getReward(msg.sender, _lock, true);
-        return true;
-    }
-
-    /**
-     * @notice
-     *  Get rewards and claim extra rewards, do not lock YFI earned
-     *  @return true
-     */
     function getReward() external updateReward(msg.sender) returns (bool) {
-        _getReward(msg.sender, false, true);
+        _getReward(msg.sender);
         return true;
     }
 
@@ -706,26 +496,12 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *  Get rewards for an account
      * @dev rewards are transferred to _account
      * @param _account to claim rewards for
-     * @param _claimExtras claim extra rewards
      * @return true
      */
-    function getRewardFor(
-        address _account,
-        bool _lock,
-        bool _claimExtras
+    function getReward(
+        address _account
     ) external updateReward(_account) returns (bool) {
-        if (_account != msg.sender) {
-            require(
-                approvedTo[msg.sender][_account].claim,
-                "not allowed to claim"
-            );
-            require(
-                _lock == false || approvedTo[msg.sender][_account].lock,
-                "not allowed to lock"
-            );
-        }
-
-        _getReward(_account, _lock, _claimExtras);
+        _getReward(_account);
 
         return true;
     }
@@ -735,11 +511,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *   This function MUST NOT be called without the caller invoking
      *   updateReward(_account) first.
      */
-    function _getReward(
-        address _account,
-        bool _lock,
-        bool _claimExtras
-    ) internal {
+    function _getReward(address _account) internal {
         uint256 boostedBalance = _boostedBalanceOf(_account);
         _boostedBalances[_account] = boostedBalance;
         emit BoostedBalanceUpdated(_account, boostedBalance);
@@ -747,66 +519,25 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         uint256 reward = rewards[_account];
         if (reward != 0) {
             rewards[_account] = 0;
-            if (_lock) {
-                rewardToken.approve(address(veToken), reward);
-                IVotingYFI(veToken).modify_lock(reward, 0, _account);
+            address recipient = recipients[_account];
+            if (recipient != address(0x0)) {
+                REWARD_TOKEN.safeTransfer(recipient, reward);
             } else {
-                rewardToken.safeTransfer(_account, reward);
+                REWARD_TOKEN.safeTransfer(_account, reward);
             }
-
             emit RewardPaid(_account, reward);
         }
-        //also get rewards from linked rewards
-        if (_claimExtras) {
-            uint256 length = extraRewards.length;
-            for (uint256 i = 0; i < length; ++i) {
-                IExtraReward(extraRewards[i]).getRewardFor(_account);
-            }
-        }
     }
 
-    /**
-     * @notice
-     * Transfer penalty to the veYFIRewardContract
-     * @dev Penalty are queued in this contract.
-     * @return true
-     */
-    function transferVeYfiRewards() external returns (bool) {
-        uint256 toTransfer = queuedVeYfiRewards;
-        queuedVeYfiRewards = 0;
-
-        IERC20(rewardToken).approve(veYfiRewardPool, toTransfer);
-        BaseGauge(veYfiRewardPool).queueNewRewards(toTransfer);
-        emit TransferedQueuedPenalty(toTransfer);
-        return true;
+    function _transferVeYfiORewards(uint256 _penalty) internal {
+        IERC20(REWARD_TOKEN).approve(VE_YFI_POOL, _penalty);
+        IOYfiRewardPool(VE_YFI_POOL).burn(_penalty);
     }
 
-    /**
-     * @notice
-     * set reward manager
-     * @dev Can be called by rewardManager or owner
-     * @param _rewardManager new reward manager
-     * @return true
-     */
-    function setRewardManager(address _rewardManager) external returns (bool) {
-        require(
-            msg.sender == rewardManager || msg.sender == owner(),
-            "!authorized"
-        );
-
-        require(_rewardManager != address(0), "_rewardManager 0x0 address");
-        rewardManager = _rewardManager;
-        emit UpdatedRewardManager(rewardManager);
-        return true;
-    }
-
-    function _notProtectedTokens(address _token)
-        internal
-        view
-        override
-        returns (bool)
-    {
-        return _token != address(rewardToken) && _token != address(asset);
+    function _protectedTokens(
+        address _token
+    ) internal view override returns (bool) {
+        return _token == address(REWARD_TOKEN) || _token == address(asset);
     }
 
     /**

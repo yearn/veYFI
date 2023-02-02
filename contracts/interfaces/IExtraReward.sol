@@ -12,7 +12,5 @@ interface IExtraReward is IBaseGauge {
 
     function rewardCheckpoint(address _account) external returns (bool);
 
-    function getRewardFor(address _account) external returns (bool);
-
     function getReward() external returns (bool);
 }
