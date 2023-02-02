@@ -102,7 +102,7 @@ def create_vault(project, gov):
 def create_gauge(registry, gauge_factory, gov, project):
     def create_gauge(vault):
         tx = registry.addVaultToRewards(vault, gov, sender=gov)
-        gauge_address = next(tx.decode_logs(gauge_factory.GaugeCreated)).gauge
+        gauge_address = tx.decode_logs(gauge_factory.GaugeCreated)[0].gauge
         return project.Gauge.at(gauge_address)
 
     yield create_gauge
