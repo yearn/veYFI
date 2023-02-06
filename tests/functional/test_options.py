@@ -211,20 +211,18 @@ DISCOUNT_TABLE = [
 DISCOUNT_NUMERATOR = 1000
 
 
-@pytest.fixture(params=[1, 10, 40, 70])
-def percent_locked(gov, yfi, ve_yfi, request):
+@pytest.mark.parametrize("percent_locked", [1, 10, 40, 70])
+def test_exercise(o_yfi, yfi, ve_yfi, options, gov, panda, percent_locked):
+    # Lock tokens to reach the targeted percentage of locked tokens
     total_to_mint = 10**22
     yfi.mint(gov, total_to_mint, sender=gov)
-    to_lock = int(total_to_mint * request.param / 100)
+    to_lock = int(total_to_mint * percent_locked / 100)
     yfi.approve(ve_yfi, to_lock, sender=gov)
     assert yfi.balanceOf(ve_yfi) == 0
     ve_yfi.modify_lock(
         to_lock, chain.blocks.head.timestamp + 3600 * 24 * 14, sender=gov
     )
-    yield request.param
 
-
-def test_exercise(o_yfi, yfi, options, gov, panda, percent_locked):
     yfi.transfer(options, AMOUNT, sender=gov)
     o_yfi.mint(panda, AMOUNT, sender=gov)
     estimate = options.eth_required(AMOUNT)
