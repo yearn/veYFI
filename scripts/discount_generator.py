@@ -15,8 +15,8 @@ import math
 # plt.show()
 
 discounts = []
-MAX = 200
-NUMERATOR = 1000
+MAX = 500
+NUMERATOR = 10000
 import math
 
 for i in range(1, MAX + 1):

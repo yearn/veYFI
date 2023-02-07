@@ -1,16 +1,15 @@
 import ape
 import pytest
 from ape import chain
+import math
 
 SLIPPAGE_TOLERANCE = 3
 SLIPPAGE_DENOMINATOR = 1000
 AMOUNT = 10**18
 # contract constants
 DISCOUNT_TABLE = []
-MAX = 200
-NUMERATOR = 1000
-DISCOUNT_NUMERATOR = 1000
-import math
+MAX = 500
+NUMERATOR = 10000
 
 for i in range(1, MAX + 1):
     d = 1.0 / (1.0 + (9.9999 * (math.e ** (4.6969 * (i / MAX - 1)))))
@@ -36,8 +35,8 @@ def test_exercise(o_yfi, yfi, ve_yfi, options, gov, panda, percent_locked):
         pytest.approx(
             int(
                 options.get_latest_price()
-                * DISCOUNT_TABLE[percent_locked * 2]
-                / DISCOUNT_NUMERATOR
+                * DISCOUNT_TABLE[percent_locked * 5]
+                / NUMERATOR
             )
         )
         == estimate
