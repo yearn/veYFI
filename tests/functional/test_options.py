@@ -19,11 +19,11 @@ for i in range(1, MAX + 1):
 @pytest.mark.parametrize("percent_locked", [1, 10, 40, 70])
 def test_exercise(o_yfi, yfi, ve_yfi, options, gov, panda, percent_locked):
     # Lock tokens to reach the targeted percentage of locked tokens
+    assert yfi.totalSupply() == 0
     total_to_mint = 10**22
     yfi.mint(gov, total_to_mint, sender=gov)
     to_lock = int(total_to_mint * percent_locked / 100)
     yfi.approve(ve_yfi, to_lock, sender=gov)
-    assert yfi.balanceOf(ve_yfi) == 0
     ve_yfi.modify_lock(
         to_lock, chain.blocks.head.timestamp + 3600 * 24 * 14, sender=gov
     )
