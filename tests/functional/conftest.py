@@ -9,39 +9,21 @@ def gov(accounts):
     yield accounts[0]
 
 
-@pytest.fixture(scope="session")
-def whale_amount():
-    yield 10**22
-
-
-@pytest.fixture(scope="session")
-def whale(accounts, yfi, whale_amount):
+@pytest.fixture()
+def whale(accounts):
     a = accounts[1]
-    yfi.mint(a, whale_amount, sender=a)
     yield a
 
 
-@pytest.fixture(scope="session")
-def shark_amount():
-    yield 10**20
-
-
-@pytest.fixture(scope="session")
-def shark(accounts, yfi, shark_amount):
+@pytest.fixture()
+def shark(accounts):
     a = accounts[2]
-    yfi.mint(a, shark_amount, sender=a)
     yield a
 
 
-@pytest.fixture(scope="session")
-def fish_amount():
-    yield 10**18
-
-
-@pytest.fixture(scope="session")
-def fish(accounts, yfi, fish_amount):
+@pytest.fixture()
+def fish(accounts):
     a = accounts[3]
-    yfi.mint(a, fish_amount, sender=a)
     yield a
 
 

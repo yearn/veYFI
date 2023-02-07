@@ -9,12 +9,13 @@ def test_gauge_yfi_distribution_full_rewards(
     o_yfi,
     ve_yfi,
     whale,
-    whale_amount,
     create_vault,
     create_gauge,
     gov,
     ve_yfi_o_yfi_pool,
 ):
+    whale_amount = 10**22
+    yfi.mint(whale, whale_amount, sender=whale)
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
@@ -94,14 +95,14 @@ def test_boost_lock(
     o_yfi,
     ve_yfi,
     whale,
-    whale_amount,
     create_vault,
     create_gauge,
     panda,
     gov,
     ve_yfi_o_yfi_pool,
 ):
-
+    whale_amount = 10**22
+    yfi.mint(whale, whale_amount, sender=whale)
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
@@ -150,13 +151,14 @@ def test_gauge_get_reward_for(
     o_yfi,
     ve_yfi,
     whale,
-    whale_amount,
     shark,
     create_vault,
     create_gauge,
     gov,
     ve_yfi_o_yfi_pool,
 ):
+    whale_amount = 10**22
+    yfi.mint(whale, whale_amount, sender=whale)
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
@@ -193,12 +195,13 @@ def test_deposit_for(
     ve_yfi,
     whale,
     shark,
-    whale_amount,
     create_vault,
     create_gauge,
     ve_yfi_o_yfi_pool,
     gov,
 ):
+    whale_amount = 10**22
+    yfi.mint(whale, whale_amount, sender=whale)
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
@@ -250,12 +253,13 @@ def test_withdraw(
     o_yfi,
     ve_yfi,
     whale,
-    whale_amount,
     create_vault,
     create_gauge,
     gov,
     ve_yfi_o_yfi_pool,
 ):
+    whale_amount = 10**22
+    yfi.mint(whale, whale_amount, sender=whale)
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
@@ -286,7 +290,9 @@ def test_withdraw(
     assert gauge.queuedRewards() == 0
 
 
-def test_kick(create_vault, create_gauge, whale_amount, panda, yfi, ve_yfi, whale, gov):
+def test_kick(create_vault, create_gauge, panda, yfi, ve_yfi, whale, gov):
+    whale_amount = 10**22
+    yfi.mint(whale, whale_amount, sender=whale)
     lp_amount = 10**18
     vault = create_vault()
     gauge = create_gauge(vault)
@@ -328,12 +334,13 @@ def withdraw_for(
     ve_yfi,
     whale,
     panda,
-    whale_amount,
     create_vault,
     create_gauge,
     gov,
     ve_yfi_o_yfi_pool,
 ):
+    whale_amount = 10**22
+    yfi.mint(whale, whale_amount, sender=whale)
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
@@ -372,12 +379,13 @@ def transfer(
     ve_yfi,
     whale,
     panda,
-    whale_amount,
     create_vault,
     create_gauge,
     gov,
     ve_yfi_o_yfi_pool,
 ):
+    whale_amount = 10**22
+    yfi.mint(whale, whale_amount, sender=whale)
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale

@@ -5,7 +5,9 @@ from ape import chain
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 
-def test_ve_yfi_claim(yfi, ve_yfi, whale, whale_amount, ve_yfi_rewards, gov):
+def test_ve_yfi_claim(yfi, ve_yfi, whale, ve_yfi_rewards, gov):
+    whale_amount = 10**22
+    yfi.mint(whale, whale_amount, sender=whale)
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 86400 * 365, sender=whale
@@ -34,7 +36,9 @@ def test_ve_yfi_claim(yfi, ve_yfi, whale, whale_amount, ve_yfi_rewards, gov):
     assert yfi.balanceOf(whale) == rewards
 
 
-def test_ve_yfi_claim_for(yfi, ve_yfi, whale, fish, whale_amount, ve_yfi_rewards, gov):
+def test_ve_yfi_claim_for(yfi, ve_yfi, whale, fish, ve_yfi_rewards, gov):
+    whale_amount = 10**22
+    yfi.mint(whale, whale_amount, sender=whale)
     yfi.approve(ve_yfi, whale_amount, sender=whale)
     ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 3600 * 24 * 365, sender=whale
