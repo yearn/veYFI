@@ -561,11 +561,12 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
         _boostedBalances[_account] = boostedBalance;
         emit BoostedBalanceUpdated(_account, boostedBalance);
     }
+
     /**
     @notice Set the recipient of rewards for an account
     @param recipient Address to send rewards to
     */
-    function setRecipients(address recipient) external{
+    function setRecipients(address recipient) external {
         recipients[msg.sender] = recipient;
     }
 }
