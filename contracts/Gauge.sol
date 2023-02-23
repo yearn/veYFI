@@ -51,6 +51,8 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
 
     event Initialize(address indexed asset, address indexed owner);
 
+    event RecipientUpdated(address indexed account, address indexed recipient);
+
     constructor(
         address _veYfi,
         address _oYfi,
@@ -568,5 +570,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     */
     function setRecipient(address _recipient) external {
         recipients[msg.sender] = _recipient;
+        emit RecipientUpdated(msg.sender, _recipient);
     }
 }
