@@ -564,9 +564,9 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
 
     /**
     @notice Set the recipient of rewards for an account
-    @param recipient Address to send rewards to
+    @param _recipient Address to send rewards to
     */
-    function setRecipients(address recipient) external {
-        recipients[msg.sender] = recipient;
+    function setRecipients(address _recipient) external {
+        recipients[msg.sender] = _recipient;
     }
 }
