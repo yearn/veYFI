@@ -61,6 +61,7 @@ def __init__(yfi: address, o_yfi: address, ve_yfi: address, owner: address, pric
     PRICE_FEED = AggregatorV3Interface(price_feed)
     CURVE_POOL = CurvePoolInterface(curve_pool)
     self._transfer_ownership(owner)
+    self.payee = owner
 
 
 @payable
@@ -114,6 +115,10 @@ def _eth_required(amount: uint256) -> uint256:
 @external
 @view
 def get_latest_price() -> uint256:
+    """
+    @dev get the latest price of YFI in ETH
+    @return price of YFI in ETH
+    """
     return self._get_latest_price()
 
 
@@ -138,6 +143,15 @@ def _get_oracle_price() -> int256:
     (round_id, price, started_at, updated_at, answered_in_round) = PRICE_FEED.latestRoundData()
     return price
 
+
+@external
+def set_payee(new_payee: address):
+    """
+    @dev set the payee of the ETH used to exercise options
+    @param new_payee the new payee
+    """
+    self._check_owner()
+    self.payee = new_payee
 
 @external
 def kill():
