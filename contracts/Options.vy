@@ -109,7 +109,7 @@ def _eth_required(amount: uint256) -> uint256:
     else:
         discount = convert(DISCOUNT_TABLE[total_locked * DISCOUNT_GRANULARITY / total_supply], uint256)
 
-    return amount * eth_per_yfi / PRICE_DENOMINATOR * discount / DISCOUNT_NUMERATOR
+    return amount * eth_per_yfi  * discount / PRICE_DENOMINATOR / DISCOUNT_NUMERATOR
 
 
 @external
