@@ -52,6 +52,8 @@ event OwnershipTransferred:
     previous_owner: indexed(address)
     new_owner: indexed(address)
 
+event SetPayee:
+    payee: indexed(address)
 
 @external
 def __init__(yfi: address, o_yfi: address, ve_yfi: address, owner: address, price_feed: address, curve_pool: address):
@@ -153,6 +155,7 @@ def set_payee(new_payee: address):
     """
     self._check_owner()
     self.payee = new_payee
+    log SetPayee(new_payee)
 
 @external
 def kill():
