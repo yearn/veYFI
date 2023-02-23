@@ -47,12 +47,14 @@ def o_yfi(accounts, project):
 
 @pytest.fixture(scope="session")
 def options(accounts, project, yfi, o_yfi, ve_yfi):
+    oft = project.OracleFakeTime.deploy(sender=accounts[0])
+
     yield project.Options.deploy(
         yfi,
         o_yfi,
         ve_yfi,
         accounts[0],
-        "0x7c5d4F8345e66f68099581Db340cd65B078C41f4",
+        oft,
         "0xc26b89a667578ec7b3f11b2f98d6fd15c07c54ba",
         sender=accounts[0],
     )

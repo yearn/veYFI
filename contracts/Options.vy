@@ -61,6 +61,7 @@ def __init__(yfi: address, o_yfi: address, ve_yfi: address, owner: address, pric
     PRICE_FEED = AggregatorV3Interface(price_feed)
     CURVE_POOL = CurvePoolInterface(curve_pool)
     self._transfer_ownership(owner)
+    self.payee = owner
 
 
 @payable
@@ -108,12 +109,16 @@ def _eth_required(amount: uint256) -> uint256:
     else:
         discount = convert(DISCOUNT_TABLE[total_locked * DISCOUNT_GRANULARITY / total_supply], uint256)
 
-    return amount * eth_per_yfi / PRICE_DENOMINATOR * discount / DISCOUNT_NUMERATOR
+    return amount * eth_per_yfi  * discount / PRICE_DENOMINATOR / DISCOUNT_NUMERATOR
 
 
 @external
 @view
 def get_latest_price() -> uint256:
+    """
+    @dev get the latest price of YFI in ETH
+    @return price of YFI in ETH
+    """
     return self._get_latest_price()
 
 
@@ -136,8 +141,18 @@ def _get_oracle_price() -> int256:
     updated_at: uint256 = 0
     answered_in_round: uint80 = 0
     (round_id, price, started_at, updated_at, answered_in_round) = PRICE_FEED.latestRoundData()
+    assert updated_at + 86400 > block.timestamp, "price too old"
     return price
 
+
+@external
+def set_payee(new_payee: address):
+    """
+    @dev set the payee of the ETH used to exercise options
+    @param new_payee the new payee
+    """
+    self._check_owner()
+    self.payee = new_payee
 
 @external
 def kill():
@@ -163,7 +178,7 @@ def _check_killed():
 def sweep(token: ERC20) -> uint256:
     assert self.killed or token != YFI, "protected token"
     amount: uint256 = token.balanceOf(self)
-    token.transfer(self.owner, amount)
+    token.transfer(self.owner, amount, default_return_value=True)
     log Sweep(token.address, amount)
     return amount
 
