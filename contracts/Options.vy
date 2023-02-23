@@ -177,7 +177,7 @@ def _check_killed():
 def sweep(token: ERC20) -> uint256:
     assert self.killed or token != YFI, "protected token"
     amount: uint256 = token.balanceOf(self)
-    token.transfer(self.owner, amount)
+    token.transfer(self.owner, amount, default_return_value=True)
     log Sweep(token.address, amount)
     return amount
 
