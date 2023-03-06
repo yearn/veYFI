@@ -554,11 +554,6 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
 
     function _kick(address _account) internal updateReward(_account) {
         uint256 balance = balanceOf(_account);
-        require(
-            _boostedBalances[_account] >
-                (balance * BOOSTING_FACTOR) / BOOST_DENOMINATOR,
-            "min boosted balance"
-        );
         uint256 boostedBalance = _boostedBalanceOf(_account, balance);
         _boostedBalances[_account] = boostedBalance;
         emit BoostedBalanceUpdated(_account, boostedBalance);
