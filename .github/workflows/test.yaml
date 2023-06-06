@@ -28,6 +28,6 @@ jobs:
 
     - name: Run tests
       env:
-          WEB3_INFURA_PROJECT_ID: b7821200399e4be2b4e5dbdf06fbe85b        
+          WEB3_INFURA_PROJECT_ID: f8b4d65ef4634cb7a3e1af5bf8d53ec1        
       run: ape test -s
       timeout-minutes: 10
