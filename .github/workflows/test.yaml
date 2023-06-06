@@ -23,14 +23,8 @@ jobs:
     - name: Compile contracts
       run: ape compile --size
 
-    # Needed to use hardhat
-    - name: Setup node.js
-      uses: actions/setup-node@v1
-      with:
-        node-version: '14.x'
-
-    - name: Install hardhat
-      run: npm install hardhat
+    - name: Install foundry
+      uses: foundry-rs/foundry-toolchain@v1
 
     - name: Run tests
       env:

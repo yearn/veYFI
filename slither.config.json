@@ -1,4 +1,4 @@
 {
-    "compile_force_framework": "hardhat",
+    "compile_force_framework": "foundry",
     "filter_paths": "openzeppelin|test"
 }
