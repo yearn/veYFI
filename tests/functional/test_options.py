@@ -47,36 +47,36 @@ def test_exercise(o_yfi, yfi, ve_yfi, options, gov, panda, percent_locked):
     assert yfi.balanceOf(panda) == AMOUNT
 
 
-# def test_slippage_tollerance(o_yfi, yfi, options, gov, panda):
-#     yfi.mint(options, AMOUNT * 2, sender=gov)
-#     o_yfi.mint(panda, AMOUNT * 2, sender=gov)
-#     estimate = options.eth_required(AMOUNT)
-#     o_yfi.approve(options, AMOUNT * 2, sender=panda)
-#     assert yfi.balanceOf(panda) == 0
-#     with ape.reverts("price out of tolerance"):
-#         options.exercise(
-#             AMOUNT,
-#             sender=panda,
-#             value=estimate - estimate * SLIPPAGE_TOLERANCE // SLIPPAGE_DENOMINATOR - 1,
-#         )
-#     options.exercise(
-#         AMOUNT,
-#         sender=panda,
-#         value=estimate - estimate * SLIPPAGE_TOLERANCE // SLIPPAGE_DENOMINATOR,
-#     )
-#     assert yfi.balanceOf(panda) == AMOUNT
-#     with ape.reverts("price out of tolerance"):
-#         options.exercise(
-#             AMOUNT,
-#             sender=panda,
-#             value=estimate + estimate * SLIPPAGE_TOLERANCE // SLIPPAGE_DENOMINATOR + 1,
-#         )
-#     options.exercise(
-#         AMOUNT,
-#         sender=panda,
-#         value=estimate + estimate * SLIPPAGE_TOLERANCE // SLIPPAGE_DENOMINATOR,
-#     )
-#     assert yfi.balanceOf(panda) == 2 * AMOUNT
+def test_slippage_tollerance(o_yfi, yfi, options, gov, panda):
+    yfi.mint(options, AMOUNT * 2, sender=gov)
+    o_yfi.mint(panda, AMOUNT * 2, sender=gov)
+    estimate = options.eth_required(AMOUNT)
+    o_yfi.approve(options, AMOUNT * 2, sender=panda)
+    assert yfi.balanceOf(panda) == 0
+    with ape.reverts("price out of tolerance"):
+        options.exercise(
+            AMOUNT,
+            sender=panda,
+            value=estimate - estimate * SLIPPAGE_TOLERANCE // SLIPPAGE_DENOMINATOR - 1,
+        )
+    options.exercise(
+        AMOUNT,
+        sender=panda,
+        value=estimate - estimate * SLIPPAGE_TOLERANCE // SLIPPAGE_DENOMINATOR,
+    )
+    assert yfi.balanceOf(panda) == AMOUNT
+    with ape.reverts("price out of tolerance"):
+        options.exercise(
+            AMOUNT,
+            sender=panda,
+            value=estimate + estimate * SLIPPAGE_TOLERANCE // SLIPPAGE_DENOMINATOR + 1,
+        )
+    options.exercise(
+        AMOUNT,
+        sender=panda,
+        value=estimate + estimate * SLIPPAGE_TOLERANCE // SLIPPAGE_DENOMINATOR,
+    )
+    assert yfi.balanceOf(panda) == 2 * AMOUNT
 
 
 def test_kill(o_yfi, yfi, options, gov, panda):
