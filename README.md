@@ -58,9 +58,18 @@ Options is the contract used to exercise oYFI for YFI using ETH. YFI/ETH price i
 
 Install ape framework. See [ape quickstart guide](https://docs.apeworx.io/ape/stable/userguides/quickstart.html)
 
-Hardhat dependencies for running tests
+Install dependencies
 ```bash
 npm install
+```
+
+Install [Foundry](https://github.com/foundry-rs/foundry) for running tests
+```bash
+curl -L https://foundry.paradigm.xyz | bash
+```
+
+```bash
+foundryup
 ```
 
 ## Compile
