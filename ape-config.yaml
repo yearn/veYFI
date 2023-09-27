@@ -21,7 +21,7 @@ dependencies:
 solidity:
   import_remapping:
     - "@openzeppelin/contracts=openzeppelin/v4.8.1"
-    - "@openzeppelin-upgradeable/contracts=openzeppelin-upgradeable/v4.8.1"
+    - "@openzeppelin/contracts-upgradeable=openzeppelin-upgradeable/v4.8.1"
 
 default_ecosystem: ethereum
 
