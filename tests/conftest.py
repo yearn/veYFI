@@ -41,8 +41,10 @@ def reward_pool(ve_yfi_and_reward_pool):
 
 
 @pytest.fixture(scope="session")
-def o_yfi(accounts, project):
-    yield project.OYfi.deploy(sender=accounts[0])
+def o_yfi(gov, project):
+    o_yfi = project.OYfi.deploy(sender=gov)
+    o_yfi.setMinter(gov, True, sender=gov)
+    yield o_yfi
 
 
 @pytest.fixture(scope="session")
