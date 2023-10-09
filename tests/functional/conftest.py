@@ -62,8 +62,8 @@ def ve_yfi_rewards(ve_yfi_and_reward_pool):
 
 
 @pytest.fixture(scope="session")
-def gauge_factory(project, gov, ve_yfi, o_yfi, ve_yfi_o_yfi_pool):
-    gauge = gov.deploy(project.Gauge, ve_yfi, o_yfi, ve_yfi_o_yfi_pool)
+def gauge_factory(project, gov, ve_yfi, d_yfi, ve_yfi_d_yfi_pool):
+    gauge = gov.deploy(project.Gauge, ve_yfi, d_yfi, ve_yfi_d_yfi_pool)
     yield gov.deploy(project.GaugeFactory, gauge)
 
 

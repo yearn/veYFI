@@ -24,7 +24,7 @@ def test_do_not_queue_zero_rewards(create_vault, create_gauge, panda):
         gauge.queueNewRewards(0, sender=panda)
 
 
-def test_sweep(create_vault, create_gauge, create_token, o_yfi, whale, gov):
+def test_sweep(create_vault, create_gauge, create_token, d_yfi, whale, gov):
     vault = create_vault()
     gauge = create_gauge(vault)
     yfo = create_token("YFO")
@@ -32,7 +32,7 @@ def test_sweep(create_vault, create_gauge, create_token, o_yfi, whale, gov):
     with ape.reverts("Ownable: caller is not the owner"):
         gauge.sweep(yfo, sender=whale)
     with ape.reverts("protected token"):
-        gauge.sweep(o_yfi, sender=gov)
+        gauge.sweep(d_yfi, sender=gov)
     with ape.reverts("protected token"):
         gauge.sweep(vault, sender=gov)
     gauge.sweep(yfo, sender=gov)
@@ -40,15 +40,15 @@ def test_sweep(create_vault, create_gauge, create_token, o_yfi, whale, gov):
 
 
 def test_small_queued_rewards_duration_extension(
-    create_vault, create_gauge, o_yfi, gov
+    create_vault, create_gauge, d_yfi, gov
 ):
     vault = create_vault()
     gauge = create_gauge(vault)
-    o_yfi_to_distribute = 10**20
-    o_yfi.mint(gov, o_yfi_to_distribute * 2, sender=gov)
-    o_yfi.approve(gauge, o_yfi_to_distribute * 2, sender=gov)
+    d_yfi_to_distribute = 10**20
+    d_yfi.mint(gov, d_yfi_to_distribute * 2, sender=gov)
+    d_yfi.approve(gauge, d_yfi_to_distribute * 2, sender=gov)
 
-    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
+    gauge.queueNewRewards(d_yfi_to_distribute, sender=gov)
     finish = gauge.periodFinish()
     # distribution started, do not extend the duration unless rewards are 120% of what has been distributed.
     chain.pending_timestamp += 24 * 3600
@@ -64,13 +64,13 @@ def test_small_queued_rewards_duration_extension(
     assert gauge.periodFinish() != finish
 
 
-def test_set_duration(create_vault, create_gauge, o_yfi, gov):
+def test_set_duration(create_vault, create_gauge, d_yfi, gov):
     vault = create_vault()
     gauge = create_gauge(vault)
-    o_yfi_to_distribute = 10**20
-    o_yfi.mint(gov, o_yfi_to_distribute * 2, sender=gov)
-    o_yfi.approve(gauge, o_yfi_to_distribute * 2, sender=gov)
-    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
+    d_yfi_to_distribute = 10**20
+    d_yfi.mint(gov, d_yfi_to_distribute * 2, sender=gov)
+    d_yfi.approve(gauge, d_yfi_to_distribute * 2, sender=gov)
+    gauge.queueNewRewards(d_yfi_to_distribute, sender=gov)
 
     finish = gauge.periodFinish()
     rate = gauge.rewardRate()

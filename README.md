@@ -21,7 +21,7 @@ So at most you are paying a 75% penalty that starts decreasing when your lock du
 
 ## Gauges
 
-Gauges allow vault depositors to stake their vault tokens and earn oYFI rewards according to the amount of oYFI to be distributed and their veYFI weight.
+Gauges allow vault depositors to stake their vault tokens and earn dYFI rewards according to the amount of dYFI to be distributed and their veYFI weight.
 
 ### Gauges boosting
 
@@ -38,7 +38,7 @@ The rewards that are not distributed because the balance isn't fully boosted are
 
 ### Gauge YFI distribution
 
-Every two weeks veYFI holders can vote on oYFI distribution to gauges.
+Every two weeks veYFI holders can vote on dYFI distribution to gauges.
 
 ## veYFIRewardPool
 
@@ -46,13 +46,13 @@ Users who lock veYFI can claim YFI from the veYFI exited early and the non-distr
 You will be able to start claiming from the veFYI reward pool two or three weeks from the Thursday after which you lock before you can claim.
 
 
-## OYfiRewardPool
+## dYFIRewardPool
 
-Users who lock veYFI can claim oYFI from the oYFI that aren't distributed due to the lack of boost.
+Users who lock veYFI can claim dYFI from the dYFI that aren't distributed due to the lack of boost.
 
-## Options
+## Redemption
 
-Options is the contract used to exercise oYFI for YFI using ETH. YFI/ETH price is fetched from curve and chainlink oracles. YFI is sold at a discounted rate based on the ratio between the total supply and the amount of YFI in the veYFI contract.
+Redemption is the contract used to redeem dYFI for YFI using ETH. YFI/ETH price is fetched from curve and chainlink oracles. YFI is sold at a discounted rate based on the ratio between the total YFI supply and the veYFI supply.
 
 ## Setup
 

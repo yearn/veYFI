@@ -1,6 +1,6 @@
 # @version 0.3.7
 """
-@title YFI Reward Pool
+@title dYFI Reward Pool
 @author Curve Finance, Yearn Finance
 @license MIT
 """
@@ -46,7 +46,7 @@ struct LockedBalance:
 WEEK: constant(uint256) = 7 * 86400
 TOKEN_CHECKPOINT_DEADLINE: constant(uint256) = 86400
 
-OYFI: immutable(ERC20)
+DYFI: immutable(ERC20)
 VEYFI: immutable(VotingYFI)
 
 start_time: public(uint256)
@@ -61,7 +61,7 @@ ve_supply: public(HashMap[uint256, uint256])
 
 
 @external
-def __init__(veyfi: VotingYFI, oyfi: address, start_time: uint256):
+def __init__(veyfi: VotingYFI, dyfi: address, start_time: uint256):
     """
     @notice Contract constructor
     @param veyfi VotingYFI contract address
@@ -72,14 +72,14 @@ def __init__(veyfi: VotingYFI, oyfi: address, start_time: uint256):
     self.last_token_time = t
     self.time_cursor = t
     VEYFI = veyfi
-    OYFI = ERC20(oyfi)
+    DYFI = ERC20(dyfi)
 
     log Initialized(veyfi, start_time)
 
 
 @internal
 def _checkpoint_token():
-    token_balance: uint256 = OYFI.balanceOf(self)
+    token_balance: uint256 = DYFI.balanceOf(self)
     to_distribute: uint256 = token_balance - self.token_last_balance
     # @dev gas optimization
     if to_distribute == 0:
@@ -224,7 +224,7 @@ def claim(user: address = msg.sender) -> uint256:
 
     amount: uint256 = self._claim(user, last_token_time)
     if amount != 0:
-        assert OYFI.transfer(user, amount)
+        assert DYFI.transfer(user, amount)
         self.token_last_balance -= amount
 
     return amount
@@ -233,15 +233,15 @@ def claim(user: address = msg.sender) -> uint256:
 @external
 def burn(amount: uint256 = max_value(uint256)) -> bool:
     """
-    @notice Receive YFI into the contract and trigger a token checkpoint
+    @notice Receive dYFI into the contract and trigger a token checkpoint
     @param amount Amount of tokens to pull [default: allowance]
     @return bool success
     """
     _amount: uint256 = amount
     if _amount == max_value(uint256):
-        _amount = OYFI.allowance(msg.sender, self)
+        _amount = DYFI.allowance(msg.sender, self)
     if _amount > 0:
-        OYFI.transferFrom(msg.sender, self, _amount)
+        DYFI.transferFrom(msg.sender, self, _amount)
         log RewardReceived(msg.sender, _amount)
         if block.timestamp > self.last_token_time + TOKEN_CHECKPOINT_DEADLINE:
             self._checkpoint_token()
@@ -252,7 +252,7 @@ def burn(amount: uint256 = max_value(uint256)) -> bool:
 @view
 @external
 def token() -> ERC20:
-    return OYFI
+    return DYFI
 
 
 @view

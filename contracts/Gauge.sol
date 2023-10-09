@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IGauge.sol";
 import "./BaseGauge.sol";
 import "./interfaces/IVotingYFI.sol";
-import "./interfaces/IOYfiRewardPool.sol";
+import "./interfaces/IdYFIRewardPool.sol";
 
 /** @title  Gauge stake vault token get YFI rewards
     @notice Deposit your vault token (one gauge per vault).
@@ -55,14 +55,14 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
 
     constructor(
         address _veYfi,
-        address _oYfi,
-        address _veYfiOYfiPool
-    ) BaseGauge(_oYfi) {
+        address _dYfi,
+        address _veYfiDYfiPool
+    ) BaseGauge(_dYfi) {
         require(_veYfi != address(0x0), "_asset 0x0 address");
-        require(_veYfiOYfiPool != address(0x0), "_asset 0x0 address");
+        require(_veYfiDYfiPool != address(0x0), "_asset 0x0 address");
 
         VEYFI = _veYfi;
-        VE_YFI_POOL = _veYfiOYfiPool;
+        VE_YFI_POOL = _veYfiDYfiPool;
     }
 
     /** @notice initialize the contract
@@ -533,7 +533,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
 
     function _transferVeYfiORewards(uint256 _penalty) internal {
         IERC20(REWARD_TOKEN).approve(VE_YFI_POOL, _penalty);
-        IOYfiRewardPool(VE_YFI_POOL).burn(_penalty);
+        IDYfiRewardPool(VE_YFI_POOL).burn(_penalty);
     }
 
     function _protectedTokens(

@@ -41,29 +41,30 @@ def reward_pool(ve_yfi_and_reward_pool):
 
 
 @pytest.fixture(scope="session")
-def o_yfi(accounts, project):
-    yield project.OYfi.deploy(sender=accounts[0])
+def d_yfi(accounts, project):
+    yield project.dYFI.deploy(sender=accounts[0])
 
 
 @pytest.fixture(scope="session")
-def options(accounts, project, yfi, o_yfi, ve_yfi):
+def redemption(accounts, project, yfi, d_yfi, ve_yfi):
     oft = project.OracleFakeTime.deploy(sender=accounts[0])
 
-    yield project.Options.deploy(
+    yield project.Redemption.deploy(
         yfi,
-        o_yfi,
+        d_yfi,
         ve_yfi,
         accounts[0],
         oft,
         "0xc26b89a667578ec7b3f11b2f98d6fd15c07c54ba",
+        10**18,
         sender=accounts[0],
     )
 
 
 @pytest.fixture(scope="session")
-def ve_yfi_o_yfi_pool(accounts, project, ve_yfi, o_yfi):
+def ve_yfi_d_yfi_pool(accounts, project, ve_yfi, d_yfi):
     start_time = chain.pending_timestamp + 7 * 3600 * 24
-    yield project.OYfiRewardPool.deploy(ve_yfi, o_yfi, start_time, sender=accounts[0])
+    yield project.dYFIRewardPool.deploy(ve_yfi, d_yfi, start_time, sender=accounts[0])
 
 
 @pytest.fixture(autouse=True, scope="session")
