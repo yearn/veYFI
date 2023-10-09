@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IGauge.sol";
 import "./BaseGauge.sol";
 import "./interfaces/IVotingYFI.sol";
-import "./interfaces/IdYFIRewardPool.sol";
+import "./interfaces/IDYfiRewardPool.sol";
 
 /** @title  Gauge stake vault token get YFI rewards
     @notice Deposit your vault token (one gauge per vault).
