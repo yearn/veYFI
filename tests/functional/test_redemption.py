@@ -6,12 +6,16 @@ SLIPPAGE_TOLERANCE = 3
 SLIPPAGE_DENOMINATOR = 1000
 AMOUNT = 10**18
 
+
 def discount(s, x):
     return 1 / (1 + 10 * exp(4.7 * (s * x - 1)))
 
+
 @pytest.mark.parametrize("percent_locked", [1, 5, 10, 40, 60])
 @pytest.mark.parametrize("scaling_factor", [1, 2, 4, 8, 10])
-def test_redeem(chain, d_yfi, yfi, ve_yfi, redemption, gov, panda, percent_locked, scaling_factor):
+def test_redeem(
+    chain, d_yfi, yfi, ve_yfi, redemption, gov, panda, percent_locked, scaling_factor
+):
     redemption.start_ramp(scaling_factor * AMOUNT, 0, sender=gov)
     # Lock tokens to reach the targeted percentage of locked tokens
     assert yfi.totalSupply() == 0
@@ -23,8 +27,8 @@ def test_redeem(chain, d_yfi, yfi, ve_yfi, redemption, gov, panda, percent_locke
         to_lock, chain.blocks.head.timestamp + 3600 * 24 * 2000, sender=gov
     )
 
-    expected = discount(scaling_factor, percent_locked/100)
-    assert pytest.approx(expected) == redemption.discount()/AMOUNT
+    expected = discount(scaling_factor, percent_locked / 100)
+    assert pytest.approx(expected) == redemption.discount() / AMOUNT
 
     yfi.transfer(redemption, AMOUNT, sender=gov)
     d_yfi.mint(panda, AMOUNT, sender=gov)
@@ -67,6 +71,7 @@ def test_slippage_tollerance(d_yfi, yfi, redemption, gov, panda):
     )
     assert yfi.balanceOf(panda) == 2 * AMOUNT
 
+
 def test_ramp(chain, redemption, gov, panda):
     assert redemption.scaling_factor() == AMOUNT
     assert redemption.scaling_factor_ramp() == (0, 0, AMOUNT, AMOUNT)
@@ -90,7 +95,12 @@ def test_ramp(chain, redemption, gov, panda):
     with chain.isolate():
         redemption.stop_ramp(sender=gov)
         assert redemption.scaling_factor() == AMOUNT * 15 // 10
-        assert redemption.scaling_factor_ramp() == (0, 0, AMOUNT * 15 // 10, AMOUNT * 15 // 10)
+        assert redemption.scaling_factor_ramp() == (
+            0,
+            0,
+            AMOUNT * 15 // 10,
+            AMOUNT * 15 // 10,
+        )
 
     chain.mine()
     assert redemption.scaling_factor() == AMOUNT * 15 // 10
