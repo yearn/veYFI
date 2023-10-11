@@ -13,7 +13,7 @@ UNIT: constant(uint256) = 10**18
 SLIPPAGE_TOLERANCE: constant(uint256) = 3
 SLIPPAGE_DENOMINATOR: constant(uint256) = 1000
 
-DYFI: immutable(ERC20)
+DYFI: immutable(IDYFI)
 YFI: immutable(ERC20)
 VEYFI: immutable(ERC20)
 CURVE_POOL: immutable(CurvePoolInterface)
@@ -23,7 +23,7 @@ PRICE_FEED: immutable(AggregatorV3Interface)
 owner: public(address)
 # @dev Returns the address of the pending owner.
 pending_owner: public(address)
-# @dev when the contrac is killed, redemptions aren't possible
+# @dev when the contract is killed, redemptions aren't possible
 killed: public(bool)
 # @dev recipient of the ETH used for redemptions
 payee: public(address)
@@ -35,14 +35,14 @@ event Killed:
     yfi_recovered: uint256
 
 event Sweep:
-    token: address
+    token: indexed(address)
     amount: uint256
 
 # @dev Emitted when the ownership transfer from
-# `previous_owner` to `new_owner` is initiated.
-event OwnershipTransferStarted:
+# `previous_owner` to `pending_owner` is initiated.
+event PendingOwnershipTransfer:
     previous_owner: indexed(address)
-    new_owner: indexed(address)
+    pending_owner: indexed(address)
 
 
 # @dev Emitted when the ownership is transferred
@@ -102,7 +102,7 @@ def __init__(
     price_feed: address, curve_pool: address, scaling_factor: uint256,
 ):
     YFI = ERC20(yfi)
-    DYFI = ERC20(d_yfi)
+    DYFI = IDYFI(d_yfi)
     VEYFI = ERC20(ve_yfi)
     PRICE_FEED = AggregatorV3Interface(price_feed)
     CURVE_POOL = CurvePoolInterface(curve_pool)
@@ -123,11 +123,12 @@ def redeem(amount: uint256, recipient: address = msg.sender) -> uint256:
     self._check_killed()
     assert YFI.balanceOf(self) >= amount, "not enough YFI"
     eth_required: uint256 = self._eth_required(amount)
+    assert eth_required > 0
     tolerance: uint256 = eth_required * SLIPPAGE_TOLERANCE / SLIPPAGE_DENOMINATOR
     if msg.value < (eth_required - tolerance) or msg.value > (eth_required + tolerance):
         raise "price out of tolerance"
-    IDYFI(DYFI.address).burn(msg.sender, amount)
-    send(self.payee, msg.value)
+    DYFI.burn(msg.sender, amount)
+    raw_call(self.payee, b"", value=msg.value)
     YFI.transfer(recipient, amount)
     return amount
 
@@ -166,8 +167,7 @@ def eth_required(amount: uint256) -> uint256:
 @internal
 @view
 def _eth_required(amount: uint256) -> uint256:
-    eth_per_yfi: uint256 = amount * self._get_latest_price() / UNIT
-    return eth_per_yfi * (UNIT - self._discount()) / UNIT
+    return amount * self._get_latest_price() / UNIT * (UNIT - self._discount()) / UNIT
 
 
 @external
@@ -252,6 +252,7 @@ def set_payee(new_payee: address):
     @param new_payee the new payee
     """
     self._check_owner()
+    assert new_payee != empty(address)
     self.payee = new_payee
     log SetPayee(new_payee)
 
@@ -265,7 +266,7 @@ def start_ramp(new: uint256, duration: uint256 = 604_800, start: uint256 = block
     @param start Ramp start timestamp
     """
     self._check_owner()
-    assert new <= 12 * UNIT
+    assert new >= UNIT and new <= 12 * UNIT
     assert start >= block.timestamp
     scaling_factor: int256 = 0
     active: bool = False
@@ -309,11 +310,16 @@ def _check_killed():
     assert self.killed == False, "killed"
 
 @external
-def sweep(token: ERC20) -> uint256:
-    assert self.killed or token != YFI, "protected token"
-    amount: uint256 = token.balanceOf(self)
-    token.transfer(self.owner, amount, default_return_value=True)
-    log Sweep(token.address, amount)
+def sweep(token: address) -> uint256:
+    assert self.killed or token != YFI.address, "protected token"
+    amount: uint256 = 0
+    if token == empty(address):
+        amount = self.balance
+        raw_call(self.owner, b"", value=amount)
+    else:
+        amount = ERC20(token).balanceOf(self)
+        assert ERC20(token).transfer(self.owner, amount, default_return_value=True)
+    log Sweep(token, amount)
     return amount
 
 
@@ -335,7 +341,7 @@ def transfer_ownership(new_owner: address):
     """
     self._check_owner()
     self.pending_owner = new_owner
-    log OwnershipTransferStarted(self.owner, new_owner)
+    log PendingOwnershipTransfer(self.owner, new_owner)
 
 
 @external
