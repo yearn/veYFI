@@ -1,7 +1,9 @@
 # @version 0.3.7
 
 from vyper.interfaces import ERC20
-import interfaces.AggregatorV3Interface as AggregatorV3Interface
+
+interface AggregatorV3Interface:
+    def latestRoundData() -> (uint80, int256, uint256, uint256, uint80): view
 
 interface IDYFI:
     def burn(owner: address, amount: uint256): nonpayable
@@ -101,6 +103,7 @@ def __init__(
     yfi: address, d_yfi: address, ve_yfi: address, owner: address, 
     price_feed: address, curve_pool: address, scaling_factor: uint256,
 ):
+    assert scaling_factor >= UNIT and scaling_factor <= 12 * UNIT
     YFI = ERC20(yfi)
     DYFI = IDYFI(d_yfi)
     VEYFI = ERC20(ve_yfi)
@@ -139,6 +142,9 @@ def discount() -> uint256:
     """
     @notice Get the current dYFI redemption discount
     @return Redemption discount (18 decimals)
+    @dev 
+        Discount formula is `1/(1 + 10 e^(4.7(s*x - 1)))`,
+        with `x = veyfi supply / yfi supply`
     """
     return self._discount()
 
@@ -312,6 +318,7 @@ def _check_killed():
 @external
 def sweep(token: address) -> uint256:
     assert self.killed or token != YFI.address, "protected token"
+    self._check_owner()
     amount: uint256 = 0
     if token == empty(address):
         amount = self.balance
