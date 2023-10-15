@@ -132,10 +132,11 @@ def test_sweep(d_yfi, yfi, redemption, gov):
     with ape.reverts("protected token"):
         redemption.sweep(yfi, sender=gov)
 
+
 def test_oracle(project, gov):
-    yfiusd = ape.Contract('0xA027702dbb89fbd58938e4324ac03B58d812b0E1')
-    ethusd = ape.Contract('0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419')
-    yfieth = ape.Contract('0x7c5d4F8345e66f68099581Db340cd65B078C41f4')
+    yfiusd = ape.Contract("0xA027702dbb89fbd58938e4324ac03B58d812b0E1")
+    ethusd = ape.Contract("0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419")
+    yfieth = ape.Contract("0x7c5d4F8345e66f68099581Db340cd65B078C41f4")
     combined = project.CombinedChainlinkOracle.deploy(yfiusd, ethusd, sender=gov)
     actual = combined.latestRoundData()[1]
     expected = yfiusd.latestRoundData()[1] * 10**18 // ethusd.latestRoundData()[1]
