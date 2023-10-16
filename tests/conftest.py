@@ -7,13 +7,13 @@ DAY = 86400
 WEEK = 7 * DAY
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def yfi(accounts, project):
     dev = accounts[0]
     yield project.Token.deploy("YFI", sender=dev)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def ve_yfi_and_reward_pool(accounts, project, yfi):
     # calculate the reward pool address to pass to ve_yfi
     reward_pool_address = to_checksum_address(
@@ -30,22 +30,22 @@ def ve_yfi_and_reward_pool(accounts, project, yfi):
     yield ve_yfi, reward_pool
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def ve_yfi(ve_yfi_and_reward_pool):
     yield ve_yfi_and_reward_pool[0]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def reward_pool(ve_yfi_and_reward_pool):
     yield ve_yfi_and_reward_pool[1]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def d_yfi(accounts, project):
     yield project.dYFI.deploy(sender=accounts[0])
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def redemption(accounts, project, yfi, d_yfi, ve_yfi):
     oft = project.OracleFakeTime.deploy(sender=accounts[0])
 
@@ -61,15 +61,7 @@ def redemption(accounts, project, yfi, d_yfi, ve_yfi):
     )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def ve_yfi_d_yfi_pool(accounts, project, ve_yfi, d_yfi):
     start_time = chain.pending_timestamp + 7 * 3600 * 24
     yield project.dYFIRewardPool.deploy(ve_yfi, d_yfi, start_time, sender=accounts[0])
-
-
-@pytest.fixture(autouse=True, scope="session")
-def setup_time(chain):
-    chain.pending_timestamp += WEEK - (
-        chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
-    )
-    chain.mine()

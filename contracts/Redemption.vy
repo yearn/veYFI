@@ -205,7 +205,7 @@ def _get_oracle_price() -> int256:
     updated_at: uint256 = 0
     answered_in_round: uint80 = 0
     (round_id, price, started_at, updated_at, answered_in_round) = PRICE_FEED.latestRoundData()
-    assert updated_at + 86400 > block.timestamp, "price too old"
+    assert updated_at + 3600 > block.timestamp, "price too old"
     return price
 
 

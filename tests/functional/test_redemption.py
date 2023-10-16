@@ -133,7 +133,24 @@ def test_sweep(d_yfi, yfi, redemption, gov):
         redemption.sweep(yfi, sender=gov)
 
 
-def test_oracle(project, gov):
+def test_oracle(project, yfi, d_yfi, ve_yfi, gov):
+    mock = project.MockOracle.deploy(sender=gov)
+    redemption = project.Redemption.deploy(
+        yfi, d_yfi, ve_yfi, gov, mock, mock, 10 * AMOUNT, sender=gov
+    )
+
+    mock.set_price(2 * AMOUNT, AMOUNT, sender=gov)
+    assert redemption.get_latest_price() == 2 * AMOUNT
+
+    mock.set_price(2 * AMOUNT, 3 * AMOUNT, sender=gov)
+    assert redemption.get_latest_price() == 3 * AMOUNT
+
+    mock.set_updated(1, sender=gov)
+    with ape.reverts():
+        redemption.get_latest_price()
+
+
+def test_chainlink_oracle(project, yfi, d_yfi, ve_yfi, gov):
     yfiusd = ape.project.AggregatorV3Interface.at(
         "0xA027702dbb89fbd58938e4324ac03B58d812b0E1"
     )
@@ -143,8 +160,27 @@ def test_oracle(project, gov):
     yfieth = ape.project.AggregatorV3Interface.at(
         "0x7c5d4F8345e66f68099581Db340cd65B078C41f4"
     )
-    combined = project.CombinedChainlinkOracle.deploy(yfiusd, ethusd, sender=gov)
+    combined = project.CombinedChainlinkOracle.deploy(sender=gov)
     actual = combined.latestRoundData()[1]
     expected = yfiusd.latestRoundData()[1] * 10**18 // ethusd.latestRoundData()[1]
     assert actual == expected
     assert abs(yfieth.latestRoundData()[1] - actual) / actual <= 0.01
+
+    mock = project.MockOracle.deploy(sender=gov)
+    mock.set_price(AMOUNT, AMOUNT, sender=gov)
+
+    redemption = project.Redemption.deploy(
+        yfi, d_yfi, ve_yfi, gov, combined, mock, 10 * AMOUNT, sender=gov
+    )
+    assert redemption.get_latest_price() == actual
+
+
+def test_curve_oracle(project, yfi, d_yfi, ve_yfi, gov):
+    mock = project.MockOracle.deploy(sender=gov)
+    mock.set_price(AMOUNT, AMOUNT, sender=gov)
+    curve = ape.Contract("0xC26b89A667578ec7b3f11b2F98d6Fd15C07C54ba")
+    redemption = project.Redemption.deploy(
+        yfi, d_yfi, ve_yfi, gov, mock, curve, 10 * AMOUNT, sender=gov
+    )
+    actual = curve.price_oracle()
+    assert redemption.get_latest_price() == actual

@@ -4,6 +4,17 @@ import pytest
 
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
+DAY = 86400
+WEEK = 7 * DAY
+
+
+@pytest.fixture(autouse=True)
+def setup_time(chain):
+    chain.pending_timestamp += WEEK - (
+        chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
+    )
+    chain.mine()
+
 
 def test_set_gov(create_vault, create_gauge, panda, gov):
     vault = create_vault()

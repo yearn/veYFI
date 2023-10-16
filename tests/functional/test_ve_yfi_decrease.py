@@ -10,6 +10,14 @@ AMOUNT = 10**18
 POWER = AMOUNT // MAXTIME * MAXTIME
 
 
+@pytest.fixture(autouse=True)
+def setup_time(chain):
+    chain.pending_timestamp += WEEK - (
+        chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
+    )
+    chain.mine()
+
+
 @pytest.fixture()
 def bob(accounts, yfi, ve_yfi):
     bob = accounts[1]

@@ -3,6 +3,17 @@ import pytest
 from ape import chain, project
 from eth_utils import to_int
 
+DAY = 86400
+WEEK = 7 * DAY
+
+
+@pytest.fixture(autouse=True)
+def setup_time(chain):
+    chain.pending_timestamp += WEEK - (
+        chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
+    )
+    chain.mine()
+
 
 def test_gauge_yfi_distribution_full_rewards(
     yfi,
