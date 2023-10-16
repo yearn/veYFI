@@ -178,7 +178,7 @@ def test_chainlink_oracle(project, yfi, d_yfi, ve_yfi, gov):
 def test_curve_oracle(project, yfi, d_yfi, ve_yfi, gov):
     mock = project.MockOracle.deploy(sender=gov)
     mock.set_price(AMOUNT, AMOUNT, sender=gov)
-    curve = ape.Contract("0xC26b89A667578ec7b3f11b2F98d6Fd15C07C54ba")
+    curve = project.MockOracle.at("0xC26b89A667578ec7b3f11b2F98d6Fd15C07C54ba")
     redemption = project.Redemption.deploy(
         yfi, d_yfi, ve_yfi, gov, mock, curve, 10 * AMOUNT, sender=gov
     )
