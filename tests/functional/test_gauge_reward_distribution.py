@@ -3,16 +3,27 @@ import pytest
 from ape import chain, project
 from eth_utils import to_int
 
+DAY = 86400
+WEEK = 7 * DAY
+
+
+@pytest.fixture(autouse=True)
+def setup_time(chain):
+    chain.pending_timestamp += WEEK - (
+        chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
+    )
+    chain.mine()
+
 
 def test_gauge_yfi_distribution_full_rewards(
     yfi,
-    o_yfi,
+    d_yfi,
     ve_yfi,
     whale,
     create_vault,
     create_gauge,
     gov,
-    ve_yfi_o_yfi_pool,
+    ve_yfi_d_yfi_pool,
 ):
     whale_amount = 10**22
     yfi.mint(whale, whale_amount, sender=whale)
@@ -20,7 +31,7 @@ def test_gauge_yfi_distribution_full_rewards(
     ve_yfi.modify_lock(
         whale_amount, chain.pending_timestamp + 4 * 3600 * 24 * 365, sender=whale
     )
-    assert o_yfi.balanceOf(whale) == 0
+    assert d_yfi.balanceOf(whale) == 0
     assert yfi.balanceOf(whale) == 0
 
     lp_amount = 10**18
@@ -31,29 +42,29 @@ def test_gauge_yfi_distribution_full_rewards(
     vault.approve(gauge, lp_amount, sender=whale)
     gauge.deposit(sender=whale)
 
-    o_yfi_to_distribute = 10**16
-    o_yfi.mint(gov, o_yfi_to_distribute, sender=gov)
-    o_yfi.approve(gauge, o_yfi_to_distribute, sender=gov)
+    d_yfi_to_distribute = 10**16
+    d_yfi.mint(gov, d_yfi_to_distribute, sender=gov)
+    d_yfi.approve(gauge, d_yfi_to_distribute, sender=gov)
 
-    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == o_yfi_to_distribute / (14 * 24 * 3600)
+    gauge.queueNewRewards(d_yfi_to_distribute, sender=gov)
+    assert pytest.approx(gauge.rewardRate()) == d_yfi_to_distribute / (14 * 24 * 3600)
 
     chain.mine(timestamp=chain.pending_timestamp + 3600)
-    assert pytest.approx(gauge.earned(whale), rel=5 * 10e-4) == o_yfi_to_distribute / (
+    assert pytest.approx(gauge.earned(whale), rel=5 * 10e-4) == d_yfi_to_distribute / (
         14 * 24
     )
     gauge.getReward(sender=whale)
     assert gauge.rewardPerToken() > 0
 
     assert pytest.approx(
-        o_yfi.balanceOf(whale), rel=5 * 10e-4
-    ) == o_yfi_to_distribute / (14 * 24)
-    assert o_yfi.balanceOf(ve_yfi_o_yfi_pool) == 0
+        d_yfi.balanceOf(whale), rel=5 * 10e-4
+    ) == d_yfi_to_distribute / (14 * 24)
+    assert d_yfi.balanceOf(ve_yfi_d_yfi_pool) == 0
     assert gauge.queuedRewards() == 0
 
 
 def test_gauge_yfi_distribution_no_boost(
-    yfi, o_yfi, ve_yfi, panda, create_vault, create_gauge, gov, ve_yfi_o_yfi_pool
+    yfi, d_yfi, ve_yfi, panda, create_vault, create_gauge, gov, ve_yfi_d_yfi_pool
 ):
     # we create a big lock compared to what panda will deposit so he doesn't have a boost.
     yfi.mint(gov, 10**18, sender=gov)
@@ -70,36 +81,36 @@ def test_gauge_yfi_distribution_no_boost(
     vault.approve(gauge, lp_amount, sender=panda)
     gauge.deposit(sender=panda)
 
-    o_yfi_to_distribute = 10**16
-    o_yfi.mint(gov, o_yfi_to_distribute, sender=gov)
-    o_yfi.approve(gauge, o_yfi_to_distribute, sender=gov)
+    d_yfi_to_distribute = 10**16
+    d_yfi.mint(gov, d_yfi_to_distribute, sender=gov)
+    d_yfi.approve(gauge, d_yfi_to_distribute, sender=gov)
 
-    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == o_yfi_to_distribute / (14 * 24 * 3600)
+    gauge.queueNewRewards(d_yfi_to_distribute, sender=gov)
+    assert pytest.approx(gauge.rewardRate()) == d_yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.getReward(sender=panda)
 
     assert (
-        pytest.approx(o_yfi.balanceOf(panda), rel=5 * 10e-4)
-        == o_yfi_to_distribute / (14 * 24) * 0.1
+        pytest.approx(d_yfi.balanceOf(panda), rel=5 * 10e-4)
+        == d_yfi_to_distribute / (14 * 24) * 0.1
     )
 
     assert (
-        pytest.approx(o_yfi.balanceOf(ve_yfi_o_yfi_pool), rel=10e-4)
-        == o_yfi_to_distribute / (14 * 24) * 0.9
+        pytest.approx(d_yfi.balanceOf(ve_yfi_d_yfi_pool), rel=10e-4)
+        == d_yfi_to_distribute / (14 * 24) * 0.9
     )
 
 
 def test_boost_lock(
     yfi,
-    o_yfi,
+    d_yfi,
     ve_yfi,
     whale,
     create_vault,
     create_gauge,
     panda,
     gov,
-    ve_yfi_o_yfi_pool,
+    ve_yfi_d_yfi_pool,
 ):
     whale_amount = 10**22
     yfi.mint(whale, whale_amount, sender=whale)
@@ -118,12 +129,12 @@ def test_boost_lock(
     vault.approve(gauge, lp_amount, sender=whale)
     gauge.deposit(sender=whale)
 
-    o_yfi_to_distribute = 10**16
-    o_yfi.mint(gov, o_yfi_to_distribute, sender=gov)
-    o_yfi.approve(gauge, o_yfi_to_distribute, sender=gov)
+    d_yfi_to_distribute = 10**16
+    d_yfi.mint(gov, d_yfi_to_distribute, sender=gov)
+    d_yfi.approve(gauge, d_yfi_to_distribute, sender=gov)
 
-    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == o_yfi_to_distribute / (14 * 24 * 3600)
+    gauge.queueNewRewards(d_yfi_to_distribute, sender=gov)
+    assert pytest.approx(gauge.rewardRate()) == d_yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
 
     yfi.mint(panda, whale_amount, sender=panda)
@@ -134,10 +145,10 @@ def test_boost_lock(
 
     gauge.getReward(sender=whale)
 
-    assert pytest.approx(o_yfi.balanceOf(whale), rel=10e-3) == o_yfi_to_distribute / (
+    assert pytest.approx(d_yfi.balanceOf(whale), rel=10e-3) == d_yfi_to_distribute / (
         14 * 24
     )
-    assert o_yfi.balanceOf(ve_yfi_o_yfi_pool) == 0
+    assert d_yfi.balanceOf(ve_yfi_d_yfi_pool) == 0
     assert (
         pytest.approx(gauge.boostedBalanceOf(whale))
         == gauge.nextBoostedBalanceOf(whale)
@@ -148,14 +159,14 @@ def test_boost_lock(
 
 def test_gauge_get_reward_for(
     yfi,
-    o_yfi,
+    d_yfi,
     ve_yfi,
     whale,
     shark,
     create_vault,
     create_gauge,
     gov,
-    ve_yfi_o_yfi_pool,
+    ve_yfi_d_yfi_pool,
 ):
     whale_amount = 10**22
     yfi.mint(whale, whale_amount, sender=whale)
@@ -173,31 +184,31 @@ def test_gauge_get_reward_for(
     vault.approve(gauge, lp_amount, sender=whale)
     gauge.deposit(sender=whale)
 
-    o_yfi_to_distribute = 10**16
-    o_yfi.mint(gov, o_yfi_to_distribute, sender=gov)
-    o_yfi.approve(gauge, o_yfi_to_distribute, sender=gov)
+    d_yfi_to_distribute = 10**16
+    d_yfi.mint(gov, d_yfi_to_distribute, sender=gov)
+    d_yfi.approve(gauge, d_yfi_to_distribute, sender=gov)
 
-    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == o_yfi_to_distribute / (14 * 24 * 3600)
+    gauge.queueNewRewards(d_yfi_to_distribute, sender=gov)
+    assert pytest.approx(gauge.rewardRate()) == d_yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.getReward(whale, sender=shark)
 
     assert pytest.approx(
-        o_yfi.balanceOf(whale), rel=5 * 10e-4
-    ) == o_yfi_to_distribute / (14 * 24)
-    assert o_yfi.balanceOf(ve_yfi_o_yfi_pool) == 0
+        d_yfi.balanceOf(whale), rel=5 * 10e-4
+    ) == d_yfi_to_distribute / (14 * 24)
+    assert d_yfi.balanceOf(ve_yfi_d_yfi_pool) == 0
     assert gauge.queuedRewards() == 0
 
 
 def test_deposit_for(
     yfi,
-    o_yfi,
+    d_yfi,
     ve_yfi,
     whale,
     shark,
     create_vault,
     create_gauge,
-    ve_yfi_o_yfi_pool,
+    ve_yfi_d_yfi_pool,
     gov,
 ):
     whale_amount = 10**22
@@ -232,31 +243,31 @@ def test_deposit_for(
     assert gauge.totalSupply() == 2 * 10**18
     assert gauge.balanceOf(whale) == 2 * 10**18
 
-    o_yfi_to_distribute = 10**16
-    o_yfi.mint(gov, o_yfi_to_distribute, sender=gov)
-    o_yfi.approve(gauge, o_yfi_to_distribute, sender=gov)
+    d_yfi_to_distribute = 10**16
+    d_yfi.mint(gov, d_yfi_to_distribute, sender=gov)
+    d_yfi.approve(gauge, d_yfi_to_distribute, sender=gov)
 
-    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == o_yfi_to_distribute / (14 * 24 * 3600)
+    gauge.queueNewRewards(d_yfi_to_distribute, sender=gov)
+    assert pytest.approx(gauge.rewardRate()) == d_yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.getReward(sender=whale)
 
     assert pytest.approx(
-        o_yfi.balanceOf(whale), rel=5 * 10e-4
-    ) == o_yfi_to_distribute / (14 * 24)
-    assert o_yfi.balanceOf(ve_yfi_o_yfi_pool) == 0
+        d_yfi.balanceOf(whale), rel=5 * 10e-4
+    ) == d_yfi_to_distribute / (14 * 24)
+    assert d_yfi.balanceOf(ve_yfi_d_yfi_pool) == 0
     assert gauge.queuedRewards() == 0
 
 
 def test_withdraw(
     yfi,
-    o_yfi,
+    d_yfi,
     ve_yfi,
     whale,
     create_vault,
     create_gauge,
     gov,
-    ve_yfi_o_yfi_pool,
+    ve_yfi_d_yfi_pool,
 ):
     whale_amount = 10**22
     yfi.mint(whale, whale_amount, sender=whale)
@@ -274,19 +285,19 @@ def test_withdraw(
     vault.approve(gauge, lp_amount, sender=whale)
     gauge.deposit(sender=whale)
 
-    o_yfi_to_distribute = 10**16
-    o_yfi.mint(gov, o_yfi_to_distribute, sender=gov)
-    o_yfi.approve(gauge, o_yfi_to_distribute, sender=gov)
+    d_yfi_to_distribute = 10**16
+    d_yfi.mint(gov, d_yfi_to_distribute, sender=gov)
+    d_yfi.approve(gauge, d_yfi_to_distribute, sender=gov)
 
-    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == o_yfi_to_distribute / (14 * 24 * 3600)
+    gauge.queueNewRewards(d_yfi_to_distribute, sender=gov)
+    assert pytest.approx(gauge.rewardRate()) == d_yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.withdraw(True, sender=whale)
 
     assert pytest.approx(
-        o_yfi.balanceOf(whale), rel=5 * 10e-4
-    ) == o_yfi_to_distribute / (14 * 24)
-    assert o_yfi.balanceOf(ve_yfi_o_yfi_pool) == 0
+        d_yfi.balanceOf(whale), rel=5 * 10e-4
+    ) == d_yfi_to_distribute / (14 * 24)
+    assert d_yfi.balanceOf(ve_yfi_d_yfi_pool) == 0
     assert gauge.queuedRewards() == 0
 
 
@@ -330,14 +341,14 @@ def test_kick(create_vault, create_gauge, panda, yfi, ve_yfi, whale, gov):
 
 def withdraw_for(
     yfi,
-    o_yfi,
+    d_yfi,
     ve_yfi,
     whale,
     panda,
     create_vault,
     create_gauge,
     gov,
-    ve_yfi_o_yfi_pool,
+    ve_yfi_d_yfi_pool,
 ):
     whale_amount = 10**22
     yfi.mint(whale, whale_amount, sender=whale)
@@ -355,34 +366,34 @@ def withdraw_for(
     vault.approve(gauge, lp_amount, sender=whale)
     gauge.deposit(sender=whale)
 
-    o_yfi_to_distribute = 10**16
-    o_yfi.mint(gov, o_yfi_to_distribute, sender=gov)
-    o_yfi.approve(gauge, o_yfi_to_distribute, sender=gov)
+    d_yfi_to_distribute = 10**16
+    d_yfi.mint(gov, d_yfi_to_distribute, sender=gov)
+    d_yfi.approve(gauge, d_yfi_to_distribute, sender=gov)
 
-    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == o_yfi_to_distribute / (14 * 24 * 3600)
+    gauge.queueNewRewards(d_yfi_to_distribute, sender=gov)
+    assert pytest.approx(gauge.rewardRate()) == d_yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.approve(panda, lp_amount, sender=whale)
 
     gauge.withdraw(lp_amount, whale, panda, True, False, sender=panda)
 
     assert pytest.approx(
-        o_yfi.balanceOf(whale), rel=5 * 10e-4
-    ) == o_yfi_to_distribute / (14 * 24)
-    assert o_yfi.balanceOf(ve_yfi_o_yfi_pool) == 0
+        d_yfi.balanceOf(whale), rel=5 * 10e-4
+    ) == d_yfi_to_distribute / (14 * 24)
+    assert d_yfi.balanceOf(ve_yfi_d_yfi_pool) == 0
     assert gauge.queuedRewards() == 0
 
 
 def transfer(
     yfi,
-    o_yfi,
+    d_yfi,
     ve_yfi,
     whale,
     panda,
     create_vault,
     create_gauge,
     gov,
-    ve_yfi_o_yfi_pool,
+    ve_yfi_d_yfi_pool,
 ):
     whale_amount = 10**22
     yfi.mint(whale, whale_amount, sender=whale)
@@ -400,12 +411,12 @@ def transfer(
     vault.approve(gauge, lp_amount, sender=whale)
     gauge.deposit(sender=whale)
 
-    o_yfi_to_distribute = 10**16
-    o_yfi.mint(gov, o_yfi_to_distribute, sender=gov)
-    o_yfi.approve(gauge, o_yfi_to_distribute, sender=gov)
+    d_yfi_to_distribute = 10**16
+    d_yfi.mint(gov, d_yfi_to_distribute, sender=gov)
+    d_yfi.approve(gauge, d_yfi_to_distribute, sender=gov)
 
-    gauge.queueNewRewards(o_yfi_to_distribute, sender=gov)
-    assert pytest.approx(gauge.rewardRate()) == o_yfi_to_distribute / (14 * 24 * 3600)
+    gauge.queueNewRewards(d_yfi_to_distribute, sender=gov)
+    assert pytest.approx(gauge.rewardRate()) == d_yfi_to_distribute / (14 * 24 * 3600)
     chain.pending_timestamp += 3600
     gauge.approve(panda, lp_amount, sender=whale)
 
@@ -414,7 +425,7 @@ def transfer(
 
     assert gauge.boostedBalance(whale) == 0
     assert pytest.approx(
-        o_yfi.balanceOf(whale), rel=5 * 10e-4
-    ) == o_yfi_to_distribute / (14 * 24)
-    assert o_yfi.balanceOf(ve_yfi_o_yfi_pool) == 0
+        d_yfi.balanceOf(whale), rel=5 * 10e-4
+    ) == d_yfi_to_distribute / (14 * 24)
+    assert d_yfi.balanceOf(ve_yfi_d_yfi_pool) == 0
     assert gauge.queuedRewards() == 0

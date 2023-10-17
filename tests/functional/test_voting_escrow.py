@@ -10,6 +10,14 @@ MAXTIME = 4 * 365 * 86400 // WEEK * WEEK
 TOL = 120 / WEEK
 
 
+@pytest.fixture(autouse=True)
+def setup_time(chain):
+    chain.pending_timestamp += WEEK - (
+        chain.pending_timestamp - (chain.pending_timestamp // WEEK * WEEK)
+    )
+    chain.mine()
+
+
 def test_over_four_years(chain, accounts, yfi, ve_yfi):
     alice = accounts[0]
     amount = 1000 * 10**18

@@ -1,6 +1,7 @@
 # @version 0.3.7
 
-import interfaces.AggregatorV3Interface as AggregatorV3Interface
+interface AggregatorV3Interface:
+    def latestRoundData() -> (uint80, int256, uint256, uint256, uint80): view
 
 PRICE_FEED: immutable(AggregatorV3Interface) 
 

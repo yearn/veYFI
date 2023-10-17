@@ -4,8 +4,8 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract OYfi is ERC20, Ownable {
-    constructor() ERC20("OYFI", "OYFI") {}
+contract dYFI is ERC20, Ownable {
+    constructor() ERC20("Discount YFI", "dYFI") {}
 
     function mint(address _to, uint256 _amount) external onlyOwner {
         _mint(_to, _amount);
