@@ -8,9 +8,6 @@ interface AggregatorV3Interface:
 interface IDYFI:
     def burn(owner: address, amount: uint256): nonpayable
 
-interface CurvePoolInterface:
-    def price_oracle() -> uint256: view
-
 UNIT: constant(uint256) = 10**18
 SLIPPAGE_TOLERANCE: constant(uint256) = 3
 SLIPPAGE_DENOMINATOR: constant(uint256) = 1000
@@ -18,7 +15,6 @@ SLIPPAGE_DENOMINATOR: constant(uint256) = 1000
 DYFI: immutable(IDYFI)
 YFI: immutable(ERC20)
 VEYFI: immutable(ERC20)
-CURVE_POOL: immutable(CurvePoolInterface)
 PRICE_FEED: immutable(AggregatorV3Interface)
 
 # @dev Returns the address of the current owner.
@@ -101,14 +97,13 @@ A11: constant(int256) = 1_064_49_445_891_785_942_956
 @external
 def __init__(
     yfi: address, d_yfi: address, ve_yfi: address, owner: address, 
-    price_feed: address, curve_pool: address, scaling_factor: uint256,
+    price_feed: address, scaling_factor: uint256,
 ):
     assert scaling_factor >= UNIT and scaling_factor <= 12 * UNIT
     YFI = ERC20(yfi)
     DYFI = IDYFI(d_yfi)
     VEYFI = ERC20(ve_yfi)
     PRICE_FEED = AggregatorV3Interface(price_feed)
-    CURVE_POOL = CurvePoolInterface(curve_pool)
     self._transfer_ownership(owner)
     self.payee = owner
     self.packed_scaling_factor = shift(scaling_factor, 128) | shift(scaling_factor, 192)
@@ -189,16 +184,6 @@ def get_latest_price() -> uint256:
 @internal
 @view
 def _get_latest_price() -> uint256:
-    oracle_price: uint256 = convert(self._get_oracle_price(), uint256)
-    pool_price: uint256 = CURVE_POOL.price_oracle()
-    if pool_price < oracle_price:
-        return oracle_price
-    return pool_price
-
-
-@internal
-@view
-def _get_oracle_price() -> int256:
     round_id: uint80 = 0
     price: int256 = 0
     started_at: uint256 = 0
@@ -206,7 +191,7 @@ def _get_oracle_price() -> int256:
     answered_in_round: uint80 = 0
     (round_id, price, started_at, updated_at, answered_in_round) = PRICE_FEED.latestRoundData()
     assert updated_at + 3600 > block.timestamp, "price too old"
-    return price
+    return convert(price, uint256)
 
 
 @external
