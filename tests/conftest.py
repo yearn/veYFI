@@ -55,7 +55,6 @@ def redemption(accounts, project, yfi, d_yfi, ve_yfi):
         ve_yfi,
         accounts[0],
         oft,
-        "0xc26b89a667578ec7b3f11b2f98d6fd15c07c54ba",
         10**18,
         sender=accounts[0],
     )

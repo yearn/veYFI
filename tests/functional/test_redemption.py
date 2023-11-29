@@ -136,13 +136,13 @@ def test_sweep(d_yfi, yfi, redemption, gov):
 def test_oracle(project, yfi, d_yfi, ve_yfi, gov):
     mock = project.MockOracle.deploy(sender=gov)
     redemption = project.Redemption.deploy(
-        yfi, d_yfi, ve_yfi, gov, mock, mock, 10 * AMOUNT, sender=gov
+        yfi, d_yfi, ve_yfi, gov, mock, 10 * AMOUNT, sender=gov
     )
 
     mock.set_price(2 * AMOUNT, AMOUNT, sender=gov)
     assert redemption.get_latest_price() == 2 * AMOUNT
 
-    mock.set_price(2 * AMOUNT, 3 * AMOUNT, sender=gov)
+    mock.set_price(3 * AMOUNT, 2 * AMOUNT, sender=gov)
     assert redemption.get_latest_price() == 3 * AMOUNT
 
     mock.set_updated(1, sender=gov)
@@ -166,21 +166,7 @@ def test_chainlink_oracle(project, yfi, d_yfi, ve_yfi, gov):
     assert actual == expected
     assert abs(yfieth.latestRoundData()[1] - actual) / actual <= 0.01
 
-    mock = project.MockOracle.deploy(sender=gov)
-    mock.set_price(AMOUNT, AMOUNT, sender=gov)
-
     redemption = project.Redemption.deploy(
-        yfi, d_yfi, ve_yfi, gov, combined, mock, 10 * AMOUNT, sender=gov
+        yfi, d_yfi, ve_yfi, gov, combined, 10 * AMOUNT, sender=gov
     )
-    assert redemption.get_latest_price() == actual
-
-
-def test_curve_oracle(project, yfi, d_yfi, ve_yfi, gov):
-    mock = project.MockOracle.deploy(sender=gov)
-    mock.set_price(AMOUNT, AMOUNT, sender=gov)
-    curve = project.MockOracle.at("0xC26b89A667578ec7b3f11b2F98d6Fd15C07C54ba")
-    redemption = project.Redemption.deploy(
-        yfi, d_yfi, ve_yfi, gov, mock, curve, 10 * AMOUNT, sender=gov
-    )
-    actual = curve.price_oracle()
     assert redemption.get_latest_price() == actual
