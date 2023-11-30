@@ -170,3 +170,27 @@ def test_chainlink_oracle(project, yfi, d_yfi, ve_yfi, gov):
         yfi, d_yfi, ve_yfi, gov, combined, 10 * AMOUNT, sender=gov
     )
     assert redemption.get_latest_price() == actual
+
+
+def test_redeployment_oracle(chain, accounts, project, d_yfi, ve_yfi, gov):
+    ychad = accounts["0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52"]
+    pool = ape.Contract("0xC26b89A667578ec7b3f11b2F98d6Fd15C07C54ba")
+    yfi = ape.Contract("0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e")
+    yfi.approve(pool, 1000 * AMOUNT, sender=ychad)
+    pool.exchange(1, 0, 100 * AMOUNT, 0, sender=ychad)
+    chain.pending_timestamp += 60
+    pool.exchange(1, 0, 100 * AMOUNT, 0, sender=ychad)
+    chain.pending_timestamp += 60
+    pool.exchange(1, 0, 100 * AMOUNT, 0, sender=ychad)
+
+    old = ape.Contract("0x2fBa208E1B2106d40DaA472Cb7AE0c6C7EFc0224")
+    new = project.Redemption.deploy(
+        yfi,
+        d_yfi,
+        ve_yfi,
+        gov,
+        "0x3EbEACa272Ce4f60E800f6C5EE678f50D2882fd4",
+        10 * AMOUNT,
+        sender=gov,
+    )
+    assert old.get_latest_price() == new.get_latest_price()
