@@ -249,7 +249,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     }
 
     /** @notice
-     *   Calculates the boosted balance of based on veYFI balance.
+     *   Calculates the boosted balance based on veYFI balance.
      *  @dev
      *   This function expects this._totalAssets to be up to date.
      *  @return
@@ -263,7 +263,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     }
 
     /** @notice
-     *   Calculates the boosted balance of based on veYFI balance.
+     *   Calculates the boosted balance based on veYFI balance.
      *  @dev
      *    This function expects the account's _balances[_account].realBalance
      *    to be up to date.
@@ -354,7 +354,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
      *   @dev shares and
      *   @param _shares to deposit
      *   @param _receiver the account to deposit to
-     *   @return amount of shares transfered
+     *   @return amount of shares transferred
      */
     function mint(
         uint256 _shares,
@@ -390,7 +390,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     /** @notice Burns shares from owner and sends exactly assets of underlying tokens to receiver.
      *  @dev This call updates claimable rewards
      *  @param _assets amount to withdraw
-     *  @param _receiver account that will recieve the shares
+     *  @param _receiver account that will receive the shares
      *  @param _owner shares will be taken from account
      *  @param _claim claim veYFI and additional reward
      *  @return amount of shares withdrawn
@@ -407,7 +407,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     /** @notice Burns shares from owner and sends exactly assets of underlying tokens to receiver.
      *  @dev This call updates claimable rewards
      *  @param _assets amount to withdraw
-     *  @param _receiver account that will recieve the shares
+     *  @param _receiver account that will receive the shares
      *  @param _owner shares will be taken from account
      *  @return amount of shares withdrawn
      */
@@ -471,7 +471,7 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     /** @notice Burns shares from owner and sends exactly assets of underlying tokens to receiver.
      *  @dev This call updates claimable rewards
      *  @param _assets amount to withdraw
-     *  @param _receiver account that will recieve the shares
+     *  @param _receiver account that will receive the shares
      *  @param _owner shares will be taken from account
      *  @return amount of shares withdrawn
      */
@@ -547,8 +547,12 @@ contract Gauge is BaseGauge, ERC20Upgradeable, IGauge {
     @param _accounts Addresses to kick
     */
     function kick(address[] calldata _accounts) public {
-        for (uint256 i = 0; i < _accounts.length; ++i) {
+        for (uint256 i; i < _accounts.length;) {
             _kick(_accounts[i]);
+
+            unchecked {
+                ++i;
+            }
         }
     }
 
