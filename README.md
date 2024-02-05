@@ -1,3 +1,5 @@
+[Governance spec](./GOVERNANCE.md)
+
 ## veYFI
 
 veYFI is locking similar to the ve-style program of Curve. 
