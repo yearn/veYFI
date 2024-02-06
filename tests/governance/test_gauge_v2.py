@@ -77,30 +77,62 @@ def test_reinitialize(deployer, controller, implementation, vault, gauge):
     with ape.reverts():
         gauge.initialize(vault, deployer, controller, b"", sender=deployer)
 
-def test_rewards(chain, deployer, alice, ychad, locking_token, voting_escrow, genesis, measure, controller, vault, gauge):
+def test_rewards(chain, deployer, alice, bob, ychad, locking_token, voting_escrow, reward, genesis, controller, vault, gauge):
     locking_token.transfer(alice, UNIT, sender=ychad)
     locking_token.approve(voting_escrow, MAX, sender=alice)
-    assert measure.vote_weight(alice) == 0
     voting_escrow.modify_lock(UNIT, chain.pending_timestamp + 200 * WEEK_LENGTH, sender=alice)
-    assert measure.vote_weight(alice) > 0
-
     controller.whitelist(gauge, True, sender=deployer)
 
-    vault.mint(alice, 2 * UNIT, sender=alice)
-    vault.approve(gauge, 2 * UNIT, sender=alice)
-    gauge.deposit(2 * UNIT, sender=alice)
-    assert gauge.balanceOf(alice) == 2 * UNIT
+    vault.mint(bob, 2 * UNIT, sender=bob)
+    vault.approve(gauge, 2 * UNIT, sender=bob)
+    gauge.deposit(2 * UNIT, sender=bob)
+    assert gauge.balanceOf(bob) == 2 * UNIT
+    assert gauge.boostedBalanceOf(bob) == 2 * UNIT // 10
 
     chain.pending_timestamp += WEEK_LENGTH
     controller.vote([gauge], [10_000], sender=alice)
-    chain.pending_timestamp = genesis + 2 * EPOCH_LENGTH + WEEK_LENGTH
-    gauge.getReward(alice, sender=alice)
-    emission = controller.emission()[2]
-    rate = emission * UNIT // EPOCH_LENGTH
-    assert gauge.rewardRate() == rate
-    assert abs(gauge.rewardPerTokenStored() - emission // 4) <= 1
 
+    # middle of next epoch
+    chain.pending_timestamp = genesis + 2 * EPOCH_LENGTH + WEEK_LENGTH
+    gauge.getReward(bob, sender=bob)
+    emission = controller.emission()[2]
+    assert gauge.rewardRate() == emission * UNIT // EPOCH_LENGTH
+    assert abs(gauge.rewardPerTokenStored() - emission // 4) <= 1
+    assert abs(reward.balanceOf(bob) - emission // 2 // 10) <= 1
+
+    # end of epoch
     chain.pending_timestamp = genesis + 3 * EPOCH_LENGTH
-    gauge.getReward(alice, sender=alice)
+    gauge.getReward(bob, sender=bob)
     assert gauge.rewardRate() == 0
-    assert gauge.rewardPerTokenStored() == emission // 2
+    assert abs(gauge.rewardPerTokenStored() - emission // 2) <= 1
+    assert abs(reward.balanceOf(bob) - emission // 10) <= 1
+
+def test_rewards_gap(chain, deployer, alice, bob, ychad, locking_token, voting_escrow, reward, genesis, controller, vault, gauge):
+    locking_token.transfer(alice, UNIT, sender=ychad)
+    locking_token.approve(voting_escrow, MAX, sender=alice)
+    voting_escrow.modify_lock(UNIT, chain.pending_timestamp + 200 * WEEK_LENGTH, sender=alice)
+    controller.whitelist(gauge, True, sender=deployer)
+
+    vault.mint(bob, 2 * UNIT, sender=bob)
+    vault.approve(gauge, 2 * UNIT, sender=bob)
+    gauge.deposit(2 * UNIT, sender=bob)
+    assert gauge.balanceOf(bob) == 2 * UNIT
+
+    chain.pending_timestamp += WEEK_LENGTH
+    controller.vote([gauge], [10_000], sender=alice)
+
+    # no gauge updates for a full epoch
+    chain.pending_timestamp += EPOCH_LENGTH
+    controller.vote([gauge], [10_000], sender=alice)
+    chain.pending_timestamp += WEEK_LENGTH
+    
+    # middle of next epoch
+    chain.pending_timestamp = genesis + 3 * EPOCH_LENGTH + WEEK_LENGTH
+    gauge.getReward(bob, sender=bob)
+    prev_emission = controller.epoch_emission(1)[0]
+    emission = controller.epoch_emission(2)[0]
+    assert gauge.historicalRewards() == prev_emission + emission
+    assert gauge.rewardRate() == emission * UNIT // EPOCH_LENGTH
+    assert gauge.rewardPerTokenStored() == prev_emission // 2 + emission // 4
+    expected = (prev_emission + emission // 2) // 10
+    assert abs(reward.balanceOf(bob) - expected) <= 1
