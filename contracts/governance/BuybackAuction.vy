@@ -214,6 +214,7 @@ def kick(_id: bytes32) -> uint256:
     return amount
 
 @external
+@nonreentrant("take")
 def take(_id: bytes32, _max: uint256 = max_value(uint256), _recipient: address = msg.sender, _data: Bytes[1024] = b""):
     """
     @notice Take up to `_max` of `sell` tokens at current price
