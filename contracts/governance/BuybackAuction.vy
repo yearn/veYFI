@@ -17,6 +17,9 @@ from vyper.interfaces import ERC20
 interface WETH:
     def deposit(): payable
 
+interface Taker:
+    def auctionTakeCallback(_id: bytes32, _sender: address, _taken: uint256, _needed: uint256, _data: Bytes[1024]): nonpayable
+
 # https://hackmd.io/@D4Z1faeARKedWmEygMxDBA/Syxo_HJqp
 interface Auction:
     def auctionLength() -> uint256: view
@@ -26,7 +29,7 @@ interface Auction:
     def price(_id: bytes32, _ts: uint256) -> uint256: view
     def kickable(_id: bytes32) -> uint256: view
     def kick(_id: bytes32) -> uint256: nonpayable
-    def take(_id: bytes32, _max: uint256, _recipient: address): nonpayable
+    def take(_id: bytes32, _max: uint256, _recipient: address, _data: Bytes[1024]): nonpayable
 
 implements: Auction
 
@@ -211,7 +214,7 @@ def kick(_id: bytes32) -> uint256:
     return amount
 
 @external
-def take(_id: bytes32, _max: uint256 = max_value(uint256), _recipient: address = msg.sender):
+def take(_id: bytes32, _max: uint256 = max_value(uint256), _recipient: address = msg.sender, _data: Bytes[1024] = b""):
     """
     @notice Take up to `_max` of `sell` tokens at current price
     @param _id Auction identifier
@@ -222,15 +225,19 @@ def take(_id: bytes32, _max: uint256 = max_value(uint256), _recipient: address =
     price: uint256 = self._price(block.timestamp)
     assert price > 0
     available: uint256 = self.available
-    amount: uint256 = min(_max, available)
-    assert amount > 0
-    available -= amount
-    want_amount: uint256 = (amount * price + SCALE - 1) / SCALE
+    taken: uint256 = min(_max, available)
+    assert taken > 0
+    available -= taken
+    needed: uint256 = (taken * price + SCALE - 1) / SCALE
     self.available = available
 
-    assert want.transferFrom(msg.sender, self.treasury, want_amount, default_return_value=True)
-    assert sell.transfer(_recipient, amount, default_return_value=True)
-    log AuctionTaken(AUCTION_ID, amount, available)
+    assert sell.transfer(_recipient, taken, default_return_value=True)
+    if len(_data) > 0:
+        # callback to recipient if there's any additoinal data
+        Taker(_recipient).auctionTakeCallback(_id, msg.sender, taken, needed, _data)
+
+    assert want.transferFrom(msg.sender, self.treasury, needed, default_return_value=True)
+    log AuctionTaken(AUCTION_ID, taken, available)
 
 @external
 def set_treasury(_treasury: address):

@@ -146,11 +146,39 @@ def test_take(chain, alice, bob, treasury, weth, token, auction):
 
     # take all remaining
     chain.pending_timestamp += 5 * HOUR_LENGTH
+    with chain.isolate():
+        chain.mine()
+        assert auction.price(AUCTION_ID) == price // 32
+
     cost2 = token.balanceOf(alice)
     auction.take(AUCTION_ID, MAX, sender=alice)
     cost2 -= token.balanceOf(alice)
     assert token.balanceOf(treasury) == cost + cost2
     assert weth.balanceOf(alice) == 3 * UNIT
+
+def test_take_callback(chain, project, deployer, alice, treasury, weth, token, auction):
+    token.mint(alice, 100_000 * UNIT, sender=alice)
+    token.approve(auction, MAX, sender=alice)
+
+    kick = chain.pending_timestamp
+    alice.transfer(auction, 5 * UNIT)
+    
+    ts = kick + 12 * HOUR_LENGTH
+    chain.pending_timestamp = ts
+
+    cost = auction.getAmountNeeded(AUCTION_ID, 2 * UNIT, ts)
+    data = b"123abc"
+
+    callback = project.MockCallback.deploy(token, sender=deployer)
+    callback.set_id(AUCTION_ID, sender=deployer)
+    callback.set_sender(alice, sender=deployer)
+    callback.set_taken(2 * UNIT, sender=deployer)
+    callback.set_data(data, sender=deployer)
+
+    # take
+    auction.take(AUCTION_ID, 2 * UNIT, callback, sender=alice)
+    assert token.balanceOf(treasury) == cost
+    assert weth.balanceOf(callback) == 2 * UNIT
 
 def test_set_treasury(deployer, alice, treasury, auction):
     # only management can set treasury
