@@ -43,12 +43,15 @@ def test_register(project, deployer, alice, factory, controller, registry):
     assert registry.vault_count() == 0
     assert registry.vaults(0) == ZERO_ADDRESS
     assert registry.vault_gauge_map(vault) == ZERO_ADDRESS
+    with ape.reverts():
+        registry.gauges(0)
     assert not registry.registered(gauge)
     assert not controller.gauge_whitelisted(gauge)
     assert registry.register(gauge, sender=deployer).return_value == 0
     assert registry.vault_count() == 1
     assert registry.vaults(0) == vault
     assert registry.vault_gauge_map(vault) == gauge
+    assert registry.gauges(0) == gauge
     assert registry.registered(gauge)
     assert controller.gauge_whitelisted(gauge)
 
@@ -95,6 +98,8 @@ def test_deregister(project, deployer, alice, factory, controller, registry):
     assert registry.vaults(0) == vault2
     assert registry.vaults(1) == ZERO_ADDRESS
     assert registry.vault_gauge_map(vault) == ZERO_ADDRESS
+    with ape.reverts():
+        registry.gauges(1)
     assert not registry.registered(gauge)
     assert not controller.gauge_whitelisted(gauge)
 

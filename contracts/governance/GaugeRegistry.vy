@@ -36,6 +36,10 @@ event Deregister:
     gauge: indexed(address)
     idx: uint256
 
+event UpdateIndex:
+    old_idx: indexed(uint256)
+    idx: uint256
+
 event SetController:
     controller: address
 
@@ -58,6 +62,18 @@ def __init__(_controller: address, _factory: address):
     self.management = msg.sender
     self.controller = Controller(_controller)
     self.factory = Factory(_factory)
+
+@external
+@view
+def gauges(_idx: uint256) -> address:
+    """
+    @notice Get a gauge at a certain index in the list
+    @param _idx Index of the gauge
+    @return Gauge at the specified index
+    """
+    vault: address = self.vaults[_idx]
+    assert vault != empty(address)
+    return self.vault_gauge_map[vault]
 
 @external
 def register(_gauge: address) -> uint256:
@@ -99,12 +115,13 @@ def deregister(_gauge: address, _idx: uint256):
     # and shorten array by one
     max_idx: uint256 = self.vault_count - 1
     self.vault_count = max_idx
+    log Deregister(_gauge, _idx)
     if _idx != max_idx:
         self.vaults[_idx] = self.vaults[max_idx]
+        log UpdateIndex(max_idx, _idx)
     self.vaults[max_idx] = empty(address)
     self.vault_gauge_map[vault] = empty(address)
     self.controller.whitelist(_gauge, False)
-    log Deregister(_gauge, _idx)
 
 @external
 @view
