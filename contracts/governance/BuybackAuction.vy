@@ -310,9 +310,10 @@ def _price(_ts: uint256) -> uint256:
         Where `h` is the amount of hours since the start of the auction
         and `m` is the amout of minutes past the hour
     """
-    t: uint256 = _ts - self.kicked
-    if t >= AUCTION_LENGTH:
+    t: uint256 = self.kicked
+    if _ts < t or _ts >= t + AUCTION_LENGTH:
         return 0
+    t = _ts - t
 
     m: uint256 = (t % HOUR) / MINUTE
 
