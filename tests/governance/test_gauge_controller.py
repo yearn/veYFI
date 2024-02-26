@@ -67,6 +67,17 @@ def test_whitelist(chain, deployer, alice, bob, gauge, gauge2, controller):
     with ape.reverts():
         controller.whitelist(gauge2, True, sender=alice)
 
+def test_remove_whitelist_reserved(deployer, gauge, controller):
+    controller.whitelist(gauge, True, sender=deployer)
+    controller.set_reserved_points(gauge, 5_000, sender=deployer)
+    assert controller.gauge_whitelisted(gauge)
+    assert controller.reserved_points() == 5_000
+    assert controller.gauge_reserved_points(gauge) == 5_000
+    controller.whitelist(gauge, False, sender=deployer)
+    assert not controller.gauge_whitelisted(gauge)
+    assert controller.reserved_points() == 0
+    assert controller.gauge_reserved_points(gauge) == 0
+
 def test_vote(chain, deployer, alice, bob, gauge, gauge2, epoch, measure, controller):
     controller.whitelist(gauge, True, sender=deployer)
     measure.set_vote_weight(alice, 4 * UNIT, sender=deployer)

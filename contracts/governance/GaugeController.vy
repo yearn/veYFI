@@ -343,7 +343,7 @@ def whitelist(_gauge: address, _whitelisted: bool):
         points, last = self._unpack_two(self.packed_gauge_reserved[_gauge])
         if points > 0:
             self.reserved_points -= points
-            self.packed_gauge_reserved[_gauge] = self._pack(0, points, last)
+            self.packed_gauge_reserved[_gauge] = 0
     self.gauge_whitelisted[_gauge] = _whitelisted
     log Whitelist(_gauge, _whitelisted)
 
