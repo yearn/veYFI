@@ -61,7 +61,7 @@ event NewEpoch:
     blank: uint256
 
 event Claim:
-    gauge: address
+    gauge: indexed(address)
     amount: uint256
 
 event Vote:

@@ -48,7 +48,7 @@ contract GaugeV2 is BaseGaugeV2, ERC20Upgradeable, IGaugeV2 {
     mapping(address => address) public recipients;
 
     event TransferredPenalty(address indexed account, uint256 transfered);
-    event BoostedBalanceUpdated(address account, uint256 amount);
+    event BoostedBalanceUpdated(address indexed account, uint256 amount);
 
     event Initialize(address indexed asset, address indexed owner);
 
