@@ -71,7 +71,6 @@ event AuctionEnabled:
 event AuctionKicked:
     auction_id: indexed(bytes32)
     available: uint256
-    start_price: uint256
 
 event AuctionTaken:
     auction_id: indexed(bytes32)
@@ -297,9 +296,8 @@ def _kick(_amount: uint256):
     """
     self.kicked = block.timestamp
     self.available = _amount
-    start_price: uint256 = START_PRICE * SCALE / _amount
-    self.start_price = start_price
-    log AuctionKicked(AUCTION_ID, _amount, start_price)
+    self.start_price = START_PRICE * SCALE / _amount
+    log AuctionKicked(AUCTION_ID, _amount)
 
 @internal
 @view
