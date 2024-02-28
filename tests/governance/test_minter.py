@@ -53,11 +53,9 @@ def test_minter(chain, deployer, alice, controller, locking_token, reward_token,
         minter.mint(1, sender=alice)
 
     assert minter.last_epoch() == 0
-    assert minter.minted(1) == 0
     assert reward_token.balanceOf(controller) == 0
     assert minter.mint(1, sender=controller).return_value == preview
     assert minter.last_epoch() == 1
-    assert minter.minted(1) == preview
     assert reward_token.balanceOf(controller) == preview
 
     # cant mint more than once
@@ -80,9 +78,10 @@ def test_minter_gap(chain, deployer, alice, controller, locking_token, reward_to
     with ape.reverts():
         minter.mint(2, sender=controller)
 
-    assert minter.mint(1, sender=controller).return_value > 0
-    assert minter.mint(2, sender=controller).return_value > 0
-    assert reward_token.balanceOf(controller) == minter.minted(1) + minter.minted(2)
+    mint1 = minter.mint(1, sender=controller).return_value
+    mint2 = minter.mint(2, sender=controller).return_value
+    assert mint1 > 0 and mint2 > 0
+    assert reward_token.balanceOf(controller) == mint1 + mint2
 
 def test_set_scaling_factor(chain, deployer, alice, controller, locking_token, voting_escrow, minter):
     locking_token.mint(alice, 2 * UNIT, sender=deployer)

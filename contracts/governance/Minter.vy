@@ -28,7 +28,6 @@ pending_management: public(address)
 controller: public(address)
 scaling_factor: public(uint256)
 last_epoch: public(uint256)
-minted: public(HashMap[uint256, uint256])
 
 event Mint:
     epoch: indexed(uint256)
@@ -112,8 +111,6 @@ def mint(_epoch: uint256) -> uint256:
 
     self.last_epoch = _epoch
     minted: uint256 = self._mintable(_epoch)
-    self.minted[_epoch] = minted
-
     token.mint(controller, minted)
     log Mint(_epoch, minted)
     return minted
