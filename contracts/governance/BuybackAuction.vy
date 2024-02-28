@@ -234,7 +234,7 @@ def take(_id: bytes32, _max: uint256 = max_value(uint256), _recipient: address =
 
     assert sell.transfer(_recipient, taken, default_return_value=True)
     if len(_data) > 0:
-        # callback to recipient if there's any additoinal data
+        # callback to recipient if there's any additional data
         Taker(_recipient).auctionTakeCallback(_id, msg.sender, taken, needed, _data)
 
     assert want.transferFrom(msg.sender, self.treasury, needed, default_return_value=True)
@@ -258,7 +258,7 @@ def set_kick_threshold(_threshold: uint256):
     """
     @notice Set new kick threshold
     @param _threshold New threshold (18 decimals)
-    @dev If a ETH transfer puts the balance over the threshold, a new
+    @dev If an ETH transfer puts the balance over the threshold, a new
         auction is automatically kicked
     @dev Only callable by management
     """

@@ -378,7 +378,7 @@ def set_reserved_points(_gauge: address, _points: uint256):
 @external
 def set_blank_burn_points(_points: uint256):
     """
-    @notice Set fraction of blank emisisons to be burned
+    @notice Set fraction of blank emissions to be burned
     @param _points Blank burn fraction (bps)
     @dev Only callable by management
     """
