@@ -156,18 +156,15 @@ contract GaugeV2 is BaseGaugeV2, ERC20Upgradeable, IGaugeV2 {
                 rewardPerTokenStored += delta * PRECISION_FACTOR / totalAssets();
             }
             // forward to beginning of epoch
+            uint256 finish = start + DURATION;
+            uint256 rate = current * PRECISION_FACTOR / DURATION;
+
             lastUpdateTime = start;
-            periodFinish = start + DURATION;
-            rewardRate = current * PRECISION_FACTOR / DURATION;
+            periodFinish = finish;
+            rewardRate = rate;
             historicalRewards = cumulative;
 
-            emit RewardsAdded(
-                current,
-                lastUpdateTime,
-                periodFinish,
-                rewardRate,
-                historicalRewards
-            );
+            emit RewardsAdded(current, start, finish, rate, cumulative);
         }
 
         rewardPerTokenStored = _rewardPerToken();
