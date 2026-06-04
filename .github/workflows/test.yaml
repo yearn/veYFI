@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - uses: ApeWorX/github-action@v1
+    - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1
+    - uses: ApeWorX/github-action@98088cbe8dc5bbce5bb6003ee9f17aff35d5b109 # v1
       with:
         python-version: 3.9
 
@@ -24,7 +24,7 @@ jobs:
       run: ape compile --size
 
     - name: Install foundry
-      uses: foundry-rs/foundry-toolchain@v1
+      uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d # v1
 
     - name: Run tests
       env:
