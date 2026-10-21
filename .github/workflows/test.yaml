@@ -18,7 +18,35 @@ jobs:
     - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1
     - uses: ApeWorX/github-action@98088cbe8dc5bbce5bb6003ee9f17aff35d5b109 # v1
       with:
-        python-version: 3.9
+        python-version: '3.10'
+
+    - name: Security overrides (certifi / aiohttp / urllib3)
+      shell: bash
+      run: |
+        # eth-ape and friends pin old certifi/aiohttp/urllib3; the brotli CVE-2026-111497 / eMudhra sweep needs newer ones.
+        pins=$(mktemp)
+        # Upgrade them to the newest versions every *other* installed package still accepts.
+        python - > "$pins" <<'PY'
+        import importlib.metadata as m, re
+        targets = {"certifi", "aiohttp", "urllib3"}
+        norm = lambda s: re.sub(r"[-_.]+", "-", s).lower()
+        have = {norm(d.metadata["Name"] or "") for d in m.distributions()}
+        for t in ("certifi>=2026.10.19", "aiohttp", "urllib3"):
+            if t.startswith("certifi") or t in have:
+                print(t)
+        for d in m.distributions():
+            n = norm(d.metadata["Name"] or "")
+            if n in targets or n == "eth-brownie":
+                continue
+            for r in d.requires or []:
+                if "extra ==" in r:
+                    continue
+                if norm(re.split(r"[\s;<>=!~\[(]", r, maxsplit=1)[0]) in targets:
+                    print(f"{n}=={d.version}")
+                    break
+        PY
+        pip install -q -U -r "$pins" || { echo "::warning::constrained upgrade failed, upgrading certifi only"; pip install -q -U "certifi>=2026.10.19"; }
+        pip list 2>/dev/null | grep -Ei '^(certifi|aiohttp|urllib3) '
 
     - name: Compile contracts
       run: ape compile --size
