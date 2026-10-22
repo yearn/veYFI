@@ -41,7 +41,7 @@ jobs:
       shell: bash
       run: |
         mkdir -p ~/.ape/ethereum/mainnet/contract_types
-        cp tests/contract_types/0x*.json ~/.ape/ethereum/mainnet/contract_types/
+        cp .github/ape-contract-types/0x*.json ~/.ape/ethereum/mainnet/contract_types/
     - uses: ApeWorX/github-action@98088cbe8dc5bbce5bb6003ee9f17aff35d5b109 # v1
       with:
         python-version: '3.10'
