@@ -1,12 +1,12 @@
 # Pinned CI environment for eth-ape 0.6.26 (used via PIP_CONSTRAINT in .github/workflows/test.yaml).
 # Unpinned transitive deps (eth-pydantic-types, numpy, click, ...) drifted and broke 'ape' imports.
-# Resolved as of 2023-12-15, except certifi/aiohttp (+deps) bumped for the brotli CVE-2026-111497 / eMudhra sweep.
+# Resolved as of 2023-12-15 (pydantic 1.x / evm-trace 0.1.0a25, which ape 0.6.26's trace handling needs),
+# except certifi/aiohttp (+deps) bumped for the brotli CVE-2026-111497 / eMudhra sweep.
 # urllib3 stays on 1.26.x because eth-ape 0.6.x requires urllib3<2.
 # py-solc-x 2.0.5+ downloads solc from binaries.soliditylang.org (solc-bin.ethereum.org is gone).
 aiohappyeyeballs==2.7.1
 aiohttp==3.14.5
 aiosignal==1.4.0
-annotated-types==0.6.0
 ape-etherscan==0.6.11
 ape-foundry==0.6.19
 ape-infura==0.6.5
@@ -38,13 +38,12 @@ eth-bloom==3.0.0
 eth-hash==0.5.2
 eth-keyfile==0.6.1
 eth-keys==0.4.0
-eth-pydantic-types==0.1.0a5
 eth-rlp==0.3.0
 eth-tester==0.9.1b1
 eth-typing==3.5.2
 eth-utils==2.3.1
 ethpm-types==0.5.11
-evm-trace==0.1.0
+evm-trace==0.1.0a25
 exceptiongroup==1.2.0
 executing==2.0.1
 frozenlist==1.8.0
@@ -89,8 +88,7 @@ py-multihash==0.2.3
 py-solc-x==2.0.5
 pycparser==2.21
 pycryptodome==3.19.0
-pydantic==2.5.2
-pydantic-core==2.14.5
+pydantic==1.10.13
 pyethash==0.1.27
 pygithub==1.59.1
 pygments==2.17.2
@@ -115,7 +113,7 @@ six==1.16.0
 sortedcontainers==2.4.0
 sqlalchemy==2.0.23
 stack-data==0.6.3
-tokenlists==0.1.7
+tokenlists==0.1.5
 tomli==2.0.1
 toolz==0.12.0
 tqdm==4.66.1
