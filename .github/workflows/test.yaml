@@ -50,4 +50,5 @@ jobs:
       env:
           WEB3_INFURA_PROJECT_ID: f8b4d65ef4634cb7a3e1af5bf8d53ec1        
       run: ape test -s
-      timeout-minutes: 10
+      # 59 mainnet-fork tests take ~10s each on hosted runners (~20 min total).
+      timeout-minutes: 35
