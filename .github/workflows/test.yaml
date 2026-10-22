@@ -13,46 +13,38 @@ concurrency:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    env:
+      # Pin the whole Python env: ApeWorX/github-action installs the latest eth-ape + plugins and then
+      # requirements.txt downgrades to eth-ape 0.6.26, leaving a broken mix (evm-trace/eth-pydantic-types,
+      # numpy 2, click 8.2, ...). The constraints file keeps every pip call in this job on a coherent set.
+      PIP_CONSTRAINT: ${{ github.workspace }}/ci-constraints.txt
 
     steps:
     - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1
     - uses: ApeWorX/github-action@98088cbe8dc5bbce5bb6003ee9f17aff35d5b109 # v1
       with:
         python-version: '3.10'
+        ape-version-pin: '==0.6.26'
 
-    - name: Security overrides (certifi / aiohttp / urllib3)
+    - name: Verify security pins (certifi / aiohttp)
       shell: bash
       run: |
-        # eth-ape and friends pin old certifi/aiohttp/urllib3; the brotli CVE-2026-111497 / eMudhra sweep needs newer ones.
-        pins=$(mktemp)
-        # Upgrade them to the newest versions every *other* installed package still accepts.
-        python - > "$pins" <<'PY'
-        import importlib.metadata as m, re
-        targets = {"certifi", "aiohttp", "urllib3"}
-        norm = lambda s: re.sub(r"[-_.]+", "-", s).lower()
-        have = {norm(d.metadata["Name"] or "") for d in m.distributions()}
-        for t in ("certifi>=2026.10.19", "aiohttp", "urllib3"):
-            if t.startswith("certifi") or t in have:
-                print(t)
-        for d in m.distributions():
-            n = norm(d.metadata["Name"] or "")
-            if n in targets or n == "eth-brownie":
-                continue
-            for r in d.requires or []:
-                if "extra ==" in r:
-                    continue
-                if norm(re.split(r"[\s;<>=!~\[(]", r, maxsplit=1)[0]) in targets:
-                    print(f"{n}=={d.version}")
-                    break
+        # Versions come from ci-constraints.txt (PIP_CONSTRAINT). eth-ape 0.6.x requires urllib3<2, so urllib3 stays on 1.26.x.
+        pip check
+        python - <<'PY'
+        import importlib.metadata as m
+        from packaging.version import Version as V
+        assert V(m.version("certifi")) >= V("2026.10.19"), m.version("certifi")
+        assert V(m.version("aiohttp")) >= V("3.14.4"), m.version("aiohttp")
+        for p in ("eth-ape", "certifi", "aiohttp", "urllib3"):
+            print(p, m.version(p))
         PY
-        pip install -q -U -r "$pins" || { echo "::warning::constrained upgrade failed, upgrading certifi only"; pip install -q -U "certifi>=2026.10.19"; }
-        pip list 2>/dev/null | grep -Ei '^(certifi|aiohttp|urllib3) '
 
     - name: Compile contracts
       run: ape compile --size
 
     - name: Install foundry
-      uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d # v1
+      uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
 
     - name: Run tests
       env:
