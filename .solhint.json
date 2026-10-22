@@ -1,6 +1,6 @@
 {
   "extends": "solhint:recommended",
-  "plugins": ["prettier", "yearn"],
+  "plugins": ["prettier"],
   "rules": {
     "compiler-version": ["error", "0.8.15"],
     "code-complexity": "warn",
@@ -12,7 +12,6 @@
     "avoid-sha3": "warn",
     "not-rely-on-time": "off",
     "private-vars-leading-underscore": "warn",
-    "reason-string": ["warn", { "maxLength": 64 }],
-    "yearn/underscore-function-args": "error"
+    "reason-string": ["warn", { "maxLength": 64 }]
   }
 }

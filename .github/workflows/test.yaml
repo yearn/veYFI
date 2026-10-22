@@ -13,21 +13,78 @@ concurrency:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    env:
+      # Pin the whole Python env: ApeWorX/github-action installs the latest eth-ape + plugins and then
+      # requirements.txt downgrades to eth-ape 0.6.26, leaving a broken mix (evm-trace/eth-pydantic-types,
+      # numpy 2, click 8.2, ...). The constraints file keeps every pip call in this job on a coherent set.
+      PIP_CONSTRAINT: ${{ github.workspace }}/ci-constraints.txt
+      # Built-in workflow token (no extra secret): ape's GitHub dependency downloads and vvm's Vyper
+      # release lookup otherwise hit the unauthenticated GitHub API rate limit.
+      GITHUB_ACCESS_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
 
     steps:
     - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1
+
+    - name: Pin mainnet fork block (CI only)
+      shell: bash
+      run: |
+        # The fork tests assert against mainnet state as of the last test update (Dec 2023): Chainlink
+        # feeds, the Curve YFI/ETH pool, the previous Redemption. Forking "latest" makes them fail.
+        # Block 18693754 = 2023-12-01 19:49 UTC. Only appended in CI; local runs keep ape-config.yaml as-is.
+        cat >> ape-config.yaml <<'YAML'
+
+        foundry:
+          fork:
+            ethereum:
+              mainnet:
+                block_number: 18693754
+        YAML
+
+    - name: Seed ape contract cache (no Etherscan API needed)
+      shell: bash
+      run: |
+        mkdir -p ~/.ape/ethereum/mainnet/contract_types
+        cp .github/ape-contract-types/0x*.json ~/.ape/ethereum/mainnet/contract_types/
     - uses: ApeWorX/github-action@98088cbe8dc5bbce5bb6003ee9f17aff35d5b109 # v1
       with:
-        python-version: 3.9
+        python-version: '3.10'
+        ape-version-pin: '==0.6.26'
+
+    - name: Verify security pins (certifi / aiohttp)
+      shell: bash
+      run: |
+        # Versions come from ci-constraints.txt (PIP_CONSTRAINT). eth-ape 0.6.x requires urllib3<2, so urllib3 stays on 1.26.x.
+        pip check
+        python - <<'PY'
+        import importlib.metadata as m
+        from packaging.version import Version as V
+        assert V(m.version("certifi")) >= V("2026.10.19"), m.version("certifi")
+        assert V(m.version("aiohttp")) >= V("3.14.4"), m.version("aiohttp")
+        for p in ("eth-ape", "certifi", "aiohttp", "urllib3"):
+            print(p, m.version(p))
+        PY
 
     - name: Compile contracts
       run: ape compile --size
 
     - name: Install foundry
-      uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d # v1
+      uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+
+    - name: Make anvil retry rate-limited fork requests
+      shell: bash
+      run: |
+        # The shared Infura project ID returns bursts of HTTP 429. ape-foundry 0.6 can't pass anvil
+        # flags, so put a wrapper first on PATH that adds more retries and a longer backoff.
+        real=$(command -v anvil)
+        mkdir -p "$RUNNER_TEMP/anvil-wrapper"
+        printf '#!/usr/bin/env bash\nexec "%s" "$@" --retries 20 --fork-retry-backoff 2000\n' "$real" > "$RUNNER_TEMP/anvil-wrapper/anvil"
+        chmod +x "$RUNNER_TEMP/anvil-wrapper/anvil"
+        echo "$RUNNER_TEMP/anvil-wrapper" >> "$GITHUB_PATH"
 
     - name: Run tests
       env:
           WEB3_INFURA_PROJECT_ID: f8b4d65ef4634cb7a3e1af5bf8d53ec1        
       run: ape test -s
-      timeout-minutes: 10
+      # 59 mainnet-fork tests take ~10s each on hosted runners (~20 min total).
+      timeout-minutes: 35
