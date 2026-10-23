@@ -143,7 +143,7 @@ abstract contract BaseGauge is IBaseGauge, OwnableUpgradeable {
      * @param _amount token to add to rewards
      * @return true
      */
-    function queueNewRewards(uint256 _amount) external override returns (bool) {
+    function queueNewRewards(uint256 _amount) external returns (bool) {
         require(_amount != 0, "==0");
         SafeERC20.safeTransferFrom(
             IERC20(REWARD_TOKEN),
