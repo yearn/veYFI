@@ -31,3 +31,5 @@ ethereum:
     default_provider: infura
   mainnet_fork:
     default_provider: foundry
+    # Archive fork reads can outlast Ape's 20-second local transaction default.
+    transaction_acceptance_timeout: 120
