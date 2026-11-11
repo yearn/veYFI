@@ -247,7 +247,9 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     ) * WEEK - chain.blocks.head.timestamp
     chain.mine()
 
-    ve_yfi.modify_lock(amount, chain.blocks.head.timestamp + 2 * WEEK, sender=alice)
+    # Keep the requested week boundary: Anvil also advances with wall-clock time.
+    alice_unlock = (chain.blocks.head.timestamp + 2 * WEEK) // WEEK * WEEK
+    ve_yfi.modify_lock(amount, alice_unlock, sender=alice)
     stages["alice_deposit_2"] = (chain.blocks.head.number, chain.blocks.head.timestamp)
 
     assert approx(ve_yfi.totalSupply(), rel=TOL) == amount // MAXTIME * 2 * WEEK
@@ -292,7 +294,9 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     w_total = ve_yfi.totalSupply()
     w_alice = ve_yfi.balanceOf(alice)
     assert w_alice == w_total
-    assert approx(w_total, rel=TOL) == amount // MAXTIME * (WEEK - 2 * H)
+    assert approx(w_total, rel=TOL) == amount // MAXTIME * max(
+        alice_unlock - chain.blocks.head.timestamp, 0
+    )
     assert ve_yfi.balanceOf(bob) == 0
 
     chain.pending_timestamp += H
@@ -307,7 +311,9 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
         w_total = ve_yfi.totalSupply()
         w_alice = ve_yfi.balanceOf(alice)
         assert w_total == w_alice
-        assert approx(w_total, rel=TOL) == amount // MAXTIME * max(WEEK - dt - 2 * H, 0)
+        assert approx(w_total, rel=TOL) == amount // MAXTIME * max(
+            alice_unlock - chain.blocks.head.timestamp, 0
+        )
         assert ve_yfi.balanceOf(bob) == 0
         stages["alice_in_2"].append(
             (chain.blocks.head.number, chain.blocks.head.timestamp)
@@ -389,7 +395,9 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
     w_alice = ve_yfi.getPriorVotes(alice, stages["bob_withdraw_1"][0])
     w_bob = ve_yfi.getPriorVotes(bob, stages["bob_withdraw_1"][0])
     assert w_total == w_alice
-    assert approx(w_total, rel=TOL) == amount // MAXTIME * (WEEK - 2 * H)
+    assert approx(w_total, rel=TOL) == amount // MAXTIME * max(
+        alice_unlock - stages["bob_withdraw_1"][1], 0
+    )
     assert w_bob == 0
 
     t0 = stages["bob_withdraw_1"][1]
@@ -404,7 +412,7 @@ def test_voting_powers(chain, accounts, yfi, ve_yfi):
             WEEK - i * DAY + DAY
         )  # Rounding error of 1 block is possible, and we have 1h blocks
         assert approx(w_total, rel=error_1h) == amount // MAXTIME * max(
-            WEEK - dt - 2 * H, 0
+            alice_unlock - t, 0
         )
 
     w_total = ve_yfi.totalSupplyAt(stages["bob_withdraw_2"][0])
